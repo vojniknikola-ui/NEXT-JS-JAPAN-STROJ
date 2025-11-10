@@ -378,6 +378,17 @@ export default function AdminPanel() {
                     className={inputClass}
                   />
                 </div>
+                <div>
+                  <label className={labelClass}>Stanje na skladištu (interna referenca)</label>
+                  <input
+                    type="number"
+                    placeholder="0"
+                    value={formData.stock || 0}
+                    onChange={(e) => handleInputChange(e, 'stock')}
+                    className={inputClass}
+                    min="0"
+                  />
+                </div>
               </div>
 
               <div className="mt-8">
@@ -438,6 +449,7 @@ export default function AdminPanel() {
                       <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Spec 6</th>
                       <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Spec 7</th>
                       <th className="px-4 py-3 text-right text-neutral-200 font-semibold">Popust %</th>
+                      <th className="px-4 py-3 text-center text-neutral-200 font-semibold">Stanje</th>
                       <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Link slike</th>
                       <th className="px-4 py-3 text-center text-neutral-200 font-semibold">Akcije</th>
                     </tr>
@@ -477,6 +489,7 @@ export default function AdminPanel() {
                         <td className="px-4 py-3 text-neutral-100">{part.technicalSpecs.spec6}</td>
                         <td className="px-4 py-3 text-neutral-100">{part.technicalSpecs.spec7}</td>
                         <td className="px-4 py-3 text-right text-neutral-100">{part.discount.toFixed(2)}%</td>
+                        <td className="px-4 py-3 text-center text-neutral-100">{part.stock || 0}</td>
                         <td className="px-4 py-3">
                           {part.imageUrl ? (
                             <a

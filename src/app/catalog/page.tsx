@@ -238,6 +238,11 @@ export default function CatalogPage() {
 
   const filteredProducts = React.useMemo(() => {
     let result = spareParts.filter((product) => {
+      // Hide products with 0 stock
+      if ((product.stock || 0) <= 0) {
+        return false;
+      }
+
       const brandMatch = filters.brands.size === 0 || filters.brands.has(product.brand);
       const modelMatch = filters.models.size === 0 || filters.models.has(product.model);
       const applicationMatch = filters.applications.size === 0 || filters.applications.has(product.application);

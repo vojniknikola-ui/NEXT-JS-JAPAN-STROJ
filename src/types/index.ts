@@ -27,6 +27,7 @@ export interface SparePart {
   discount: number;
   imageUrl: string;
   technicalSpecs: TechnicalSpecs;
+  stock?: number;
   recommendationReasons?: string[];
 }
 

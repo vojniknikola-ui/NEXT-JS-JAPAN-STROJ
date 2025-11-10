@@ -21,7 +21,6 @@ const Header: React.FC<HeaderProps> = ({ activePage, setActivePage, cartItemCoun
     { id: 'services', label: 'Usluge', icon: CogIcon },
     { id: 'cart', label: 'Košarica', icon: CartIcon },
     { id: 'manuals', label: 'Priručnici', icon: ManualIcon },
-    { id: 'admin', label: 'Admin', icon: AdminIcon },
   ];
 
   const handleNavClick = (page: Page) => {
@@ -74,20 +73,28 @@ const Header: React.FC<HeaderProps> = ({ activePage, setActivePage, cartItemCoun
           </div>
         </div>
       </div>
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-[#050505]/95 border-t border-white/10 flex justify-around p-2 z-50 backdrop-blur-sm">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-[#050505]/98 border-t border-white/10 flex justify-around items-center py-3 px-2 z-50 backdrop-blur-sm shadow-2xl">
         {navItems.map((item) => (
             <button
               key={item.id}
               onClick={() => handleNavClick(item.id as Page)}
-              className={`relative flex flex-col items-center justify-center w-1/6 p-2 rounded-lg transition-colors duration-200 min-w-fit ${
-                activePage === item.id ? 'text-[#ff6b00]' : 'text-neutral-400'
+              className={`relative flex flex-col items-center justify-center flex-1 py-2 px-1 rounded-xl transition-all duration-300 min-w-0 ${
+                activePage === item.id
+                  ? 'text-[#ff6b00] bg-[#ff6b00]/10 shadow-lg'
+                  : 'text-neutral-400 hover:text-[#ff6b00] hover:bg-white/5'
               }`}
             >
-              <item.icon className="h-5 w-5 sm:h-6 sm:w-6" />
-              <span className="text-[10px] sm:text-xs mt-1 text-center font-medium leading-tight">{item.label}</span>
+              <div className={`p-1 rounded-lg transition-all duration-300 ${
+                activePage === item.id ? 'bg-[#ff6b00]/20' : ''
+              }`}>
+                <item.icon className="h-6 w-6 sm:h-7 sm:w-7" />
+              </div>
+              <span className="text-[9px] sm:text-[10px] mt-1 text-center font-semibold leading-tight truncate max-w-full">
+                {item.label.length > 8 ? item.label.substring(0, 8) + '...' : item.label}
+              </span>
               {item.id === 'cart' && cartItemCount > 0 && (
-                <span className="absolute top-0 right-2 sm:right-3 bg-[#ff3b3b] text-white text-[10px] sm:text-xs rounded-full h-3 w-3 sm:h-4 sm:w-4 flex items-center justify-center">
-                  {cartItemCount}
+                <span className="absolute -top-1 -right-1 bg-[#ff3b3b] text-white text-[9px] sm:text-[10px] rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center font-bold shadow-lg">
+                  {cartItemCount > 9 ? '9+' : cartItemCount}
                 </span>
               )}
             </button>
