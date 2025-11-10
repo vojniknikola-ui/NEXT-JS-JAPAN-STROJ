@@ -74,14 +74,14 @@ export default function ServicesPage() {
       <Header activePage={activePage} setActivePage={setActivePage} cartItemCount={cartItemCount} />
       <main className="flex-grow">
         <div className="container mx-auto px-4 py-16">
-          <div className="text-center mb-12 sm:mb-20">
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 sm:px-4 py-1 text-xs sm:text-sm font-semibold uppercase tracking-[0.4em] text-neutral-300 mb-4 sm:mb-6">
+          <div className="text-center mb-8 sm:mb-12 md:mb-16 lg:mb-20">
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 sm:px-4 py-1 text-xs sm:text-sm font-semibold uppercase tracking-[0.4em] text-neutral-300 mb-3 sm:mb-4 md:mb-6">
               Profesionalne usluge
             </span>
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-white mb-4 sm:mb-6 leading-tight">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-extrabold text-white mb-3 sm:mb-4 md:mb-6 leading-tight">
               Stručnost i preciznost u <span className="text-[#ff6b00]">svakom detalju</span>
             </h1>
-            <p className="text-base sm:text-lg md:text-xl text-neutral-400 max-w-4xl mx-auto leading-relaxed px-4">
+            <p className="text-sm sm:text-base md:text-lg lg:text-xl text-neutral-400 max-w-4xl mx-auto leading-relaxed px-4">
               Više od 20 godina iskustva u popravci i održavanju građevinskih strojeva.
               Koristimo najmoderniju opremu i originalne dijelove za maksimalnu pouzdanost vaših strojeva.
             </p>
