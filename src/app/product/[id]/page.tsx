@@ -245,9 +245,9 @@ export default function ProductDetailPage() {
 
             {/* Recommended Products */}
             {recommendations.length > 0 && (
-              <div className="mt-16">
-                <h2 className="text-2xl font-bold text-white mb-8">Preporučeni proizvodi</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="mt-12 sm:mt-16">
+                <h2 className="text-xl sm:text-2xl font-bold text-white mb-6 sm:mb-8">Preporučeni proizvodi</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                   {recommendations.map((recommendedProduct) => (
                     <div
                       key={recommendedProduct.id}
@@ -270,6 +270,18 @@ export default function ProductDetailPage() {
                         <p className="text-xs text-neutral-400">
                           {recommendedProduct.brand} • {recommendedProduct.model}
                         </p>
+
+                        {/* Recommendation Reasons */}
+                        {recommendedProduct.recommendationReasons && recommendedProduct.recommendationReasons.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {recommendedProduct.recommendationReasons.slice(0, 2).map((reason, idx) => (
+                              <span key={idx} className="text-[10px] bg-[#ff6b00]/20 text-[#ff6b00] px-2 py-0.5 rounded-full">
+                                {reason}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-bold text-[#ff6b00]">
                             {(recommendedProduct.priceWithVAT * (1 - recommendedProduct.discount / 100)).toFixed(2)} BAM
