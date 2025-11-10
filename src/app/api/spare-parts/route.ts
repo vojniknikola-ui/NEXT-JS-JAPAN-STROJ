@@ -287,7 +287,7 @@ export async function GET() {
   try {
     // Try to use Vercel Blob for persistent storage
     try {
-      const { head, put } = await import('@vercel/blob');
+      const { head } = await import('@vercel/blob');
       const blob = await head('spare-parts-data.json');
 
       if (blob) {
