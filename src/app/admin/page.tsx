@@ -51,15 +51,24 @@ export default function AdminPanel() {
     }
 
     // Load spare parts from API
-    fetch('/api/spare-parts')
-      .then(res => res.json())
-      .then(data => {
-        setParts(data);
-        if (editingId === null) {
-          setFormData((prev) => (prev.name || prev.brand || prev.catalogNumber ? prev : createEmptyPart(getNextId(data))));
+    const loadSpareParts = async () => {
+      try {
+        const response = await fetch('/api/spare-parts');
+        if (response.ok) {
+          const data = await response.json();
+          setParts(data);
+          if (editingId === null) {
+            setFormData((prev) => (prev.name || prev.brand || prev.catalogNumber ? prev : createEmptyPart(getNextId(data))));
+          }
+        } else {
+          console.error('Failed to load spare parts');
         }
-      })
-      .catch(error => console.error('Error loading spare parts:', error));
+      } catch (error) {
+        console.error('Error loading spare parts:', error);
+      }
+    };
+
+    loadSpareParts();
   }, [editingId]);
 
   // Load example data for demonstration
@@ -147,10 +156,31 @@ export default function AdminPanel() {
   };
 
   const handleSave = async () => {
+    // Validation
+    if (!formData.name.trim()) {
+      alert('Naziv dijela je obavezan!');
+      return;
+    }
+    if (!formData.brand.trim()) {
+      alert('Marka je obavezna!');
+      return;
+    }
+    if (!formData.catalogNumber.trim()) {
+      alert('Kataloški broj je obavezan!');
+      return;
+    }
+    if (formData.priceWithoutVAT <= 0) {
+      alert('Cijena bez PDV-a mora biti veća od 0!');
+      return;
+    }
+
     const partToSave: SparePart = {
       ...formData,
       priceWithVAT: calculateVAT(formData.priceWithoutVAT),
     };
+
+    // Remove id for new parts (database will auto-generate)
+    const dataToSend = editingId ? partToSave : { ...partToSave, id: undefined };
 
     try {
       const method = editingId ? 'PUT' : 'POST';
@@ -159,7 +189,7 @@ export default function AdminPanel() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(partToSave),
+        body: JSON.stringify(dataToSend),
       });
 
       if (response.ok) {
