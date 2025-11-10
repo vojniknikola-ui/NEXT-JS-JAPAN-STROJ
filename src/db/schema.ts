@@ -21,3 +21,11 @@ export const spareParts = sqliteTable('spare_parts', {
   spec6: text('spec6').notNull(),
   spec7: text('spec7').notNull(),
 });
+
+export const carts = sqliteTable('carts', {
+  id: text('id').primaryKey(), // cart ID from Vercel Blob
+  userId: text('user_id'), // optional for future user accounts
+  data: text('data').notNull(), // JSON string of cart items
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});

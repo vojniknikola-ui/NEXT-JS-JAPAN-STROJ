@@ -7,25 +7,58 @@ export function useCart() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Load cart from localStorage on mount
+  // Load cart from API on mount
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedCart = localStorage.getItem('japanStrojCart');
-      if (savedCart) {
-        try {
-          setCartItems(JSON.parse(savedCart));
-        } catch (error) {
-          console.error('Error loading cart:', error);
+    const loadCart = async () => {
+      try {
+        const response = await fetch('/api/cart');
+        if (response.ok) {
+          const data = await response.json();
+          setCartItems(data);
         }
+      } catch (error) {
+        console.error('Error loading cart:', error);
+        // Fallback to localStorage if API fails
+        if (typeof window !== 'undefined') {
+          const savedCart = localStorage.getItem('japanStrojCart');
+          if (savedCart) {
+            try {
+              setCartItems(JSON.parse(savedCart));
+            } catch (localError) {
+              console.error('Error loading cart from localStorage:', localError);
+            }
+          }
+        }
+      } finally {
+        setIsLoaded(true);
       }
-      setIsLoaded(true);
-    }
+    };
+
+    loadCart();
   }, []);
 
-  // Save cart to localStorage whenever it changes
+  // Save cart to API whenever it changes
   useEffect(() => {
-    if (isLoaded && typeof window !== 'undefined') {
-      localStorage.setItem('japanStrojCart', JSON.stringify(cartItems));
+    if (isLoaded) {
+      const saveCart = async () => {
+        try {
+          await fetch('/api/cart', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(cartItems),
+          });
+        } catch (error) {
+          console.error('Error saving cart to API:', error);
+          // Fallback to localStorage if API fails
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('japanStrojCart', JSON.stringify(cartItems));
+          }
+        }
+      };
+
+      saveCart();
     }
   }, [cartItems, isLoaded]);
 
@@ -62,10 +95,18 @@ export function useCart() {
     setCartItems((prevItems) => prevItems.filter((item) => item.id !== productId));
   }, []);
 
-  const clearCart = useCallback(() => {
+  const clearCart = useCallback(async () => {
     setCartItems([]);
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('japanStrojCart');
+    try {
+      await fetch('/api/cart', {
+        method: 'DELETE',
+      });
+    } catch (error) {
+      console.error('Error clearing cart from API:', error);
+      // Fallback to localStorage if API fails
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('japanStrojCart');
+      }
     }
   }, []);
 
