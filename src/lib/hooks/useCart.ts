@@ -133,7 +133,7 @@ export function useCart() {
 
   // Calculate shipping
   const freeShippingThreshold = 200;
-  const shippingCost = subtotalAfterDiscount >= freeShippingThreshold ? 0 : 12;
+  const shippingCost = subtotalAfterDiscount >= freeShippingThreshold ? 0 : 15;
   const finalTotal = subtotalAfterDiscount + shippingCost;
 
   return {

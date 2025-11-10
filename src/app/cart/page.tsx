@@ -167,6 +167,12 @@ export default function CartPage() {
                   </p>
                 </div>
 
+                <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
+                  <p className="text-blue-400 text-sm">
+                    📦 Troškovi dostave: {pricing.shippingCost === 0 ? 'Besplatna dostava' : `${pricing.shippingCost.toFixed(2)} BAM`}
+                  </p>
+                </div>
+
                 <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3">
                   <p className="text-green-400 text-sm">
                     💰 Popusti: 3% za narudžbe preko 2000 BAM, 5% za narudžbe preko 5000 BAM

@@ -196,7 +196,7 @@ export default function CatalogPage() {
   });
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const productsPerPage = 24;
+  const productsPerPage = 12;
 
   useEffect(() => {
     // Load spare parts from API
