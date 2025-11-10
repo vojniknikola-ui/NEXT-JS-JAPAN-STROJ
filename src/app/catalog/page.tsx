@@ -195,6 +195,8 @@ export default function CatalogPage() {
     availabilities: new Set<Availability>(),
   });
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const productsPerPage = 24;
 
   useEffect(() => {
     // Load spare parts from API
@@ -280,6 +282,17 @@ export default function CatalogPage() {
 
     return result;
   }, [searchTerm, spareParts, filters]);
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
+  const startIndex = (currentPage - 1) * productsPerPage;
+  const endIndex = startIndex + productsPerPage;
+  const currentProducts = filteredProducts.slice(startIndex, endIndex);
+
+  // Reset to first page when filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [filters, searchTerm]);
 
   const activeFilterCount =
     filters.brands.size +
@@ -413,7 +426,7 @@ export default function CatalogPage() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 sm:gap-8">
-                {filteredProducts.map((product) => (
+                {currentProducts.map((product) => (
                   <ProductCard key={product.id} product={product} onAddToCart={handleAddToCart} onSelectProduct={handleSelectProduct} />
                 ))}
               </div>
@@ -421,6 +434,53 @@ export default function CatalogPage() {
               {filteredProducts.length === 0 && (
                 <div className="col-span-full text-center py-16">
                   <p className="text-xl text-neutral-500">Nema rezultata za vašu pretragu ili filtere.</p>
+                </div>
+              )}
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex justify-center items-center mt-12 space-x-2">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="px-4 py-2 bg-[#101010] border border-white/10 rounded-lg text-white hover:bg-[#ff6b00] hover:border-[#ff6b00] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
+                  >
+                    Prethodna
+                  </button>
+
+                  <div className="flex space-x-1">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        className={`px-3 py-2 rounded-lg border transition-all duration-300 ${
+                          currentPage === page
+                            ? 'bg-[#ff6b00] border-[#ff6b00] text-white'
+                            : 'bg-[#101010] border-white/10 text-neutral-300 hover:bg-[#ff6b00] hover:border-[#ff6b00]'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="px-4 py-2 bg-[#101010] border border-white/10 rounded-lg text-white hover:bg-[#ff6b00] hover:border-[#ff6b00] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
+                  >
+                    Sljedeća
+                  </button>
+                </div>
+              )}
+
+              {/* Results info */}
+              {filteredProducts.length > 0 && (
+                <div className="text-center mt-8 text-neutral-400">
+                  <p>
+                    Prikazano {startIndex + 1}-{Math.min(endIndex, filteredProducts.length)} od {filteredProducts.length} rezultata
+                    {totalPages > 1 && ` (stranica ${currentPage} od ${totalPages})`}
+                  </p>
                 </div>
               )}
             </div>
