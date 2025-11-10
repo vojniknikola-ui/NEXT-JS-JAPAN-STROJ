@@ -332,6 +332,7 @@ export async function POST() {
       priceWithVAT: item.priceWithVAT,
       discount: item.discount || 0,
       imageUrl: item.imageUrl,
+      stock: 10, // Default stock for seeded data
       spec1: `Primjena: ${item.application}`,
       spec2: `Model: ${item.model}`,
       spec3: `Brend: ${item.brand}`,
