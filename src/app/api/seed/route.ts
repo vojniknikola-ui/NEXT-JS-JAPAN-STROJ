@@ -1,0 +1,229 @@
+import { NextResponse } from 'next/server';
+import { db } from '@/db';
+import { spareParts } from '@/db/schema';
+import { Availability } from '@/types';
+
+const priceWithoutVAT = (priceWithVAT: number) => parseFloat((priceWithVAT / 1.17).toFixed(2));
+
+const seedSpareParts = [
+  {
+    id: 1,
+    name: 'Filter ulja',
+    brand: 'Caterpillar',
+    model: '320D',
+    catalogNumber: 'CAT-320D-FLT',
+    application: 'Motor',
+    delivery: Availability.Available,
+    priceWithVAT: 45.5,
+    imageUrl: 'https://picsum.photos/seed/filter1/400/300',
+    specs: {
+      spec5: 'Kapacitet: 10L',
+      spec6: 'Visina: 150mm',
+    },
+  },
+  {
+    id: 2,
+    name: 'Zupčanik pogona',
+    brand: 'Komatsu',
+    model: 'PC200',
+    catalogNumber: 'KMT-PC200-GEAR',
+    application: 'Transmisija',
+    delivery: Availability.FifteenDays,
+    priceWithVAT: 1250,
+    imageUrl: 'https://picsum.photos/seed/gear1/400/300',
+    specs: {
+      spec5: 'Materijal: Kaljeni čelik',
+      spec6: 'Broj zuba: 28',
+    },
+  },
+  {
+    id: 3,
+    name: 'Injektor goriva',
+    brand: 'Volvo',
+    model: 'EC210',
+    catalogNumber: 'VLV-EC210-INJ',
+    application: 'Motor',
+    delivery: Availability.Available,
+    priceWithVAT: 850.75,
+    imageUrl: 'https://picsum.photos/seed/injector1/400/300',
+    specs: {
+      spec5: 'Tlak: 2000 bar',
+      spec6: 'Tip: Common rail',
+    },
+  },
+  {
+    id: 4,
+    name: 'Hidraulična pumpa',
+    brand: 'JCB',
+    model: '3CX',
+    catalogNumber: 'JCB-3CX-HYD',
+    application: 'Hidraulika',
+    delivery: Availability.OnRequest,
+    priceWithVAT: 3200,
+    imageUrl: 'https://picsum.photos/seed/pump1/400/300',
+    specs: {
+      spec5: 'Protok: 160 L/min',
+      spec6: 'Pritisak: 320 bar',
+    },
+  },
+  {
+    id: 5,
+    name: 'Set brtvi motora',
+    brand: 'Cummins',
+    model: 'QSB6.7',
+    catalogNumber: 'CUM-QSB6.7-GSK',
+    application: 'Motor',
+    delivery: Availability.Available,
+    priceWithVAT: 650,
+    imageUrl: 'https://picsum.photos/seed/gasket1/400/300',
+    specs: {
+      spec5: 'Set: 18 komada',
+      spec6: 'Materijal: Grafit',
+    },
+  },
+  {
+    id: 6,
+    name: 'Filter zraka',
+    brand: 'Fleetguard',
+    model: 'AF25139M',
+    catalogNumber: 'FLT-AF25139M-AIR',
+    application: 'Motor',
+    delivery: Availability.Available,
+    priceWithVAT: 85,
+    imageUrl: 'https://picsum.photos/seed/airfilter/400/300',
+    specs: {
+      spec5: 'Efikasnost: 99%',
+      spec6: 'Dimenzije: 420x220mm',
+    },
+  },
+  {
+    id: 7,
+    name: 'Starter motora',
+    brand: 'Bosch',
+    model: 'KB 24V',
+    catalogNumber: 'BOS-KB24V-STR',
+    application: 'Elektrika',
+    delivery: Availability.FifteenDays,
+    priceWithVAT: 720,
+    imageUrl: 'https://picsum.photos/seed/starter/400/300',
+    specs: {
+      spec5: 'Napon: 24V',
+      spec6: 'Snaga: 5.4kW',
+    },
+  },
+  {
+    id: 8,
+    name: 'Gusjenica (link)',
+    brand: 'Caterpillar',
+    model: 'D6',
+    catalogNumber: 'CAT-D6-TRK',
+    application: 'Podvozje',
+    delivery: Availability.Available,
+    priceWithVAT: 180,
+    discount: 5,
+    imageUrl: 'https://picsum.photos/seed/tracklink/400/300',
+    specs: {
+      spec5: 'Tvrdoća: 48 HRC',
+      spec6: 'Težina: 22kg',
+    },
+  },
+  {
+    id: 9,
+    name: 'Klip i karika set',
+    brand: 'Komatsu',
+    model: 'S6D102E',
+    catalogNumber: 'KMT-S6D102E-PST',
+    application: 'Motor',
+    delivery: Availability.OnRequest,
+    priceWithVAT: 450,
+    imageUrl: 'https://picsum.photos/seed/piston/400/300',
+    specs: {
+      spec5: 'Promjer: 102mm',
+      spec6: 'Materijal: Aluminij',
+    },
+  },
+  {
+    id: 10,
+    name: 'Turbopunjač',
+    brand: 'Volvo',
+    model: 'D6E',
+    catalogNumber: 'VLV-D6E-TURBO',
+    application: 'Motor',
+    delivery: Availability.Available,
+    priceWithVAT: 2100,
+    discount: 3,
+    imageUrl: 'https://picsum.photos/seed/turbo/400/300',
+    specs: {
+      spec5: 'Pritisak: 1.6 bar',
+      spec6: 'Hlađenje: Ulje',
+    },
+  },
+  {
+    id: 11,
+    name: 'Ventil hidraulike',
+    brand: 'JCB',
+    model: 'JS220',
+    catalogNumber: 'JCB-JS220-VLV',
+    application: 'Hidraulika',
+    delivery: Availability.FifteenDays,
+    priceWithVAT: 950,
+    imageUrl: 'https://picsum.photos/seed/valve/400/300',
+    specs: {
+      spec5: 'Pritisak: 310 bar',
+      spec6: 'Kontrola: Proporcionalna',
+    },
+  },
+  {
+    id: 12,
+    name: 'Hladnjak vode',
+    brand: 'Caterpillar',
+    model: '330C',
+    catalogNumber: 'CAT-330C-RAD',
+    application: 'Hlađenje',
+    delivery: Availability.Available,
+    priceWithVAT: 1800,
+    imageUrl: 'https://picsum.photos/seed/radiator/400/300',
+    specs: {
+      spec5: 'Materijal: Bakar',
+      spec6: 'Protok: 220 L/min',
+    },
+  },
+];
+
+export async function POST() {
+  try {
+    // Check if data already exists
+    const existing = await db.select().from(spareParts);
+    if (existing.length > 0) {
+      return NextResponse.json({ message: 'Data already seeded' });
+    }
+
+    const dataToInsert = seedSpareParts.map(item => ({
+      id: item.id,
+      name: item.name,
+      brand: item.brand,
+      model: item.model,
+      catalogNumber: item.catalogNumber,
+      application: item.application,
+      delivery: item.delivery,
+      priceWithoutVAT: priceWithoutVAT(item.priceWithVAT),
+      priceWithVAT: item.priceWithVAT,
+      discount: item.discount || 0,
+      imageUrl: item.imageUrl,
+      spec1: `Primjena: ${item.application}`,
+      spec2: `Model: ${item.model}`,
+      spec3: `Brend: ${item.brand}`,
+      spec4: `Kataloški broj: ${item.catalogNumber}`,
+      spec5: item.specs?.spec5 || 'Materijal: Industrijski standard',
+      spec6: item.specs?.spec6 || 'Garancija: 12 mjeseci',
+      spec7: 'Pakovanje: 1 komad',
+    }));
+
+    await db.insert(spareParts).values(dataToInsert);
+
+    return NextResponse.json({ message: 'Data seeded successfully' });
+  } catch (error) {
+    console.error('Error seeding data:', error);
+    return NextResponse.json({ error: 'Failed to seed data' }, { status: 500 });
+  }
+}
