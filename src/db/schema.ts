@@ -1,7 +1,7 @@
-import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core';
+import { pgTable, text, integer, real, timestamp } from 'drizzle-orm/pg-core';
 
-export const spareParts = sqliteTable('spare_parts', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const spareParts = pgTable('spare_parts', {
+  id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
   name: text('name').notNull(),
   brand: text('brand').notNull(),
   model: text('model').notNull(),
@@ -22,10 +22,10 @@ export const spareParts = sqliteTable('spare_parts', {
   spec7: text('spec7').notNull(),
 });
 
-export const carts = sqliteTable('carts', {
+export const carts = pgTable('carts', {
   id: text('id').primaryKey(), // cart ID from Vercel Blob
   userId: text('user_id'), // optional for future user accounts
   data: text('data').notNull(), // JSON string of cart items
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  createdAt: timestamp('created_at').notNull(),
+  updatedAt: timestamp('updated_at').notNull(),
 });

@@ -1,1 +1,0 @@
-ALTER TABLE `spare_parts` ADD `stock` integer DEFAULT 0 NOT NULL;
