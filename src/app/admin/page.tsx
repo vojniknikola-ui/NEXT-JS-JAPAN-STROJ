@@ -70,28 +70,16 @@ export default function AdminPanel() {
         const response = await fetch('/api/spare-parts');
         if (response.ok) {
           const data = await response.json();
+          console.log('Loaded spare parts:', data); // Debug log
           setParts(data);
           if (editingId === null) {
             setFormData((prev) => (prev.name || prev.brand || prev.catalogNumber ? prev : createEmptyPart(getNextId(data))));
           }
         } else {
-          console.error('Failed to load spare parts');
+          console.error('Failed to load spare parts:', response.status, response.statusText);
         }
       } catch (error) {
         console.error('Error loading spare parts:', error);
-      }
-    };
-
-    // Refresh spare parts after save/delete operations
-    const refreshSpareParts = async () => {
-      try {
-        const response = await fetch('/api/spare-parts');
-        if (response.ok) {
-          const data = await response.json();
-          setParts(data);
-        }
-      } catch (error) {
-        console.error('Error refreshing spare parts:', error);
       }
     };
 
