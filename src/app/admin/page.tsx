@@ -62,6 +62,33 @@ export default function AdminPanel() {
       .catch(error => console.error('Error loading spare parts:', error));
   }, [editingId]);
 
+  // Load example data for demonstration
+  const loadExampleData = () => {
+    const examplePart: SparePart = {
+      id: getNextId(parts),
+      name: 'Primjer dijela - Filter ulja',
+      brand: 'Caterpillar',
+      model: '320D',
+      catalogNumber: 'CAT-320D-FLT-EXAMPLE',
+      application: 'Motor',
+      delivery: Availability.Available,
+      priceWithoutVAT: 38.89,
+      priceWithVAT: 45.5,
+      discount: 0,
+      imageUrl: 'https://picsum.photos/seed/example-filter/400/300',
+      technicalSpecs: {
+        spec1: 'Primjena: Motor',
+        spec2: 'Model: 320D',
+        spec3: 'Brend: Caterpillar',
+        spec4: 'Kataloški broj: CAT-320D-FLT-EXAMPLE',
+        spec5: 'Kapacitet: 10L',
+        spec6: 'Visina: 150mm',
+        spec7: 'Pakovanje: 1 komad',
+      },
+    };
+    setFormData(examplePart);
+  };
+
   const cartItemCount = cartItems.reduce((total, item) => total + item.quantity, 0);
 
   const primaryButtonClass = 'inline-flex items-center justify-center gap-2 rounded-full bg-[#ff6b00] px-6 py-3 text-sm font-semibold uppercase tracking-wide text-black shadow-[0_18px_45px_-20px_rgba(255,107,0,0.9)] transition-all hover:scale-105 hover:bg-[#ff7f1a]';
@@ -191,9 +218,14 @@ export default function AdminPanel() {
             <div className="rounded-3xl border border-white/10 bg-[#101010] p-10 shadow-[0_35px_90px_-40px_rgba(255,107,0,0.5)]">
               <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                 <h2 className="text-2xl font-bold text-white">{editingId ? 'Uredi postojeći dio' : 'Dodaj novu karticu'}</h2>
-                <button onClick={handleAdd} className={secondaryButtonClass}>
-                  Novi unos
-                </button>
+                <div className="flex gap-3">
+                  <button onClick={loadExampleData} className={secondaryButtonClass}>
+                    Učitaj primjer
+                  </button>
+                  <button onClick={handleAdd} className={secondaryButtonClass}>
+                    Novi unos
+                  </button>
+                </div>
               </div>
 
               <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2">
