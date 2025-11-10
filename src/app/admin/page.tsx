@@ -82,6 +82,19 @@ export default function AdminPanel() {
       }
     };
 
+    // Refresh spare parts after save/delete operations
+    const refreshSpareParts = async () => {
+      try {
+        const response = await fetch('/api/spare-parts');
+        if (response.ok) {
+          const data = await response.json();
+          setParts(data);
+        }
+      } catch (error) {
+        console.error('Error refreshing spare parts:', error);
+      }
+    };
+
     loadSpareParts();
   }, [editingId]);
 
@@ -209,14 +222,16 @@ export default function AdminPanel() {
       if (response.ok) {
         const savedPart = await response.json();
 
-        // Update local state
-        const updatedParts = editingId
-          ? parts.map((item) => (item.id === editingId ? savedPart : item))
-          : [...parts, savedPart];
+        // Refresh the parts list from API to ensure consistency
+        const refreshResponse = await fetch('/api/spare-parts');
+        if (refreshResponse.ok) {
+          const refreshedData = await refreshResponse.json();
+          setParts(refreshedData);
+        }
 
-        setParts(updatedParts);
+        // Reset form
         setEditingId(null);
-        setFormData(createEmptyPart(getNextId(updatedParts)));
+        setFormData(createEmptyPart(getNextId(parts)));
 
         // Show success message
         alert(editingId ? 'Dio je uspješno ažuriran!' : 'Dio je uspješno dodan!');
@@ -241,11 +256,16 @@ export default function AdminPanel() {
       });
 
       if (response.ok) {
-        const filtered = parts.filter((item) => item.id !== id);
-        setParts(filtered);
+        // Refresh the parts list from API to ensure consistency
+        const refreshResponse = await fetch('/api/spare-parts');
+        if (refreshResponse.ok) {
+          const refreshedData = await refreshResponse.json();
+          setParts(refreshedData);
+        }
+
         if (editingId === id) {
           setEditingId(null);
-          setFormData(createEmptyPart(getNextId(filtered)));
+          setFormData(createEmptyPart(getNextId(parts)));
         }
         alert('Dio je uspješno obrisan!');
       } else {
