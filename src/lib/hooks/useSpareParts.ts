@@ -95,6 +95,62 @@ export function useSpareParts() {
     fetchSpareParts();
   }, [fetchSpareParts]);
 
+  const getRecommendations = useCallback((currentProduct: SparePart, limit: number = 3): SparePart[] => {
+    if (!spareParts.length) return [];
+
+    // Calculate similarity scores for each product
+    const recommendations = spareParts
+      .filter(product => product.id !== currentProduct.id)
+      .map(product => {
+        let score = 0;
+
+        // Brand match (highest weight - 40 points)
+        if (product.brand === currentProduct.brand) {
+          score += 40;
+        }
+
+        // Application match (high weight - 30 points)
+        if (product.application === currentProduct.application) {
+          score += 30;
+        }
+
+        // Model similarity (medium weight - 20 points)
+        if (product.model === currentProduct.model) {
+          score += 20;
+        }
+
+        // Price range similarity (medium weight - up to 15 points)
+        const priceDiff = Math.abs(product.priceWithVAT - currentProduct.priceWithVAT);
+        const priceRange = Math.max(product.priceWithVAT, currentProduct.priceWithVAT) * 0.3; // 30% range
+        if (priceDiff <= priceRange) {
+          score += 15 - (priceDiff / priceRange) * 10; // Higher score for closer prices
+        }
+
+        // Availability bonus (small weight - 5 points)
+        if (product.delivery === currentProduct.delivery) {
+          score += 5;
+        }
+
+        // Discount bonus (small weight - 3 points)
+        if (product.discount > 0 && currentProduct.discount > 0) {
+          score += 3;
+        }
+
+        // Popular brand bonus (small weight - 2 points)
+        const popularBrands = ['Caterpillar', 'Komatsu', 'Volvo'];
+        if (popularBrands.includes(product.brand) && popularBrands.includes(currentProduct.brand)) {
+          score += 2;
+        }
+
+        return { product, score };
+      })
+      .sort((a, b) => b.score - a.score)
+      .slice(0, limit)
+      .map(item => item.product);
+
+    return recommendations;
+  }, [spareParts]);
+
   return {
     spareParts,
     loading,
@@ -103,5 +159,6 @@ export function useSpareParts() {
     createSparePart,
     updateSparePart,
     deleteSparePart,
+    getRecommendations,
   };
 }

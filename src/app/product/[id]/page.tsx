@@ -7,6 +7,7 @@ import Footer from '@/components/Footer';
 import { Page, SparePart, Availability } from '@/types';
 import { ShareIcon, FacebookIcon, CopyIcon, CheckIcon, CartIcon, WhatsAppIcon, ViberIcon } from '@/lib/icons';
 import { useCart } from '@/lib/hooks/useCart';
+import { useSpareParts } from '@/lib/hooks/useSpareParts';
 
 const AvailabilityBadge: React.FC<{ availability: Availability }> = ({ availability }) => {
   const baseClasses = 'px-3 py-1 text-xs font-semibold rounded-full uppercase tracking-wide text-white';
@@ -28,7 +29,9 @@ export default function ProductDetailPage() {
 
   const [activePage, setActivePage] = useState<Page>('productDetail');
   const { cartItemCount, addToCart } = useCart();
+  const { getRecommendations } = useSpareParts();
   const [product, setProduct] = useState<SparePart | null>(null);
+  const [recommendations, setRecommendations] = useState<SparePart[]>([]);
   const [shareMenuOpen, setShareMenuOpen] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [isAdded, setIsAdded] = useState(false);
@@ -41,6 +44,12 @@ export default function ProductDetailPage() {
         .then(data => {
           const foundProduct = data.find((p: SparePart) => p.id === productId);
           setProduct(foundProduct || null);
+
+          // Generate recommendations after product is loaded
+          if (foundProduct) {
+            const recommendedProducts = getRecommendations(foundProduct, 3);
+            setRecommendations(recommendedProducts);
+          }
         })
         .catch(error => console.error('Error loading product:', error));
     }
@@ -233,6 +242,50 @@ export default function ProductDetailPage() {
                 ))}
               </div>
             </div>
+
+            {/* Recommended Products */}
+            {recommendations.length > 0 && (
+              <div className="mt-16">
+                <h2 className="text-2xl font-bold text-white mb-8">Preporučeni proizvodi</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {recommendations.map((recommendedProduct) => (
+                    <div
+                      key={recommendedProduct.id}
+                      className="bg-[#101010] border border-white/5 rounded-xl p-4 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_10px_30px_-15px_rgba(255,107,0,0.5)] group"
+                      onClick={() => window.location.href = `/product/${recommendedProduct.id}`}
+                    >
+                      <div className="relative overflow-hidden rounded-lg mb-3">
+                        <img
+                          src={recommendedProduct.imageUrl}
+                          alt={recommendedProduct.name}
+                          className="w-full h-32 object-cover transform group-hover:scale-105 transition-transform duration-300"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      </div>
+
+                      <div className="space-y-2">
+                        <h3 className="text-sm font-semibold text-white line-clamp-2 group-hover:text-[#ff6b00] transition-colors">
+                          {recommendedProduct.name}
+                        </h3>
+                        <p className="text-xs text-neutral-400">
+                          {recommendedProduct.brand} • {recommendedProduct.model}
+                        </p>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-bold text-[#ff6b00]">
+                            {(recommendedProduct.priceWithVAT * (1 - recommendedProduct.discount / 100)).toFixed(2)} BAM
+                          </span>
+                          {recommendedProduct.discount > 0 && (
+                            <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full">
+                              -{recommendedProduct.discount}%
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </main>
