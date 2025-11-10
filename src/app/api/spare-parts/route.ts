@@ -285,7 +285,21 @@ let sparePartsData = [...fallbackSpareParts];
 
 export async function GET() {
   try {
-    // Try to use database first
+    // Try to use Vercel Blob for persistent storage
+    try {
+      const { head, put } = await import('@vercel/blob');
+      const blob = await head('spare-parts-data.json');
+
+      if (blob) {
+        const response = await fetch(blob.url);
+        const sparePartsData = await response.json();
+        return NextResponse.json(sparePartsData);
+      }
+    } catch (blobError) {
+      console.warn('Blob storage not available, trying database:', blobError);
+    }
+
+    // Fallback to database
     try {
       const { db } = await import('@/db');
       const { spareParts } = await import('@/db/schema');
@@ -330,78 +344,78 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { name, brand, model, catalogNumber, application, delivery, priceWithoutVAT, priceWithVAT, discount, imageUrl, stock, technicalSpecs } = body;
 
-    // Try to use database first
+    // Get current spare parts data
+    let currentData: SparePart[] = [];
     try {
-      const { db } = await import('@/db');
-      const { spareParts } = await import('@/db/schema');
-      const result = await db.insert(spareParts).values({
-        name,
-        brand,
-        model,
-        catalogNumber,
-        application,
-        delivery,
-        priceWithoutVAT,
-        priceWithVAT,
-        discount,
-        imageUrl,
-        stock,
-        spec1: technicalSpecs.spec1,
-        spec2: technicalSpecs.spec2,
-        spec3: technicalSpecs.spec3,
-        spec4: technicalSpecs.spec4,
-        spec5: technicalSpecs.spec5,
-        spec6: technicalSpecs.spec6,
-        spec7: technicalSpecs.spec7,
-      }).returning();
-
-      const newSparePart: SparePart = {
-        id: result[0].id,
-        name: result[0].name,
-        brand: result[0].brand,
-        model: result[0].model,
-        catalogNumber: result[0].catalogNumber,
-        application: result[0].application,
-        delivery: result[0].delivery as Availability,
-        priceWithoutVAT: result[0].priceWithoutVAT,
-        priceWithVAT: result[0].priceWithVAT,
-        discount: result[0].discount,
-        imageUrl: result[0].imageUrl,
-        stock: result[0].stock,
-        technicalSpecs: {
-          spec1: result[0].spec1,
-          spec2: result[0].spec2,
-          spec3: result[0].spec3,
-          spec4: result[0].spec4,
-          spec5: result[0].spec5,
-          spec6: result[0].spec6,
-          spec7: result[0].spec7,
-        },
-      };
-
-      return NextResponse.json(newSparePart, { status: 201 });
-    } catch (dbError) {
-      // If database fails, simulate adding to in-memory data
-      console.warn('Database not available, simulating add:', dbError);
-      const newId = Math.max(...sparePartsData.map(p => p.id)) + 1;
-      const newSparePart: SparePart = {
-        id: newId,
-        name,
-        brand,
-        model,
-        catalogNumber,
-        application,
-        delivery,
-        priceWithoutVAT,
-        priceWithVAT,
-        discount,
-        imageUrl,
-        stock,
-        technicalSpecs,
-      };
-      sparePartsData.push(newSparePart);
-      return NextResponse.json(newSparePart, { status: 201 });
+      const getResponse = await GET();
+      if (getResponse.ok) {
+        currentData = await getResponse.json();
+      }
+    } catch (error) {
+      currentData = [...fallbackSpareParts];
     }
+
+    // Create new spare part
+    const newId = Math.max(...currentData.map(p => p.id), 0) + 1;
+    const newSparePart: SparePart = {
+      id: newId,
+      name,
+      brand,
+      model,
+      catalogNumber,
+      application,
+      delivery,
+      priceWithoutVAT,
+      priceWithVAT,
+      discount,
+      imageUrl,
+      stock,
+      technicalSpecs,
+    };
+
+    // Add to current data
+    currentData.push(newSparePart);
+
+    // Save to Vercel Blob
+    try {
+      const { put } = await import('@vercel/blob');
+      await put('spare-parts-data.json', JSON.stringify(currentData), {
+        access: 'public',
+        contentType: 'application/json',
+      });
+    } catch (blobError) {
+      console.warn('Blob storage failed, trying database:', blobError);
+      // Fallback to database
+      try {
+        const { db } = await import('@/db');
+        const { spareParts } = await import('@/db/schema');
+        await db.insert(spareParts).values({
+          name,
+          brand,
+          model,
+          catalogNumber,
+          application,
+          delivery,
+          priceWithoutVAT,
+          priceWithVAT,
+          discount,
+          imageUrl,
+          stock,
+          spec1: technicalSpecs.spec1,
+          spec2: technicalSpecs.spec2,
+          spec3: technicalSpecs.spec3,
+          spec4: technicalSpecs.spec4,
+          spec5: technicalSpecs.spec5,
+          spec6: technicalSpecs.spec6,
+          spec7: technicalSpecs.spec7,
+        });
+      } catch (dbError) {
+        console.warn('Database also failed, using in-memory storage:', dbError);
+        sparePartsData.push(newSparePart);
+      }
+    }
+
+    return NextResponse.json(newSparePart, { status: 201 });
   } catch (error) {
     console.error('Error creating spare part:', error);
     return NextResponse.json({ error: 'Failed to create spare part' }, { status: 500 });
@@ -413,56 +427,56 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const { id, name, brand, model, catalogNumber, application, delivery, priceWithoutVAT, priceWithVAT, discount, imageUrl, stock, technicalSpecs } = body;
 
-    // Try to use database first
+    // Get current spare parts data
+    let currentData: SparePart[] = [];
     try {
-      const { db } = await import('@/db');
-      const { spareParts } = await import('@/db/schema');
-      const { eq } = await import('drizzle-orm');
-      await db.update(spareParts).set({
-        name,
-        brand,
-        model,
-        catalogNumber,
-        application,
-        delivery,
-        priceWithoutVAT,
-        priceWithVAT,
-        discount,
-        imageUrl,
-        stock,
-        spec1: technicalSpecs.spec1,
-        spec2: technicalSpecs.spec2,
-        spec3: technicalSpecs.spec3,
-        spec4: technicalSpecs.spec4,
-        spec5: technicalSpecs.spec5,
-        spec6: technicalSpecs.spec6,
-        spec7: technicalSpecs.spec7,
-      }).where(eq(spareParts.id, id));
+      const getResponse = await GET();
+      if (getResponse.ok) {
+        currentData = await getResponse.json();
+      }
+    } catch (error) {
+      currentData = [...fallbackSpareParts];
+    }
 
-      const updatedSparePart: SparePart = {
-        id,
-        name,
-        brand,
-        model,
-        catalogNumber,
-        application,
-        delivery,
-        priceWithoutVAT,
-        priceWithVAT,
-        discount,
-        imageUrl,
-        stock,
-        technicalSpecs,
-      };
+    // Find and update the spare part
+    const index = currentData.findIndex(p => p.id === id);
+    if (index === -1) {
+      return NextResponse.json({ error: 'Spare part not found' }, { status: 404 });
+    }
 
-      return NextResponse.json(updatedSparePart);
-    } catch (dbError) {
-      // If database fails, simulate update in-memory
-      console.warn('Database not available, simulating update:', dbError);
-      const index = sparePartsData.findIndex(p => p.id === id);
-      if (index !== -1) {
-        sparePartsData[index] = {
-          id,
+    const updatedSparePart: SparePart = {
+      id,
+      name,
+      brand,
+      model,
+      catalogNumber,
+      application,
+      delivery,
+      priceWithoutVAT,
+      priceWithVAT,
+      discount,
+      imageUrl,
+      stock,
+      technicalSpecs,
+    };
+
+    currentData[index] = updatedSparePart;
+
+    // Save to Vercel Blob
+    try {
+      const { put } = await import('@vercel/blob');
+      await put('spare-parts-data.json', JSON.stringify(currentData), {
+        access: 'public',
+        contentType: 'application/json',
+      });
+    } catch (blobError) {
+      console.warn('Blob storage failed, trying database:', blobError);
+      // Fallback to database
+      try {
+        const { db } = await import('@/db');
+        const { spareParts } = await import('@/db/schema');
+        const { eq } = await import('drizzle-orm');
+        await db.update(spareParts).set({
           name,
           brand,
           model,
@@ -473,12 +487,22 @@ export async function PUT(request: NextRequest) {
           priceWithVAT,
           discount,
           imageUrl,
-          technicalSpecs,
-        };
-        return NextResponse.json(sparePartsData[index]);
+          stock,
+          spec1: technicalSpecs.spec1,
+          spec2: technicalSpecs.spec2,
+          spec3: technicalSpecs.spec3,
+          spec4: technicalSpecs.spec4,
+          spec5: technicalSpecs.spec5,
+          spec6: technicalSpecs.spec6,
+          spec7: technicalSpecs.spec7,
+        }).where(eq(spareParts.id, id));
+      } catch (dbError) {
+        console.warn('Database also failed, using in-memory storage:', dbError);
+        sparePartsData[index] = updatedSparePart;
       }
-      return NextResponse.json({ error: 'Spare part not found' }, { status: 404 });
     }
+
+    return NextResponse.json(updatedSparePart);
   } catch (error) {
     console.error('Error updating spare part:', error);
     return NextResponse.json({ error: 'Failed to update spare part' }, { status: 500 });
@@ -494,23 +518,52 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'ID is required' }, { status: 400 });
     }
 
-    // Try to use database first
+    const partId = parseInt(id);
+
+    // Get current spare parts data
+    let currentData: SparePart[] = [];
     try {
-      const { db } = await import('@/db');
-      const { spareParts } = await import('@/db/schema');
-      const { eq } = await import('drizzle-orm');
-      await db.delete(spareParts).where(eq(spareParts.id, parseInt(id)));
-      return NextResponse.json({ message: 'Spare part deleted successfully' });
-    } catch (dbError) {
-      // If database fails, simulate delete in-memory
-      console.warn('Database not available, simulating delete:', dbError);
-      const index = sparePartsData.findIndex(p => p.id === parseInt(id));
-      if (index !== -1) {
-        sparePartsData.splice(index, 1);
-        return NextResponse.json({ message: 'Spare part deleted successfully' });
+      const getResponse = await GET();
+      if (getResponse.ok) {
+        currentData = await getResponse.json();
       }
+    } catch (error) {
+      currentData = [...fallbackSpareParts];
+    }
+
+    // Find and remove the spare part
+    const index = currentData.findIndex(p => p.id === partId);
+    if (index === -1) {
       return NextResponse.json({ error: 'Spare part not found' }, { status: 404 });
     }
+
+    currentData.splice(index, 1);
+
+    // Save to Vercel Blob
+    try {
+      const { put } = await import('@vercel/blob');
+      await put('spare-parts-data.json', JSON.stringify(currentData), {
+        access: 'public',
+        contentType: 'application/json',
+      });
+    } catch (blobError) {
+      console.warn('Blob storage failed, trying database:', blobError);
+      // Fallback to database
+      try {
+        const { db } = await import('@/db');
+        const { spareParts } = await import('@/db/schema');
+        const { eq } = await import('drizzle-orm');
+        await db.delete(spareParts).where(eq(spareParts.id, partId));
+      } catch (dbError) {
+        console.warn('Database also failed, using in-memory storage:', dbError);
+        const memIndex = sparePartsData.findIndex(p => p.id === partId);
+        if (memIndex !== -1) {
+          sparePartsData.splice(memIndex, 1);
+        }
+      }
+    }
+
+    return NextResponse.json({ message: 'Spare part deleted successfully' });
   } catch (error) {
     console.error('Error deleting spare part:', error);
     return NextResponse.json({ error: 'Failed to delete spare part' }, { status: 500 });
