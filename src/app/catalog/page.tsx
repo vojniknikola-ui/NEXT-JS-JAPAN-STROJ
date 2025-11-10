@@ -1,6 +1,12 @@
 async function fetchParts() {
-  const res = await fetch("http://localhost:3000/api/parts", { next: { revalidate: 60 } });
-  return res.json();
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000"}/api/parts`, { next: { revalidate: 60 } });
+    if (!res.ok) throw new Error('Failed to fetch');
+    return res.json();
+  } catch (error) {
+    console.error('Error fetching parts:', error);
+    return []; // Return empty array as fallback
+  }
 }
 
 export default async function CatalogPage() {
