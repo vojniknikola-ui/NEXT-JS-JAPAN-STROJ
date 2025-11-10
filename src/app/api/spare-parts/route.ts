@@ -14,6 +14,7 @@ const fallbackSpareParts: SparePart[] = [
     priceWithoutVAT: 38.89,
     priceWithVAT: 45.5,
     discount: 0,
+    stock: 10,
     imageUrl: 'https://picsum.photos/seed/filter1/400/300',
     technicalSpecs: {
       spec1: 'Primjena: Motor',
@@ -36,6 +37,7 @@ const fallbackSpareParts: SparePart[] = [
     priceWithoutVAT: 1068.38,
     priceWithVAT: 1250,
     discount: 0,
+    stock: 5,
     imageUrl: 'https://picsum.photos/seed/gear1/400/300',
     technicalSpecs: {
       spec1: 'Primjena: Transmisija',
@@ -58,6 +60,7 @@ const fallbackSpareParts: SparePart[] = [
     priceWithoutVAT: 727.14,
     priceWithVAT: 850.75,
     discount: 0,
+    stock: 8,
     imageUrl: 'https://picsum.photos/seed/injector1/400/300',
     technicalSpecs: {
       spec1: 'Primjena: Motor',
@@ -80,6 +83,7 @@ const fallbackSpareParts: SparePart[] = [
     priceWithoutVAT: 2735.04,
     priceWithVAT: 3200,
     discount: 0,
+    stock: 2,
     imageUrl: 'https://picsum.photos/seed/pump1/400/300',
     technicalSpecs: {
       spec1: 'Primjena: Hidraulika',
@@ -102,6 +106,7 @@ const fallbackSpareParts: SparePart[] = [
     priceWithoutVAT: 555.56,
     priceWithVAT: 650,
     discount: 0,
+    stock: 15,
     imageUrl: 'https://picsum.photos/seed/gasket1/400/300',
     technicalSpecs: {
       spec1: 'Primjena: Motor',
@@ -124,6 +129,7 @@ const fallbackSpareParts: SparePart[] = [
     priceWithoutVAT: 72.65,
     priceWithVAT: 85,
     discount: 0,
+    stock: 20,
     imageUrl: 'https://picsum.photos/seed/airfilter/400/300',
     technicalSpecs: {
       spec1: 'Primjena: Motor',
@@ -146,6 +152,7 @@ const fallbackSpareParts: SparePart[] = [
     priceWithoutVAT: 615.38,
     priceWithVAT: 720,
     discount: 0,
+    stock: 7,
     imageUrl: 'https://picsum.photos/seed/starter/400/300',
     technicalSpecs: {
       spec1: 'Primjena: Elektrika',
@@ -168,6 +175,7 @@ const fallbackSpareParts: SparePart[] = [
     priceWithoutVAT: 153.85,
     priceWithVAT: 180,
     discount: 5,
+    stock: 12,
     imageUrl: 'https://picsum.photos/seed/tracklink/400/300',
     technicalSpecs: {
       spec1: 'Primjena: Podvozje',
@@ -190,6 +198,7 @@ const fallbackSpareParts: SparePart[] = [
     priceWithoutVAT: 384.62,
     priceWithVAT: 450,
     discount: 0,
+    stock: 3,
     imageUrl: 'https://picsum.photos/seed/piston/400/300',
     technicalSpecs: {
       spec1: 'Primjena: Motor',
@@ -212,6 +221,7 @@ const fallbackSpareParts: SparePart[] = [
     priceWithoutVAT: 1794.87,
     priceWithVAT: 2100,
     discount: 3,
+    stock: 4,
     imageUrl: 'https://picsum.photos/seed/turbo/400/300',
     technicalSpecs: {
       spec1: 'Primjena: Motor',
@@ -234,6 +244,7 @@ const fallbackSpareParts: SparePart[] = [
     priceWithoutVAT: 811.97,
     priceWithVAT: 950,
     discount: 0,
+    stock: 6,
     imageUrl: 'https://picsum.photos/seed/valve/400/300',
     technicalSpecs: {
       spec1: 'Primjena: Hidraulika',
@@ -256,6 +267,7 @@ const fallbackSpareParts: SparePart[] = [
     priceWithoutVAT: 1538.46,
     priceWithVAT: 1800,
     discount: 0,
+    stock: 9,
     imageUrl: 'https://picsum.photos/seed/radiator/400/300',
     technicalSpecs: {
       spec1: 'Primjena: Hlađenje',
