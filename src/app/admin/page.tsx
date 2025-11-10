@@ -163,22 +163,34 @@ export default function AdminPanel() {
       });
 
       if (response.ok) {
+        const savedPart = await response.json();
+
+        // Update local state
         const updatedParts = editingId
-          ? parts.map((item) => (item.id === editingId ? partToSave : item))
-          : [...parts, partToSave];
+          ? parts.map((item) => (item.id === editingId ? savedPart : item))
+          : [...parts, savedPart];
 
         setParts(updatedParts);
         setEditingId(null);
         setFormData(createEmptyPart(getNextId(updatedParts)));
+
+        // Show success message
+        alert(editingId ? 'Dio je uspješno ažuriran!' : 'Dio je uspješno dodan!');
       } else {
-        console.error('Failed to save spare part');
+        const errorData = await response.json();
+        alert(`Greška: ${errorData.error || 'Neuspješno spremanje dijela'}`);
       }
     } catch (error) {
       console.error('Error saving spare part:', error);
+      alert('Došlo je do greške prilikom spremanja dijela.');
     }
   };
 
   const handleDelete = async (id: number) => {
+    if (!confirm('Jeste li sigurni da želite obrisati ovaj dio?')) {
+      return;
+    }
+
     try {
       const response = await fetch(`/api/spare-parts?id=${id}`, {
         method: 'DELETE',
@@ -191,11 +203,14 @@ export default function AdminPanel() {
           setEditingId(null);
           setFormData(createEmptyPart(getNextId(filtered)));
         }
+        alert('Dio je uspješno obrisan!');
       } else {
-        console.error('Failed to delete spare part');
+        const errorData = await response.json();
+        alert(`Greška: ${errorData.error || 'Neuspješno brisanje dijela'}`);
       }
     } catch (error) {
       console.error('Error deleting spare part:', error);
+      alert('Došlo je do greške prilikom brisanja dijela.');
     }
   };
 
