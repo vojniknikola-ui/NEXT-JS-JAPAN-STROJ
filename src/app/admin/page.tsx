@@ -38,17 +38,31 @@ export default function AdminPanel() {
   const [formData, setFormData] = useState<SparePart>(() => createEmptyPart(getNextId([])));
 
   useEffect(() => {
-    // Load cart from localStorage
-    if (typeof window !== 'undefined') {
-      const savedCart = localStorage.getItem('japanStrojCart');
-      if (savedCart) {
-        try {
-          setCartItems(JSON.parse(savedCart));
-        } catch (error) {
-          console.error('Error loading cart:', error);
+    // Load cart from API
+    const loadCart = async () => {
+      try {
+        const response = await fetch('/api/cart');
+        if (response.ok) {
+          const data = await response.json();
+          setCartItems(data);
+        }
+      } catch (error) {
+        console.error('Error loading cart:', error);
+        // Fallback to localStorage if API fails
+        if (typeof window !== 'undefined') {
+          const savedCart = localStorage.getItem('japanStrojCart');
+          if (savedCart) {
+            try {
+              setCartItems(JSON.parse(savedCart));
+            } catch (localError) {
+              console.error('Error loading cart from localStorage:', localError);
+            }
+          }
         }
       }
-    }
+    };
+
+    loadCart();
 
     // Load spare parts from API
     const loadSpareParts = async () => {
