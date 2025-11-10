@@ -50,47 +50,47 @@ export default function CartPage() {
     <div className="bg-[#0b0b0b] text-neutral-100 min-h-screen flex flex-col">
       <Header activePage={activePage} setActivePage={setActivePage} cartItemCount={cartItemCount} />
       <main className="flex-grow">
-        <div className="container mx-auto px-4 py-12">
-          <h1 className="text-3xl font-bold text-white mb-8">Vaša košarica</h1>
+        <div className="container mx-auto px-4 py-8 sm:py-12">
+          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-6 sm:mb-8">Vaša košarica</h1>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
             {/* Cart Items */}
-            <div className="lg:col-span-2 space-y-4">
+            <div className="lg:col-span-2 space-y-3 sm:space-y-4">
               {cartItems.map((item) => {
                 const priceAfterDiscount = item.priceWithVAT * (1 - item.discount / 100);
                 return (
-                  <div key={item.id} className="bg-[#101010] border border-white/5 rounded-2xl p-6">
-                    <div className="flex items-center gap-6">
+                  <div key={item.id} className="bg-[#101010] border border-white/5 rounded-2xl p-4 sm:p-6">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
                       <img
                         src={item.imageUrl}
                         alt={item.name}
-                        className="w-20 h-20 object-cover rounded-lg"
+                        className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg flex-shrink-0"
                       />
-                      <div className="flex-grow">
-                        <h3 className="text-lg font-semibold text-white">{item.name}</h3>
-                        <p className="text-neutral-400 text-sm">{item.brand} - {item.model}</p>
-                        <p className="text-neutral-400 text-sm">Kataloški broj: {item.catalogNumber}</p>
-                        <div className="flex items-center justify-between mt-2">
+                      <div className="flex-grow min-w-0">
+                        <h3 className="text-base sm:text-lg font-semibold text-white truncate">{item.name}</h3>
+                        <p className="text-neutral-400 text-xs sm:text-sm">{item.brand} - {item.model}</p>
+                        <p className="text-neutral-400 text-xs sm:text-sm">Kataloški broj: {item.catalogNumber}</p>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between mt-2 gap-2">
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                              className="w-8 h-8 bg-[#ff6b00] hover:bg-[#ff7f1a] text-white rounded-full flex items-center justify-center transition-colors"
+                              className="w-7 h-7 sm:w-8 sm:h-8 bg-[#ff6b00] hover:bg-[#ff7f1a] text-white rounded-full flex items-center justify-center transition-colors text-sm"
                             >
                               -
                             </button>
-                            <span className="text-white font-semibold min-w-[2rem] text-center">{item.quantity}</span>
+                            <span className="text-white font-semibold min-w-[2rem] text-center text-sm sm:text-base">{item.quantity}</span>
                             <button
                               onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                              className="w-8 h-8 bg-[#ff6b00] hover:bg-[#ff7f1a] text-white rounded-full flex items-center justify-center transition-colors"
+                              className="w-7 h-7 sm:w-8 sm:h-8 bg-[#ff6b00] hover:bg-[#ff7f1a] text-white rounded-full flex items-center justify-center transition-colors text-sm"
                             >
                               +
                             </button>
                           </div>
                           <div className="text-right">
-                            <div className="text-neutral-400 text-sm">
+                            <div className="text-neutral-400 text-xs sm:text-sm">
                               {item.priceWithoutVAT.toFixed(2)} BAM × {item.quantity}
                             </div>
-                            <div className="text-[#ff6b00] font-bold">
+                            <div className="text-[#ff6b00] font-bold text-sm sm:text-base">
                               {(item.priceWithoutVAT * item.quantity * 1.17).toFixed(2)} BAM
                             </div>
                           </div>
@@ -98,9 +98,9 @@ export default function CartPage() {
                       </div>
                       <button
                         onClick={() => removeFromCart(item.id)}
-                        className="text-red-500 hover:text-red-400 transition-colors"
+                        className="text-red-500 hover:text-red-400 transition-colors flex-shrink-0"
                       >
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
                       </button>
