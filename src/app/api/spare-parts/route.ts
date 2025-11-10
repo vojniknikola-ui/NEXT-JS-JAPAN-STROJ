@@ -290,6 +290,7 @@ export async function GET() {
         priceWithVAT: row.priceWithVAT,
         discount: row.discount,
         imageUrl: row.imageUrl,
+        stock: row.stock,
         technicalSpecs: {
           spec1: row.spec1,
           spec2: row.spec2,
@@ -315,7 +316,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, brand, model, catalogNumber, application, delivery, priceWithoutVAT, priceWithVAT, discount, imageUrl, technicalSpecs } = body;
+    const { name, brand, model, catalogNumber, application, delivery, priceWithoutVAT, priceWithVAT, discount, imageUrl, stock, technicalSpecs } = body;
 
     // Try to use database first
     try {
@@ -332,6 +333,7 @@ export async function POST(request: NextRequest) {
         priceWithVAT,
         discount,
         imageUrl,
+        stock,
         spec1: technicalSpecs.spec1,
         spec2: technicalSpecs.spec2,
         spec3: technicalSpecs.spec3,
@@ -353,6 +355,7 @@ export async function POST(request: NextRequest) {
         priceWithVAT: result[0].priceWithVAT,
         discount: result[0].discount,
         imageUrl: result[0].imageUrl,
+        stock: result[0].stock,
         technicalSpecs: {
           spec1: result[0].spec1,
           spec2: result[0].spec2,
@@ -381,6 +384,7 @@ export async function POST(request: NextRequest) {
         priceWithVAT,
         discount,
         imageUrl,
+        stock,
         technicalSpecs,
       };
       sparePartsData.push(newSparePart);
@@ -395,7 +399,7 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id, name, brand, model, catalogNumber, application, delivery, priceWithoutVAT, priceWithVAT, discount, imageUrl, technicalSpecs } = body;
+    const { id, name, brand, model, catalogNumber, application, delivery, priceWithoutVAT, priceWithVAT, discount, imageUrl, stock, technicalSpecs } = body;
 
     // Try to use database first
     try {
@@ -413,6 +417,7 @@ export async function PUT(request: NextRequest) {
         priceWithVAT,
         discount,
         imageUrl,
+        stock,
         spec1: technicalSpecs.spec1,
         spec2: technicalSpecs.spec2,
         spec3: technicalSpecs.spec3,
@@ -434,6 +439,7 @@ export async function PUT(request: NextRequest) {
         priceWithVAT,
         discount,
         imageUrl,
+        stock,
         technicalSpecs,
       };
 

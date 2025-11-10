@@ -12,6 +12,7 @@ export const spareParts = sqliteTable('spare_parts', {
   priceWithVAT: real('price_with_vat').notNull(),
   discount: real('discount').notNull().default(0),
   imageUrl: text('image_url').notNull(),
+  stock: integer('stock').notNull().default(0),
   spec1: text('spec1').notNull(),
   spec2: text('spec2').notNull(),
   spec3: text('spec3').notNull(),
