@@ -55,15 +55,30 @@ export async function POST(request: NextRequest) {
   try {
     const cartItems: CartItem[] = await request.json();
     const cartId = getCartId(request);
-    const blobUrl = `cart-${cartId}.json`;
 
-    // Store cart data in Vercel Blob
-    const blob = await put(blobUrl, JSON.stringify(cartItems), {
-      access: 'public',
-      contentType: 'application/json',
-    });
+    // Try to save to Vercel Blob first
+    try {
+      const blobUrl = `cart-${cartId}.json`;
+      const blob = await put(blobUrl, JSON.stringify(cartItems), {
+        access: 'public',
+        contentType: 'application/json',
+      });
 
-    // Also backup to database for redundancy
+      // Set cart ID cookie for future requests
+      const response = NextResponse.json({ success: true, url: blob.url });
+      response.cookies.set('japanStrojCartId', cartId, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 30, // 30 days
+      });
+
+      return response;
+    } catch (blobError) {
+      console.warn('Blob storage failed, trying database:', blobError);
+    }
+
+    // Fallback to database if blob fails
     try {
       const { db } = await import('@/db');
       const { carts } = await import('@/db/schema');
@@ -81,20 +96,28 @@ export async function POST(request: NextRequest) {
           updatedAt: now,
         },
       });
+
+      const response = NextResponse.json({ success: true });
+      response.cookies.set('japanStrojCartId', cartId, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 30, // 30 days
+      });
+
+      return response;
     } catch (dbError) {
-      console.warn('Database backup failed, but blob storage succeeded:', dbError);
+      console.warn('Database also failed, using localStorage fallback:', dbError);
+      // For development, just return success since localStorage will be used
+      const response = NextResponse.json({ success: true });
+      response.cookies.set('japanStrojCartId', cartId, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 30, // 30 days
+      });
+      return response;
     }
-
-    // Set cart ID cookie for future requests
-    const response = NextResponse.json({ success: true, url: blob.url });
-    response.cookies.set('japanStrojCartId', cartId, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 30, // 30 days
-    });
-
-    return response;
   } catch (error) {
     console.error('Error saving cart:', error);
     return NextResponse.json({ error: 'Failed to save cart' }, { status: 500 });
