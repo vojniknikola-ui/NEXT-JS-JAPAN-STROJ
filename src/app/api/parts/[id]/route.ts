@@ -3,13 +3,15 @@ import { parts } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { partUpdateSchema } from "@/lib/validation";
 
-export async function GET(_: Request, { params }: { params: { id: string } }) {
-  const [row] = await db.select().from(parts).where(eq(parts.id, Number(params.id)));
+export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const [row] = await db.select().from(parts).where(eq(parts.id, Number(id)));
   if (!row) return new Response("Not found", { status: 404 });
   return Response.json(row);
 }
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const payload = await req.json();
   const parsed = partUpdateSchema.safeParse(payload);
   if (!parsed.success) return Response.json(parsed.error.flatten(), { status: 400 });
@@ -27,11 +29,12 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   if (parsed.data.specJson !== undefined) updateData.specJson = parsed.data.specJson;
   if (parsed.data.isActive !== undefined) updateData.isActive = parsed.data.isActive;
 
-  await db.update(parts).set(updateData).where(eq(parts.id, Number(params.id)));
+  await db.update(parts).set(updateData).where(eq(parts.id, Number(id)));
   return Response.json({ ok: true });
 }
 
-export async function DELETE(_: Request, { params }: { params: { id: string } }) {
-  await db.delete(parts).where(eq(parts.id, Number(params.id)));
+export async function DELETE(_: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  await db.delete(parts).where(eq(parts.id, Number(id)));
   return Response.json({ ok: true });
 }
