@@ -199,6 +199,7 @@ export default function AdminPanel() {
 
     try {
       const method = editingId ? 'PUT' : 'POST';
+      console.log('Saving spare part:', dataToSend); // Debug log
       const response = await fetch('/api/spare-parts', {
         method,
         headers: {
@@ -207,13 +208,17 @@ export default function AdminPanel() {
         body: JSON.stringify(dataToSend),
       });
 
+      console.log('Save response status:', response.status); // Debug log
+
       if (response.ok) {
         const savedPart = await response.json();
+        console.log('Saved part:', savedPart); // Debug log
 
         // Refresh the parts list from API to ensure consistency
         const refreshResponse = await fetch('/api/spare-parts');
         if (refreshResponse.ok) {
           const refreshedData = await refreshResponse.json();
+          console.log('Refreshed parts:', refreshedData); // Debug log
           setParts(refreshedData);
         }
 
@@ -225,6 +230,7 @@ export default function AdminPanel() {
         alert(editingId ? 'Dio je uspješno ažuriran!' : 'Dio je uspješno dodan!');
       } else {
         const errorData = await response.json();
+        console.error('Save error:', errorData); // Debug log
         alert(`Greška: ${errorData.error || 'Neuspješno spremanje dijela'}`);
       }
     } catch (error) {
