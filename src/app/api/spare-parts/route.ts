@@ -302,8 +302,8 @@ export async function GET() {
     // Fallback to database
     try {
       const { db } = await import('@/db');
-      const { spareParts } = await import('@/db/schema');
-      const result = await db.select().from(spareParts);
+      const { parts } = await import('@/db/schema');
+      const result = await db.select().from(parts);
       const sparePartsData: SparePart[] = result.map((row: any) => ({
         id: row.id,
         name: row.name,
@@ -388,26 +388,29 @@ export async function POST(request: NextRequest) {
       // Fallback to database
       try {
         const { db } = await import('@/db');
-        const { spareParts } = await import('@/db/schema');
-        await db.insert(spareParts).values({
-          name,
-          brand,
-          model,
-          catalogNumber,
-          application,
-          delivery,
-          priceWithoutVAT,
-          priceWithVAT,
-          discount,
-          imageUrl,
+        const { parts } = await import('@/db/schema');
+        await db.insert(parts).values({
+          sku: catalogNumber,
+          title: name,
+          description: `${brand} ${model} - ${application}`,
+          price: priceWithVAT.toString(),
+          currency: "EUR",
           stock,
-          spec1: technicalSpecs.spec1,
-          spec2: technicalSpecs.spec2,
-          spec3: technicalSpecs.spec3,
-          spec4: technicalSpecs.spec4,
-          spec5: technicalSpecs.spec5,
-          spec6: technicalSpecs.spec6,
-          spec7: technicalSpecs.spec7,
+          categoryId: 1, // Default category
+          imageUrl,
+          specJson: JSON.stringify({
+            brand,
+            model,
+            application,
+            spec1: technicalSpecs.spec1,
+            spec2: technicalSpecs.spec2,
+            spec3: technicalSpecs.spec3,
+            spec4: technicalSpecs.spec4,
+            spec5: technicalSpecs.spec5,
+            spec6: technicalSpecs.spec6,
+            spec7: technicalSpecs.spec7,
+          }),
+          isActive: true,
         });
       } catch (dbError) {
         console.warn('Database also failed, using in-memory storage:', dbError);
@@ -474,28 +477,32 @@ export async function PUT(request: NextRequest) {
       // Fallback to database
       try {
         const { db } = await import('@/db');
-        const { spareParts } = await import('@/db/schema');
+        const { parts } = await import('@/db/schema');
         const { eq } = await import('drizzle-orm');
-        await db.update(spareParts).set({
-          name,
-          brand,
-          model,
-          catalogNumber,
-          application,
-          delivery,
-          priceWithoutVAT,
-          priceWithVAT,
-          discount,
-          imageUrl,
+        await db.update(parts).set({
+          sku: catalogNumber,
+          title: name,
+          description: `${brand} ${model} - ${application}`,
+          price: priceWithVAT.toString(),
+          currency: "EUR",
           stock,
-          spec1: technicalSpecs.spec1,
-          spec2: technicalSpecs.spec2,
-          spec3: technicalSpecs.spec3,
-          spec4: technicalSpecs.spec4,
-          spec5: technicalSpecs.spec5,
-          spec6: technicalSpecs.spec6,
-          spec7: technicalSpecs.spec7,
-        }).where(eq(spareParts.id, id));
+          categoryId: 1, // Default category
+          imageUrl,
+          specJson: JSON.stringify({
+            brand,
+            model,
+            application,
+            spec1: technicalSpecs.spec1,
+            spec2: technicalSpecs.spec2,
+            spec3: technicalSpecs.spec3,
+            spec4: technicalSpecs.spec4,
+            spec5: technicalSpecs.spec5,
+            spec6: technicalSpecs.spec6,
+            spec7: technicalSpecs.spec7,
+          }),
+          isActive: true,
+          updatedAt: new Date(),
+        }).where(eq(parts.id, id));
       } catch (dbError) {
         console.warn('Database also failed, using in-memory storage:', dbError);
         sparePartsData[index] = updatedSparePart;
@@ -551,9 +558,9 @@ export async function DELETE(request: NextRequest) {
       // Fallback to database
       try {
         const { db } = await import('@/db');
-        const { spareParts } = await import('@/db/schema');
+        const { parts } = await import('@/db/schema');
         const { eq } = await import('drizzle-orm');
-        await db.delete(spareParts).where(eq(spareParts.id, partId));
+        await db.delete(parts).where(eq(parts.id, partId));
       } catch (dbError) {
         console.warn('Database also failed, using in-memory storage:', dbError);
         const memIndex = sparePartsData.findIndex(p => p.id === partId);
