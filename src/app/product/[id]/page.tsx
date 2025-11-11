@@ -87,6 +87,8 @@ export default function ProductDetailPage() {
   const handleAddToCart = () => {
     if (!product) return;
 
+    console.log('Adding product to cart from detail page:', product); // Debug log
+
     addToCart(product);
     setIsAdded(true);
     setTimeout(() => {

@@ -125,6 +125,7 @@ export default function AdminParts() {
       if (sortDirection) params.append('order', sortDirection);
 
       const url = `/api/parts?${params.toString()}`;
+      console.log('Fetching parts from:', url); // Debug log
       const res = await fetch(url);
 
       if (!res.ok) {
@@ -132,6 +133,7 @@ export default function AdminParts() {
       }
 
       const data = await res.json();
+      console.log('Loaded parts data:', data); // Debug log
       setParts(data);
     } catch (error) {
       console.error('Error refreshing parts:', error);
