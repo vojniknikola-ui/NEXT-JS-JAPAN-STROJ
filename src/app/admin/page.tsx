@@ -38,21 +38,21 @@ export default function AdminParts() {
   const [file, setFile] = useState<File | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<PartInput>({
-    sku: "", 
-    title: "", 
+    sku: "",
+    title: "",
     brand: "",
     model: "",
     catalogNumber: "",
     application: "",
     delivery: "available",
     description: "",
-    price: 0, 
+    price: 0,
     priceWithoutVAT: 0,
     priceWithVAT: 0,
     discount: 0,
     currency: "BAM",
-    stock: 0, 
-    categoryId: 1, 
+    stock: 0,
+    categoryId: 1,
     spec1: "",
     spec2: "",
     spec3: "",
@@ -63,6 +63,13 @@ export default function AdminParts() {
     isActive: true,
   } as any);
   const [q, setQ] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(50);
+  const [sortField, setSortField] = useState<string>('createdAt');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [filterCategory, setFilterCategory] = useState<string>('');
+  const [filterStatus, setFilterStatus] = useState<string>('');
+  const [filterBrand, setFilterBrand] = useState<string>('');
 
   const primaryButtonClass = 'inline-flex items-center justify-center gap-2 rounded-full bg-[#ff6b00] px-6 py-3 text-sm font-semibold uppercase tracking-wide text-black shadow-[0_18px_45px_-20px_rgba(255,107,0,0.9)] transition-all hover:scale-105 hover:bg-[#ff7f1a] disabled:opacity-50 disabled:cursor-not-allowed';
   const secondaryButtonClass = 'inline-flex items-center justify-center gap-2 rounded-full border border-white/15 px-6 py-3 text-sm font-semibold uppercase tracking-wide text-neutral-200 transition-all hover:border-[#ff6b00] hover:text-[#ff6b00] hover:scale-105';
@@ -87,9 +94,18 @@ export default function AdminParts() {
   }, []);
 
   async function refresh(search?: string) {
-    const url = `/api/parts${search ? `?q=${encodeURIComponent(search)}` : ""}`;
+    const params = new URLSearchParams();
+    if (search) params.append('q', search);
+    if (filterCategory) params.append('categoryId', filterCategory);
+    if (filterStatus) params.append('status', filterStatus);
+    if (filterBrand) params.append('brand', filterBrand);
+    if (sortField) params.append('sort', sortField);
+    if (sortDirection) params.append('order', sortDirection);
+
+    const url = `/api/parts?${params.toString()}`;
     const res = await fetch(url);
-    setParts(await res.json());
+    const data = await res.json();
+    setParts(data);
   }
 
   async function uploadImage(): Promise<string | undefined> {
@@ -221,7 +237,65 @@ export default function AdminParts() {
     setFile(null);
   }
 
-  const filtered = useMemo(() => parts, [parts]);
+  // Filter and sort parts
+  const filteredAndSorted = useMemo(() => {
+    let filtered = [...parts];
+
+    // Apply filters
+    if (filterCategory) {
+      filtered = filtered.filter(p => p.categoryId === parseInt(filterCategory));
+    }
+    if (filterStatus) {
+      filtered = filtered.filter(p => filterStatus === 'active' ? p.isActive : !p.isActive);
+    }
+    if (filterBrand) {
+      filtered = filtered.filter(p => p.brand?.toLowerCase().includes(filterBrand.toLowerCase()));
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      let aVal = a[sortField];
+      let bVal = b[sortField];
+
+      if (sortField === 'createdAt' || sortField === 'updatedAt') {
+        aVal = new Date(aVal).getTime();
+        bVal = new Date(bVal).getTime();
+      } else if (typeof aVal === 'string') {
+        aVal = aVal.toLowerCase();
+        bVal = bVal.toLowerCase();
+      }
+
+      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return filtered;
+  }, [parts, filterCategory, filterStatus, filterBrand, sortField, sortDirection]);
+
+  // Pagination
+  const totalPages = Math.ceil(filteredAndSorted.length / itemsPerPage);
+  const paginatedParts = filteredAndSorted.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const resetFilters = () => {
+    setFilterCategory('');
+    setFilterStatus('');
+    setFilterBrand('');
+    setQ('');
+    setCurrentPage(1);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#050505] via-[#0b0b0b] to-[#111111] py-16 px-6">
@@ -236,18 +310,64 @@ export default function AdminParts() {
           </p>
         </div>
 
-        <div className="flex items-center justify-between">
-          <div className="flex gap-2">
-            <input 
-              value={q} 
-              onChange={(e) => setQ(e.target.value)} 
-              placeholder="Pretraži dijelove..." 
-              className={inputClass}
-              style={{ width: '300px' }}
-            />
-            <button onClick={() => refresh(q)} className={secondaryButtonClass}>
-              Traži
+        {/* Filters and Search */}
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <div className="flex gap-2">
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Pretraži dijelove..."
+                className={inputClass}
+                style={{ width: '300px' }}
+              />
+              <button onClick={() => refresh(q)} className={secondaryButtonClass}>
+                Traži
+              </button>
+            </div>
+            <button onClick={resetFilters} className={secondaryButtonClass}>
+              Resetuj filtere
             </button>
+          </div>
+
+          <div className="flex gap-4 flex-wrap">
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-neutral-400">Kategorija:</label>
+              <select
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
+                className={inputClass}
+                style={{ width: '150px' }}
+              >
+                <option value="">Sve kategorije</option>
+                {cats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-neutral-400">Status:</label>
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className={inputClass}
+                style={{ width: '120px' }}
+              >
+                <option value="">Svi statusi</option>
+                <option value="active">Aktivni</option>
+                <option value="inactive">Neaktivni</option>
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-neutral-400">Brend:</label>
+              <input
+                value={filterBrand}
+                onChange={(e) => setFilterBrand(e.target.value)}
+                placeholder="Filtriraj po brendu..."
+                className={inputClass}
+                style={{ width: '200px' }}
+              />
+            </div>
           </div>
         </div>
 
@@ -557,24 +677,24 @@ export default function AdminParts() {
         </div>
 
         <div className="rounded-3xl border border-white/10 bg-[#101010] p-10 shadow-[0_35px_90px_-40px_rgba(255,107,0,0.5)]">
-          <h2 className="text-2xl font-bold text-white mb-6">Inventory Management - Rezervni dijelovi ({filtered.length})</h2>
+          <h2 className="text-2xl font-bold text-white mb-6">Inventory Management - Rezervni dijelovi ({filteredAndSorted.length})</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-[#1a1a1a] border-b border-white/10">
                 <tr>
-                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold">ID</th>
+                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold cursor-pointer hover:text-white" onClick={() => handleSort('id')}>ID {sortField === 'id' && (sortDirection === 'asc' ? '↑' : '↓')}</th>
                   <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Slika</th>
-                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold">SKU</th>
-                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Marka</th>
-                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Model</th>
+                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold cursor-pointer hover:text-white" onClick={() => handleSort('sku')}>SKU {sortField === 'sku' && (sortDirection === 'asc' ? '↑' : '↓')}</th>
+                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold cursor-pointer hover:text-white" onClick={() => handleSort('brand')}>Marka {sortField === 'brand' && (sortDirection === 'asc' ? '↑' : '↓')}</th>
+                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold cursor-pointer hover:text-white" onClick={() => handleSort('model')}>Model {sortField === 'model' && (sortDirection === 'asc' ? '↑' : '↓')}</th>
                   <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Kat. broj</th>
-                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Naziv</th>
+                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold cursor-pointer hover:text-white" onClick={() => handleSort('title')}>Naziv {sortField === 'title' && (sortDirection === 'asc' ? '↑' : '↓')}</th>
                   <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Primjena</th>
                   <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Opis</th>
                   <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Dostupnost</th>
-                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Zaliha</th>
-                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Bez PDV</th>
-                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Sa PDV</th>
+                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold cursor-pointer hover:text-white" onClick={() => handleSort('stock')}>Zaliha {sortField === 'stock' && (sortDirection === 'asc' ? '↑' : '↓')}</th>
+                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold cursor-pointer hover:text-white" onClick={() => handleSort('priceWithoutVAT')}>Bez PDV {sortField === 'priceWithoutVAT' && (sortDirection === 'asc' ? '↑' : '↓')}</th>
+                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold cursor-pointer hover:text-white" onClick={() => handleSort('priceWithVAT')}>Sa PDV {sortField === 'priceWithVAT' && (sortDirection === 'asc' ? '↑' : '↓')}</th>
                   <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Popust %</th>
                   <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Valuta</th>
                   <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Spec 1</th>
@@ -586,13 +706,13 @@ export default function AdminParts() {
                   <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Spec 7</th>
                   <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Kategorija</th>
                   <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Status</th>
-                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Kreirano</th>
-                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Ažurirano</th>
+                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold cursor-pointer hover:text-white" onClick={() => handleSort('createdAt')}>Kreirano {sortField === 'createdAt' && (sortDirection === 'asc' ? '↑' : '↓')}</th>
+                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold cursor-pointer hover:text-white" onClick={() => handleSort('updatedAt')}>Ažurirano {sortField === 'updatedAt' && (sortDirection === 'asc' ? '↑' : '↓')}</th>
                   <th className="px-4 py-3 text-center text-neutral-200 font-semibold">Akcije</th>
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((p: any) => (
+                {paginatedParts.map((p: any) => (
                   <tr key={p.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                     <td className="px-4 py-3 text-neutral-100 font-mono text-xs">{p.id}</td>
                     <td className="px-4 py-3">
@@ -662,8 +782,36 @@ export default function AdminParts() {
               </tbody>
             </table>
           </div>
-          {filtered.length === 0 && (
+          {filteredAndSorted.length === 0 && (
             <p className="text-center py-8 text-neutral-400">Nema unesenih rezervnih dijelova</p>
+          )}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-6 pt-6 border-t border-white/10">
+              <div className="text-sm text-neutral-400">
+                Prikazujem {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, filteredAndSorted.length)} od {filteredAndSorted.length} dijelova
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                  className="px-4 py-2 text-sm bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
+                >
+                  Prethodna
+                </button>
+                <span className="px-4 py-2 text-sm text-neutral-300">
+                  {currentPage} / {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-4 py-2 text-sm bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
+                >
+                  Sljedeća
+                </button>
+              </div>
+            </div>
           )}
         </div>
       </div>

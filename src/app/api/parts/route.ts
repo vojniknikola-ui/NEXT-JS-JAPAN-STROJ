@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { parts, categories } from "@/db/schema";
-import { and, eq, ilike } from "drizzle-orm";
+import { and, eq, ilike, desc } from "drizzle-orm";
 import { partCreateSchema } from "@/lib/validation";
 import { revalidatePath } from "next/cache";
 
@@ -8,9 +8,53 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const q = searchParams.get("q");
   const cat = searchParams.get("categoryId");
+  const status = searchParams.get("status");
+  const brand = searchParams.get("brand");
+  const sort = searchParams.get("sort") || "createdAt";
+  const order = searchParams.get("order") || "desc";
+
   const where = [];
   if (q) where.push(ilike(parts.title, `%${q}%`));
   if (cat) where.push(eq(parts.categoryId, Number(cat)));
+  if (status) where.push(eq(parts.isActive, status === 'active'));
+  if (brand) where.push(ilike(parts.brand, `%${brand}%`));
+
+  // Build order by clause
+  let orderBy;
+  switch (sort) {
+    case 'id':
+      orderBy = order === 'asc' ? parts.id : desc(parts.id);
+      break;
+    case 'sku':
+      orderBy = order === 'asc' ? parts.sku : desc(parts.sku);
+      break;
+    case 'brand':
+      orderBy = order === 'asc' ? parts.brand : desc(parts.brand);
+      break;
+    case 'model':
+      orderBy = order === 'asc' ? parts.model : desc(parts.model);
+      break;
+    case 'title':
+      orderBy = order === 'asc' ? parts.title : desc(parts.title);
+      break;
+    case 'stock':
+      orderBy = order === 'asc' ? parts.stock : desc(parts.stock);
+      break;
+    case 'priceWithoutVAT':
+      orderBy = order === 'asc' ? parts.priceWithoutVAT : desc(parts.priceWithoutVAT);
+      break;
+    case 'priceWithVAT':
+      orderBy = order === 'asc' ? parts.priceWithVAT : desc(parts.priceWithVAT);
+      break;
+    case 'createdAt':
+      orderBy = order === 'asc' ? parts.createdAt : desc(parts.createdAt);
+      break;
+    case 'updatedAt':
+      orderBy = order === 'asc' ? parts.updatedAt : desc(parts.updatedAt);
+      break;
+    default:
+      orderBy = desc(parts.createdAt);
+  }
 
   const data = await db.select({
     id: parts.id,
@@ -40,12 +84,14 @@ export async function GET(req: Request) {
     spec7: parts.spec7,
     specJson: parts.specJson,
     isActive: parts.isActive,
+    createdAt: parts.createdAt,
+    updatedAt: parts.updatedAt,
     category: categories.name,
   })
   .from(parts)
   .leftJoin(categories, eq(parts.categoryId, categories.id))
   .where(where.length ? and(...where) : undefined)
-  .orderBy(parts.createdAt);
+  .orderBy(orderBy);
 
   return Response.json(data);
 }
