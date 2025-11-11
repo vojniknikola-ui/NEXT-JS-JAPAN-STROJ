@@ -13,14 +13,39 @@ export function useSpareParts() {
       setLoading(true);
       setError(null);
       console.log('Fetching spare parts from /api/parts...');
-      const response = await fetch('/api/parts');
+      const response = await fetch('/api/parts?status=active');
       console.log('Spare parts response status:', response.status);
       if (!response.ok) {
         throw new Error('Failed to fetch spare parts');
       }
       const data = await response.json();
       console.log('Fetched spare parts:', data);
-      setSpareParts(data);
+      
+      const transformedData = data.map((part: any) => ({
+        id: part.id,
+        name: part.title,
+        brand: part.brand || '',
+        model: part.model || '',
+        catalogNumber: part.catalogNumber || '',
+        application: part.application || '',
+        delivery: part.delivery || 'available',
+        priceWithoutVAT: parseFloat(part.priceWithoutVAT || part.price || '0'),
+        priceWithVAT: parseFloat(part.priceWithVAT || part.price || '0'),
+        discount: parseFloat(part.discount || '0'),
+        imageUrl: part.imageUrl || '',
+        technicalSpecs: {
+          spec1: part.spec1 || '',
+          spec2: part.spec2 || '',
+          spec3: part.spec3 || '',
+          spec4: part.spec4 || '',
+          spec5: part.spec5 || '',
+          spec6: part.spec6 || '',
+          spec7: part.spec7 || '',
+        },
+        stock: part.stock || 0,
+      }));
+      
+      setSpareParts(transformedData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
       console.error('Error fetching spare parts:', err);
