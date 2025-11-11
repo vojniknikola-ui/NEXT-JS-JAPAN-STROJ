@@ -69,10 +69,11 @@ export default function ProformaInvoiceModal({
       doc.text('JAPAN STROJ d.o.o.', margin, 17);
 
       // Company details
-      doc.setFontSize(9);
+      doc.setFontSize(8);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(255, 255, 255);
-      doc.text('Sarajevo, Bosna i Hercegovina | Tel: +387 61 234 567 | Email: info@japanstroj.ba', margin, 23);
+      doc.text('Adresa: Sarajevo, Bosna i Hercegovina', margin, 22);
+      doc.text('Telefon: +387 61 234 567 | Email: info@japanstroj.ba', margin, 27);
 
       // Reset text color
       doc.setTextColor(0, 0, 0);
@@ -118,11 +119,11 @@ export default function ProformaInvoiceModal({
       doc.setTextColor(0, 0, 0);
 
       doc.text(`Naziv firme: ${companyDetails.companyName}`, margin + 5, 115);
-      doc.text(`ID broj: ${companyDetails.idNumber}`, margin + 5, 125);
-      doc.text(`PDV broj: ${companyDetails.pdvNumber}`, margin + 5, 135);
+      doc.text(`ID broj: ${companyDetails.idNumber}`, margin + 5, 123);
+      doc.text(`PDV broj: ${companyDetails.pdvNumber}`, margin + 5, 131);
 
       doc.text(`Kontakt osoba: ${companyDetails.name}`, pageWidth / 2 + 10, 115);
-      doc.text(`Adresa: ${companyDetails.address}`, pageWidth / 2 + 10, 125);
+      doc.text(`Adresa: ${companyDetails.address}`, pageWidth / 2 + 10, 123);
 
       // Items table
       let yPosition = 155;
@@ -137,10 +138,10 @@ export default function ProformaInvoiceModal({
 
       doc.text('R.br.', margin + 3, yPosition + 8);
       doc.text('Naziv artikla', margin + 18, yPosition + 8);
-      doc.text('Brend/Model', margin + 85, yPosition + 8);
+      doc.text('Brend/Model', margin + 80, yPosition + 8);
       doc.text('Kol.', margin + 125, yPosition + 8);
       doc.text('Cijena (BAM)', margin + 140, yPosition + 8);
-      doc.text('Ukupno (BAM)', margin + 175, yPosition + 8);
+      doc.text('Ukupno (BAM)', margin + 170, yPosition + 8);
 
       // Table rows
       yPosition += 12;
@@ -157,16 +158,16 @@ export default function ProformaInvoiceModal({
         }
 
         doc.text((index + 1).toString(), margin + 3, yPosition + 7);
-        doc.text(item.part.name.substring(0, 25), margin + 18, yPosition + 7);
+        doc.text(item.part.name.substring(0, 22), margin + 18, yPosition + 7);
 
         const brandModel = [];
         if (item.part.brand) brandModel.push(item.part.brand);
         if (item.part.model) brandModel.push(item.part.model);
-        doc.text(brandModel.join(' / ').substring(0, 15), margin + 85, yPosition + 7);
+        doc.text(brandModel.join(' / ').substring(0, 15), margin + 80, yPosition + 7);
 
         doc.text(item.quantity.toString(), margin + 130, yPosition + 7);
         doc.text(item.part.priceWithVAT.toFixed(2), margin + 145, yPosition + 7);
-        doc.text((item.part.priceWithVAT * item.quantity).toFixed(2), margin + 180, yPosition + 7);
+        doc.text((item.part.priceWithVAT * item.quantity).toFixed(2), margin + 170, yPosition + 7);
 
         yPosition += rowHeight;
       });
@@ -180,8 +181,8 @@ export default function ProformaInvoiceModal({
       yPosition += 8;
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(12);
-      doc.text('UKUPNO ZA PLATITI:', margin + 120, yPosition);
-      doc.text(cartTotal.toFixed(2) + ' BAM', margin + 175, yPosition);
+      doc.text('UKUPNO ZA PLATITI:', margin + 115, yPosition);
+      doc.text(cartTotal.toFixed(2) + ' BAM', margin + 170, yPosition);
 
       // Footer section
       yPosition += 20;
@@ -191,8 +192,8 @@ export default function ProformaInvoiceModal({
 
       const footerText = [
         'Ovaj predračun važi 7 dana od datuma izdavanja.',
-        'Plaćanje se vrši prema dogovoru ili putem bankovnog transfera.',
-        'Sva roba je pokrivena garancijom kvaliteta.',
+        'Plaćanje se vrši prema dogovoru ili putem bankovnog transfera na račun:',
+        'JAPAN STROJ d.o.o. - UniCredit Bank BiH - 338-100-00000000-00',
         'Za dodatne informacije kontaktirajte nas na: +387 61 234 567'
       ];
 
