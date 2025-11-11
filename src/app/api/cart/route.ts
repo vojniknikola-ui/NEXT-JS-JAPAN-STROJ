@@ -19,11 +19,14 @@ export async function GET(request: NextRequest) {
     console.log('[GET] Cookies:', request.cookies.getAll());
 
     try {
-      const { db } = await import('@/db');
+      const { db, withRetry } = await import('@/db');
       const { carts } = await import('@/db/schema');
       const { eq } = await import('drizzle-orm');
 
-      const result = await db.select().from(carts).where(eq(carts.id, cartId)).limit(1);
+      const result = await withRetry(async () => 
+        db.select().from(carts).where(eq(carts.id, cartId)).limit(1)
+      );
+      
       console.log('[GET] Database query result:', result);
       if (result.length > 0) {
         const cartData = JSON.parse(result[0].data);
@@ -52,22 +55,24 @@ export async function POST(request: NextRequest) {
     console.log('[POST] Cart items count:', cartItems.length);
 
     try {
-      const { db } = await import('@/db');
+      const { db, withRetry } = await import('@/db');
       const { carts } = await import('@/db/schema');
       const now = new Date();
 
-      await db.insert(carts).values({
-        id: cartId,
-        data: JSON.stringify(cartItems),
-        createdAt: now,
-        updatedAt: now,
-      }).onConflictDoUpdate({
-        target: carts.id,
-        set: {
+      await withRetry(async () => 
+        db.insert(carts).values({
+          id: cartId,
           data: JSON.stringify(cartItems),
+          createdAt: now,
           updatedAt: now,
-        },
-      });
+        }).onConflictDoUpdate({
+          target: carts.id,
+          set: {
+            data: JSON.stringify(cartItems),
+            updatedAt: now,
+          },
+        })
+      );
 
       console.log('[POST] Saved to database, cart ID:', cartId);
 
@@ -104,11 +109,13 @@ export async function DELETE(request: NextRequest) {
     const cartId = getCartId(request);
 
     try {
-      const { db } = await import('@/db');
+      const { db, withRetry } = await import('@/db');
       const { carts } = await import('@/db/schema');
       const { eq } = await import('drizzle-orm');
 
-      await db.delete(carts).where(eq(carts.id, cartId));
+      await withRetry(async () => 
+        db.delete(carts).where(eq(carts.id, cartId))
+      );
     } catch (dbError) {
       console.warn('Database deletion failed:', dbError);
     }

@@ -6,8 +6,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Page, SparePart, Availability } from '@/types';
 import { useCart } from '@/lib/hooks/useCart';
-import { useSpareParts } from '@/lib/hooks/useSpareParts';
-import { SearchIcon, FilterIcon, CartIcon, CheckIcon } from '@/lib/icons';
+import { SearchIcon, FilterIcon, CartIcon, CheckIcon, XIcon } from '@/lib/icons';
 
 interface PartData {
   id: number;
@@ -159,7 +158,11 @@ export default function CatalogPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
-  const [showFilters, setShowFilters] = useState(false);
+  const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
+  const [selectedAvailability, setSelectedAvailability] = useState<string[]>([]);
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 10000]);
+  const [showOnlyDiscount, setShowOnlyDiscount] = useState(false);
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [addedToCart, setAddedToCart] = useState<Set<number>>(new Set());
   const [displayLimit, setDisplayLimit] = useState(12);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -170,14 +173,10 @@ export default function CatalogPage() {
         setLoading(true);
         setError(null);
 
-        console.log('Fetching parts from API...');
         const [partsRes, categoriesRes] = await Promise.all([
           fetch('/api/parts?active=true'),
           fetch('/api/categories')
         ]);
-
-        console.log('Parts response status:', partsRes.status);
-        console.log('Categories response status:', categoriesRes.status);
 
         if (!partsRes.ok) {
           throw new Error(`Greška pri učitavanju dijelova: ${partsRes.status}`);
@@ -192,15 +191,13 @@ export default function CatalogPage() {
           categoriesRes.json()
         ]);
 
-        console.log('Loaded parts:', parts);
-        console.log('Loaded categories:', cats);
-
-        // Filter only active parts
         const activeParts = parts.filter((part: PartData) => part.isActive);
-        console.log('Active parts:', activeParts);
 
         setPartsData(activeParts);
         setCategories(cats);
+
+        const maxPrice = Math.max(...activeParts.map((p: PartData) => parseFloat(p.priceWithVAT || p.price)));
+        setPriceRange([0, Math.ceil(maxPrice / 100) * 100]);
       } catch (error) {
         console.error('Error fetching data:', error);
         setError(error instanceof Error ? error.message : 'Došlo je do greške pri učitavanju podataka');
@@ -211,6 +208,14 @@ export default function CatalogPage() {
 
     fetchData();
   }, []);
+
+  const availableBrands = useMemo(() => {
+    const brands = new Set<string>();
+    partsData.forEach(part => {
+      if (part.brand) brands.add(part.brand);
+    });
+    return Array.from(brands).sort();
+  }, [partsData]);
 
   const filteredParts = useMemo(() => {
     return partsData.filter(part => {
@@ -225,14 +230,20 @@ export default function CatalogPage() {
 
       const matchesCategory = !selectedCategory || part.categoryId === selectedCategory;
 
-      return matchesSearch && matchesCategory;
+      const matchesBrand = selectedBrands.length === 0 || (part.brand && selectedBrands.includes(part.brand));
+
+      const matchesAvailability = selectedAvailability.length === 0 || (part.delivery && selectedAvailability.includes(part.delivery));
+
+      const partPrice = parseFloat(part.priceWithVAT || part.price);
+      const matchesPrice = partPrice >= priceRange[0] && partPrice <= priceRange[1];
+
+      const matchesDiscount = !showOnlyDiscount || (part.discount && parseFloat(part.discount) > 0);
+
+      return matchesSearch && matchesCategory && matchesBrand && matchesAvailability && matchesPrice && matchesDiscount;
     });
-  }, [partsData, searchQuery, selectedCategory]);
+  }, [partsData, searchQuery, selectedCategory, selectedBrands, selectedAvailability, priceRange, showOnlyDiscount]);
 
   const handleAddToCart = useCallback((part: PartData) => {
-    console.log('Adding to cart:', part); // Debug log
-
-    // Convert PartData to SparePart format for cart
     const sparePart: SparePart = {
       id: part.id,
       name: part.title,
@@ -259,8 +270,6 @@ export default function CatalogPage() {
       stock: part.stock,
     };
 
-    console.log('Converted SparePart:', sparePart); // Debug log
-
     addToCart(sparePart);
     setAddedToCart(prev => new Set(prev).add(part.id));
     setTimeout(() => {
@@ -271,7 +280,6 @@ export default function CatalogPage() {
       });
     }, 2000);
 
-    // Show toast notification
     const toast = document.createElement('div');
     toast.className = 'fixed top-4 right-4 bg-[#ff6b00] text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-in slide-in-from-right-4';
     toast.innerHTML = `
@@ -286,6 +294,20 @@ export default function CatalogPage() {
     setTimeout(() => toast.remove(), 3000);
   }, [addToCart]);
 
+  const clearFilters = () => {
+    setSearchQuery('');
+    setSelectedCategory(null);
+    setSelectedBrands([]);
+    setSelectedAvailability([]);
+    setShowOnlyDiscount(false);
+    const maxPrice = Math.max(...partsData.map(p => parseFloat(p.priceWithVAT || p.price)));
+    setPriceRange([0, Math.ceil(maxPrice / 100) * 100]);
+    setDisplayLimit(12);
+  };
+
+  const hasActiveFilters = searchQuery || selectedCategory || selectedBrands.length > 0 || 
+    selectedAvailability.length > 0 || showOnlyDiscount;
+
   return (
     <div className="bg-[#0b0b0b] text-neutral-100 min-h-screen flex flex-col">
       <Header activePage={activePage} setActivePage={setActivePage} cartItemCount={cartItemCount} />
@@ -293,8 +315,7 @@ export default function CatalogPage() {
       <main className="flex-grow">
         <div className="container mx-auto px-4 py-12">
           <div className="max-w-7xl mx-auto">
-            {/* Header */}
-            <div className="mb-12">
+            <div className="mb-8">
               <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
                 Katalog rezervnih dijelova
               </h1>
@@ -304,172 +325,262 @@ export default function CatalogPage() {
               </p>
             </div>
 
-            {/* Search and Filters */}
-            <div className="mb-8">
-              <div className="flex flex-col lg:flex-row gap-4 mb-6">
-                <div className="flex-1 relative">
-                  <SearchIcon className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-neutral-400" />
-                  <input
-                    type="text"
-                    placeholder="Pretražite po nazivu, marki, modelu ili katalog broju..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-12 pr-4 py-4 bg-[#101010] border border-white/10 rounded-2xl text-white placeholder-neutral-500 focus:border-[#ff6b00]/50 focus:ring-2 focus:ring-[#ff6b00]/20 outline-none transition-all"
-                  />
-                </div>
-                <button
-                  onClick={() => setShowFilters(!showFilters)}
-                  className="flex items-center gap-2 px-6 py-4 bg-[#101010] border border-white/10 rounded-2xl text-neutral-200 hover:border-[#ff6b00]/50 transition-all"
-                >
-                  <FilterIcon className="w-5 h-5" />
-                  Filteri
-                </button>
-              </div>
-
-              {/* Category Filters */}
-              {showFilters && (
-                <div className="bg-[#101010] border border-white/10 rounded-2xl p-6 mb-6">
-                  <h3 className="text-lg font-semibold text-white mb-4">Kategorije</h3>
-                  <div className="flex flex-wrap gap-3">
+            <div className="flex gap-6">
+              <aside className={`
+                fixed lg:sticky lg:top-24 left-0 top-0 h-full lg:h-auto w-80 bg-[#0b0b0b] lg:bg-transparent
+                border-r border-white/10 lg:border-0 p-6 lg:p-0 z-40 overflow-y-auto
+                transition-transform duration-300 lg:translate-x-0
+                ${showMobileFilters ? 'translate-x-0' : '-translate-x-full'}
+              `}>
+                <div className="lg:sticky lg:top-24 space-y-6">
+                  <div className="flex items-center justify-between lg:hidden mb-6">
+                    <h2 className="text-xl font-bold text-white">Filteri</h2>
                     <button
-                      onClick={() => setSelectedCategory(null)}
-                      className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                        selectedCategory === null
-                          ? 'bg-[#ff6b00] text-black'
-                          : 'bg-white/5 text-neutral-300 hover:bg-white/10'
-                      }`}
+                      onClick={() => setShowMobileFilters(false)}
+                      className="p-2 text-neutral-400 hover:text-white"
                     >
-                      Sve kategorije
+                      <XIcon className="w-6 h-6" />
                     </button>
-                    {categories.map((category) => (
+                  </div>
+
+                  <div className="relative">
+                    <SearchIcon className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-neutral-400" />
+                    <input
+                      type="text"
+                      placeholder="Pretraži..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-12 pr-4 py-3 bg-[#101010] border border-white/10 rounded-xl text-white placeholder-neutral-500 focus:border-[#ff6b00]/50 focus:ring-2 focus:ring-[#ff6b00]/20 outline-none transition-all"
+                    />
+                  </div>
+
+                  <div className="bg-[#101010] border border-white/10 rounded-xl p-4">
+                    <h3 className="text-sm font-semibold text-white mb-3 uppercase tracking-wide">Kategorije</h3>
+                    <div className="space-y-2">
                       <button
-                        key={category.id}
-                        onClick={() => setSelectedCategory(category.id)}
-                        className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                          selectedCategory === category.id
-                            ? 'bg-[#ff6b00] text-black'
-                            : 'bg-white/5 text-neutral-300 hover:bg-white/10'
+                        onClick={() => setSelectedCategory(null)}
+                        className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
+                          selectedCategory === null
+                            ? 'bg-[#ff6b00] text-black font-semibold'
+                            : 'text-neutral-300 hover:bg-white/5'
                         }`}
                       >
-                        {category.name}
+                        Sve kategorije
                       </button>
-                    ))}
+                      {categories.map((category) => (
+                        <button
+                          key={category.id}
+                          onClick={() => setSelectedCategory(category.id)}
+                          className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
+                            selectedCategory === category.id
+                              ? 'bg-[#ff6b00] text-black font-semibold'
+                              : 'text-neutral-300 hover:bg-white/5'
+                          }`}
+                        >
+                          {category.name}
+                        </button>
+                      ))}
+                    </div>
                   </div>
+
+                  <div className="bg-[#101010] border border-white/10 rounded-xl p-4">
+                    <h3 className="text-sm font-semibold text-white mb-3 uppercase tracking-wide">Brend</h3>
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {availableBrands.map((brand) => (
+                        <label key={brand} className="flex items-center gap-2 cursor-pointer group">
+                          <input
+                            type="checkbox"
+                            checked={selectedBrands.includes(brand)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedBrands([...selectedBrands, brand]);
+                              } else {
+                                setSelectedBrands(selectedBrands.filter(b => b !== brand));
+                              }
+                            }}
+                            className="w-4 h-4 rounded border-white/20 bg-[#1a1a1a] text-[#ff6b00] focus:ring-[#ff6b00]/50 focus:ring-2"
+                          />
+                          <span className="text-sm text-neutral-300 group-hover:text-white transition-colors">{brand}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="bg-[#101010] border border-white/10 rounded-xl p-4">
+                    <h3 className="text-sm font-semibold text-white mb-3 uppercase tracking-wide">Dostupnost</h3>
+                    <div className="space-y-2">
+                      {[
+                        { value: 'available', label: 'Dostupno odmah' },
+                        { value: '15_days', label: 'Rok isporuke 15 dana' },
+                        { value: 'on_request', label: 'Po dogovoru' }
+                      ].map(({ value, label }) => (
+                        <label key={value} className="flex items-center gap-2 cursor-pointer group">
+                          <input
+                            type="checkbox"
+                            checked={selectedAvailability.includes(value)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedAvailability([...selectedAvailability, value]);
+                              } else {
+                                setSelectedAvailability(selectedAvailability.filter(a => a !== value));
+                              }
+                            }}
+                            className="w-4 h-4 rounded border-white/20 bg-[#1a1a1a] text-[#ff6b00] focus:ring-[#ff6b00]/50 focus:ring-2"
+                          />
+                          <span className="text-sm text-neutral-300 group-hover:text-white transition-colors">{label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="bg-[#101010] border border-white/10 rounded-xl p-4">
+                    <h3 className="text-sm font-semibold text-white mb-3 uppercase tracking-wide">Cijena</h3>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between text-sm text-neutral-400">
+                        <span>{priceRange[0]} BAM</span>
+                        <span>{priceRange[1]} BAM</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max={Math.max(...partsData.map(p => parseFloat(p.priceWithVAT || p.price)), 10000)}
+                        step="50"
+                        value={priceRange[1]}
+                        onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
+                        className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-[#ff6b00]"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="bg-[#101010] border border-white/10 rounded-xl p-4">
+                    <label className="flex items-center gap-2 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={showOnlyDiscount}
+                        onChange={(e) => setShowOnlyDiscount(e.target.checked)}
+                        className="w-4 h-4 rounded border-white/20 bg-[#1a1a1a] text-[#ff6b00] focus:ring-[#ff6b00]/50 focus:ring-2"
+                      />
+                      <span className="text-sm text-neutral-300 group-hover:text-white transition-colors font-semibold">Samo sa popustom</span>
+                    </label>
+                  </div>
+
+                  {hasActiveFilters && (
+                    <button
+                      onClick={clearFilters}
+                      className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-400 px-4 py-3 rounded-xl font-semibold transition-all"
+                    >
+                      Očisti sve filtere
+                    </button>
+                  )}
                 </div>
+              </aside>
+
+              {showMobileFilters && (
+                <div
+                  className="fixed inset-0 bg-black/60 z-30 lg:hidden"
+                  onClick={() => setShowMobileFilters(false)}
+                />
               )}
 
-              {/* Results Count */}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <p className="text-neutral-400">
-                  {loading ? 'Učitavanje...' : `Prikazano ${Math.min(displayLimit, filteredParts.length)} od ${filteredParts.length} ${filteredParts.length === 1 ? 'dio' : filteredParts.length < 5 ? 'dijela' : 'dijelova'}`}
-                </p>
-                {(searchQuery || selectedCategory) && (
-                  <button
-                    onClick={() => {
-                      setSearchQuery('');
-                      setSelectedCategory(null);
-                      setDisplayLimit(12);
-                    }}
-                    className="text-[#ff6b00] hover:text-[#ff7f1a] text-sm font-medium transition-colors self-start sm:self-auto"
-                  >
-                    Očisti filtere
-                  </button>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-4">
+                    <button
+                      onClick={() => setShowMobileFilters(true)}
+                      className="lg:hidden flex items-center gap-2 px-4 py-2 bg-[#101010] border border-white/10 rounded-xl text-neutral-200 hover:border-[#ff6b00]/50 transition-all"
+                    >
+                      <FilterIcon className="w-5 h-5" />
+                      Filteri
+                    </button>
+                    <p className="text-neutral-400 text-sm">
+                      {loading ? 'Učitavanje...' : `${filteredParts.length} ${filteredParts.length === 1 ? 'rezultat' : filteredParts.length < 5 ? 'rezultata' : 'rezultata'}`}
+                    </p>
+                  </div>
+                </div>
+
+                {error && (
+                  <div className="text-center py-20">
+                    <div className="w-16 h-16 mx-auto mb-4 bg-red-500/10 rounded-full flex items-center justify-center">
+                      <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                      </svg>
+                    </div>
+                    <h3 className="text-xl font-semibold text-white mb-2">Greška pri učitavanju</h3>
+                    <p className="text-neutral-400 mb-6">{error}</p>
+                    <button
+                      onClick={() => window.location.reload()}
+                      className="bg-[#ff6b00] hover:bg-[#ff7f1a] text-black px-6 py-3 rounded-full font-semibold transition-all hover:scale-105"
+                    >
+                      Pokušaj ponovo
+                    </button>
+                  </div>
+                )}
+
+                {loading ? (
+                  <div className="flex items-center justify-center py-20">
+                    <div className="text-center">
+                      <div className="w-12 h-12 border-4 border-[#ff6b00]/30 border-t-[#ff6b00] rounded-full animate-spin mx-auto mb-4"></div>
+                      <p className="text-neutral-400">Učitavanje kataloga...</p>
+                    </div>
+                  </div>
+                ) : error ? null : filteredParts.length === 0 ? (
+                  <div className="text-center py-20">
+                    <div className="w-16 h-16 mx-auto mb-4 bg-[#101010] rounded-full flex items-center justify-center">
+                      <SearchIcon className="w-8 h-8 text-neutral-600" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-white mb-2">Nema rezultata</h3>
+                    <p className="text-neutral-400 mb-6">
+                      Pokušajte promijeniti kriterije pretrage ili filtere.
+                    </p>
+                    <button
+                      onClick={clearFilters}
+                      className="bg-[#ff6b00] hover:bg-[#ff7f1a] text-black px-6 py-3 rounded-full font-semibold transition-all hover:scale-105"
+                    >
+                      Prikaži sve dijelove
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {filteredParts.slice(0, displayLimit).map((part) => (
+                        <ProductCard
+                          key={part.id}
+                          part={part}
+                          onAddToCart={handleAddToCart}
+                          isAdded={addedToCart.has(part.id)}
+                        />
+                      ))}
+                    </div>
+
+                    {filteredParts.length > displayLimit && (
+                      <div className="text-center mt-12">
+                        <button
+                          onClick={async () => {
+                            setLoadingMore(true);
+                            await new Promise(resolve => setTimeout(resolve, 500));
+                            setDisplayLimit(prev => Math.min(prev + 12, filteredParts.length));
+                            setLoadingMore(false);
+                          }}
+                          disabled={loadingMore}
+                          className="bg-[#101010] border border-white/10 hover:border-[#ff6b00]/50 text-neutral-200 hover:text-[#ff6b00] px-8 py-4 rounded-full font-semibold transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto"
+                        >
+                          {loadingMore ? (
+                            <>
+                              <div className="w-4 h-4 border-2 border-[#ff6b00]/30 border-t-[#ff6b00] rounded-full animate-spin"></div>
+                              Učitavanje...
+                            </>
+                          ) : (
+                            <>
+                              Učitaj još dijelova ({filteredParts.length - displayLimit} preostalo)
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </div>
-
-            {/* Error State */}
-            {error && (
-              <div className="text-center py-20">
-                <div className="w-16 h-16 mx-auto mb-4 bg-red-500/10 rounded-full flex items-center justify-center">
-                  <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                  </svg>
-                </div>
-                <h3 className="text-xl font-semibold text-white mb-2">Greška pri učitavanju</h3>
-                <p className="text-neutral-400 mb-6">{error}</p>
-                <button
-                  onClick={() => window.location.reload()}
-                  className="bg-[#ff6b00] hover:bg-[#ff7f1a] text-black px-6 py-3 rounded-full font-semibold transition-all hover:scale-105"
-                >
-                  Pokušaj ponovo
-                </button>
-              </div>
-            )}
-
-            {/* Products Grid */}
-            {loading ? (
-              <div className="flex items-center justify-center py-20">
-                <div className="text-center">
-                  <div className="w-12 h-12 border-4 border-[#ff6b00]/30 border-t-[#ff6b00] rounded-full animate-spin mx-auto mb-4"></div>
-                  <p className="text-neutral-400">Učitavanje kataloga...</p>
-                </div>
-              </div>
-            ) : error ? null : filteredParts.length === 0 ? (
-              <div className="text-center py-20">
-                <div className="w-16 h-16 mx-auto mb-4 bg-[#101010] rounded-full flex items-center justify-center">
-                  <SearchIcon className="w-8 h-8 text-neutral-600" />
-                </div>
-                <h3 className="text-xl font-semibold text-white mb-2">Nema rezultata</h3>
-                <p className="text-neutral-400 mb-6">
-                  {searchQuery || selectedCategory
-                    ? 'Pokušajte promijeniti kriterije pretrage ili filtere.'
-                    : 'Trenutno nema dostupnih dijelova.'}
-                </p>
-                {(searchQuery || selectedCategory) && (
-                  <button
-                    onClick={() => {
-                      setSearchQuery('');
-                      setSelectedCategory(null);
-                    }}
-                    className="bg-[#ff6b00] hover:bg-[#ff7f1a] text-black px-6 py-3 rounded-full font-semibold transition-all hover:scale-105"
-                  >
-                    Prikaži sve dijelove
-                  </button>
-                )}
-              </div>
-            ) : (
-              <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {filteredParts.slice(0, displayLimit).map((part) => (
-                    <ProductCard
-                      key={part.id}
-                      part={part}
-                      onAddToCart={handleAddToCart}
-                      isAdded={addedToCart.has(part.id)}
-                    />
-                  ))}
-                </div>
-
-                {/* Load More Button */}
-                {filteredParts.length > displayLimit && (
-                  <div className="text-center mt-12">
-                    <button
-                      onClick={async () => {
-                        setLoadingMore(true);
-                        // Simulate loading delay for better UX
-                        await new Promise(resolve => setTimeout(resolve, 500));
-                        setDisplayLimit(prev => Math.min(prev + 12, filteredParts.length));
-                        setLoadingMore(false);
-                      }}
-                      disabled={loadingMore}
-                      className="bg-[#101010] border border-white/10 hover:border-[#ff6b00]/50 text-neutral-200 hover:text-[#ff6b00] px-8 py-4 rounded-full font-semibold transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto"
-                    >
-                      {loadingMore ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-[#ff6b00]/30 border-t-[#ff6b00] rounded-full animate-spin"></div>
-                          Učitavanje...
-                        </>
-                      ) : (
-                        <>
-                          Učitaj još dijelova ({filteredParts.length - displayLimit} preostalo)
-                        </>
-                      )}
-                    </button>
-                  </div>
-                )}
-              </>
-            )}
           </div>
         </div>
       </main>
