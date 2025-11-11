@@ -22,7 +22,7 @@ export const parts = pgTable("parts", {
   priceWithoutVAT: numeric("price_without_vat", { precision: 10, scale: 2 }),
   priceWithVAT: numeric("price_with_vat", { precision: 10, scale: 2 }),
   discount: numeric("discount", { precision: 5, scale: 2 }).default("0"),
-  currency: varchar("currency", { length: 3 }).notNull().default("EUR"),
+  currency: varchar("currency", { length: 3 }).notNull().default("BAM"),
   stock: integer("stock").notNull().default(0),
   categoryId: integer("category_id").notNull().references(() => categories.id),
   imageUrl: text("image_url"),
@@ -38,7 +38,19 @@ export const parts = pgTable("parts", {
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => ({
+  // Database indexes for better performance
+  skuIdx: uniqueIndex("parts_sku_idx").on(table.sku),
+  brandIdx: uniqueIndex("parts_brand_idx").on(table.brand),
+  modelIdx: uniqueIndex("parts_model_idx").on(table.model),
+  categoryIdx: uniqueIndex("parts_category_idx").on(table.categoryId),
+  isActiveIdx: uniqueIndex("parts_is_active_idx").on(table.isActive),
+  createdAtIdx: uniqueIndex("parts_created_at_idx").on(table.createdAt),
+  updatedAtIdx: uniqueIndex("parts_updated_at_idx").on(table.updatedAt),
+  // Composite indexes for common queries
+  brandModelIdx: uniqueIndex("parts_brand_model_idx").on(table.brand, table.model),
+  categoryActiveIdx: uniqueIndex("parts_category_active_idx").on(table.categoryId, table.isActive),
+}));
 
 export const categoriesRelations = relations(categories, ({ many }) => ({
   parts: many(parts),
