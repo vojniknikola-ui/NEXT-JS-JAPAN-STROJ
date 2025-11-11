@@ -12,11 +12,14 @@ export function useSpareParts() {
     try {
       setLoading(true);
       setError(null);
+      console.log('Fetching spare parts from /api/parts...');
       const response = await fetch('/api/parts');
+      console.log('Spare parts response status:', response.status);
       if (!response.ok) {
         throw new Error('Failed to fetch spare parts');
       }
       const data = await response.json();
+      console.log('Fetched spare parts:', data);
       setSpareParts(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
