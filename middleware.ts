@@ -1,16 +1,23 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const ADMIN_PATH = "/admin";
-
 export function middleware(req: NextRequest) {
-  if (req.nextUrl.pathname.startsWith(ADMIN_PATH)) {
+  const { pathname } = req.nextUrl;
+
+  // Allow access to login page
+  if (pathname === "/admin/login") {
+    return NextResponse.next();
+  }
+
+  // Protect all admin routes
+  if (pathname.startsWith("/admin")) {
     const cookie = req.cookies.get("admin")?.value;
     if (cookie !== "1") {
       const loginUrl = new URL("/admin/login", req.url);
-      loginUrl.searchParams.set("next", req.nextUrl.pathname);
+      loginUrl.searchParams.set("next", pathname);
       return NextResponse.redirect(loginUrl);
     }
   }
+
   return NextResponse.next();
 }

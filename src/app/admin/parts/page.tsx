@@ -20,8 +20,18 @@ export default function AdminParts() {
 
   useEffect(() => {
     (async () => {
-      // minimal: kreiraj barem 1 kategoriju ručno u DB ili dodaj API za kategorije
-      setCats([{ id: 1, name: "Default" }]);
+      // Load categories from database
+      try {
+        const res = await fetch("/api/categories");
+        if (res.ok) {
+          const categories = await res.json();
+          setCats(categories);
+        } else {
+          setCats([{ id: 1, name: "Default" }]);
+        }
+      } catch (error) {
+        setCats([{ id: 1, name: "Default" }]);
+      }
       await refresh();
     })();
   }, []);
