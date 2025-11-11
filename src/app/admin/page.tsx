@@ -387,6 +387,8 @@ export default function AdminParts() {
           <div className="flex items-center justify-between">
             <div className="flex gap-2">
               <input
+                id="search-parts"
+                name="search-parts"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="Pretraži dijelove..."
@@ -437,6 +439,8 @@ export default function AdminParts() {
             <div className="flex flex-col gap-1">
               <label className="text-xs text-neutral-400 font-medium">🏷️ Brend</label>
               <input
+                id="filter-brand"
+                name="filter-brand"
                 value={filterBrand}
                 onChange={(e) => {
                   setFilterBrand(e.target.value);
@@ -490,6 +494,8 @@ export default function AdminParts() {
                 <div>
                   <label className={labelClass}>Marka</label>
                   <input
+                    id="part-brand"
+                    name="part-brand"
                     type="text"
                     placeholder="Marka"
                     value={form.brand || ""}
@@ -500,6 +506,8 @@ export default function AdminParts() {
                 <div>
                   <label className={labelClass}>Model</label>
                   <input
+                    id="part-model"
+                    name="part-model"
                     type="text"
                     placeholder="Model"
                     value={form.model || ""}
@@ -510,6 +518,8 @@ export default function AdminParts() {
                 <div>
                   <label className={labelClass}>Kataloški broj</label>
                   <input
+                    id="part-catalog-number"
+                    name="part-catalog-number"
                     type="text"
                     placeholder="Kataloški broj"
                     value={form.catalogNumber || ""}
@@ -520,6 +530,8 @@ export default function AdminParts() {
                 <div>
                   <label className={labelClass}>SKU</label>
                   <input
+                    id="part-sku"
+                    name="part-sku"
                     type="text"
                     placeholder="SKU broj"
                     value={form.sku}
@@ -531,6 +543,8 @@ export default function AdminParts() {
                 <div className="md:col-span-2">
                   <label className={labelClass}>Naziv</label>
                   <input
+                    id="part-title"
+                    name="part-title"
                     type="text"
                     placeholder="Naziv dijela"
                     value={form.title}
