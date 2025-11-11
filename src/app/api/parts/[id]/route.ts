@@ -2,6 +2,7 @@ import { db } from "@/db";
 import { parts } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { partUpdateSchema } from "@/lib/validation";
+import { revalidatePath } from "next/cache";
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -30,11 +31,17 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (parsed.data.isActive !== undefined) updateData.isActive = parsed.data.isActive;
 
   await db.update(parts).set(updateData).where(eq(parts.id, Number(id)));
+  
+  revalidatePath('/catalog');
+  
   return Response.json({ ok: true });
 }
 
 export async function DELETE(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   await db.delete(parts).where(eq(parts.id, Number(id)));
+  
+  revalidatePath('/catalog');
+  
   return Response.json({ ok: true });
 }

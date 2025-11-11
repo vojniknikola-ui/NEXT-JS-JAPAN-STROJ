@@ -2,6 +2,7 @@ import { db } from "@/db";
 import { parts, categories } from "@/db/schema";
 import { and, eq, ilike } from "drizzle-orm";
 import { partCreateSchema } from "@/lib/validation";
+import { revalidatePath } from "next/cache";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -44,6 +45,8 @@ export async function POST(req: Request) {
     price: parsed.data.price.toString(),
     updatedAt: new Date(),
   }).returning({ id: parts.id });
+
+  revalidatePath('/catalog');
 
   return Response.json({ id: inserted.id }, { status: 201 });
 }

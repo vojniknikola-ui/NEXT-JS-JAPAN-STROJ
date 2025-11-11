@@ -19,6 +19,11 @@ export default function AdminParts() {
   } as any);
   const [q, setQ] = useState("");
 
+  const primaryButtonClass = 'inline-flex items-center justify-center gap-2 rounded-full bg-[#ff6b00] px-6 py-3 text-sm font-semibold uppercase tracking-wide text-black shadow-[0_18px_45px_-20px_rgba(255,107,0,0.9)] transition-all hover:scale-105 hover:bg-[#ff7f1a] disabled:opacity-50 disabled:cursor-not-allowed';
+  const secondaryButtonClass = 'inline-flex items-center justify-center gap-2 rounded-full border border-white/15 px-6 py-3 text-sm font-semibold uppercase tracking-wide text-neutral-200 transition-all hover:border-[#ff6b00] hover:text-[#ff6b00] hover:scale-105';
+  const inputClass = 'w-full rounded-2xl border border-white/10 bg-[#111111] px-4 py-3 text-sm text-neutral-100 placeholder:text-neutral-500 outline-none transition focus:border-[#ff6b00]/50 focus:ring-2 focus:ring-[#ff6b00]/60';
+  const labelClass = 'block text-[0.7rem] font-semibold uppercase tracking-[0.35em] text-neutral-400 mb-2';
+
   useEffect(() => {
     (async () => {
       try {
@@ -141,165 +146,225 @@ export default function AdminParts() {
   const filtered = useMemo(() => parts, [parts]);
 
   return (
-    <main className="max-w-5xl mx-auto p-6 space-y-8">
-      <header className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Rezervni dijelovi – admin</h1>
-        <div className="flex gap-2">
-          <input 
-            value={q} 
-            onChange={(e) => setQ(e.target.value)} 
-            placeholder="Pretraga..." 
-            className="border rounded p-2" 
-          />
-          <button onClick={() => refresh(q)} className="px-4 py-2 bg-black text-white rounded">
-            Traži
-          </button>
+    <div className="min-h-screen bg-gradient-to-b from-[#050505] via-[#0b0b0b] to-[#111111] py-16 px-6">
+      <div className="mx-auto w-full max-w-7xl space-y-14">
+        <div className="flex flex-col gap-3">
+          <span className="inline-flex w-max items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.4em] text-neutral-300">
+            JapanStroj Admin
+          </span>
+          <h1 className="text-4xl font-extrabold text-white md:text-5xl">Upravljanje rezervnim dijelovima</h1>
+          <p className="max-w-2xl text-sm text-neutral-400">
+            Ažurirajte ponudu komponenti, pratite stanja i kontrolirajte dostupnost u realnom vremenu.
+          </p>
         </div>
-      </header>
 
-      <section className="grid md:grid-cols-2 gap-8">
-        <form onSubmit={savePart} className="border rounded p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="font-medium">{editingId ? "Uredi dio" : "Dodaj novi dio"}</h2>
+        <div className="flex items-center justify-between">
+          <div className="flex gap-2">
+            <input 
+              value={q} 
+              onChange={(e) => setQ(e.target.value)} 
+              placeholder="Pretraži dijelove..." 
+              className={inputClass}
+              style={{ width: '300px' }}
+            />
+            <button onClick={() => refresh(q)} className={secondaryButtonClass}>
+              Traži
+            </button>
+          </div>
+        </div>
+
+        <div className="rounded-3xl border border-white/10 bg-[#101010] p-10 shadow-[0_35px_90px_-40px_rgba(255,107,0,0.5)]">
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <h2 className="text-2xl font-bold text-white">{editingId ? 'Uredi postojeći dio' : 'Dodaj novi dio'}</h2>
             {editingId && (
-              <button 
-                type="button" 
-                onClick={resetForm} 
-                className="text-sm text-gray-600 hover:text-black"
-              >
-                Otkaži
+              <button onClick={resetForm} className={secondaryButtonClass}>
+                Otkaži izmjene
               </button>
             )}
           </div>
-          
-          <input 
-            className="border p-2 w-full rounded" 
-            placeholder="SKU" 
-            value={form.sku} 
-            onChange={e => setForm({ ...form, sku: e.target.value })}
-            required
-          />
-          <input 
-            className="border p-2 w-full rounded" 
-            placeholder="Naziv" 
-            value={form.title} 
-            onChange={e => setForm({ ...form, title: e.target.value })}
-            required
-          />
-          <textarea 
-            className="border p-2 w-full rounded" 
-            placeholder="Opis" 
-            rows={3}
-            value={form.description || ""} 
-            onChange={e => setForm({ ...form, description: e.target.value })}
-          />
-          
-          <div className="grid grid-cols-3 gap-2">
-            <input 
-              type="number" 
-              step="0.01"
-              className="border p-2 rounded" 
-              placeholder="Cijena" 
-              value={form.price} 
-              onChange={e => setForm({ ...form, price: Number(e.target.value) })}
-              required
-            />
-            <input 
-              className="border p-2 rounded" 
-              placeholder="Valuta" 
-              value={form.currency} 
-              onChange={e => setForm({ ...form, currency: e.target.value.toUpperCase() })}
-              maxLength={3}
-            />
-            <input 
-              type="number" 
-              className="border p-2 rounded" 
-              placeholder="Zaliha" 
-              value={form.stock} 
-              onChange={e => setForm({ ...form, stock: Number(e.target.value) })}
-            />
-          </div>
-          
-          <select 
-            className="border p-2 rounded w-full" 
-            value={form.categoryId} 
-            onChange={e => setForm({ ...form, categoryId: Number(e.target.value) })}
-          >
-            {cats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-          
-          <div className="space-y-2">
-            <input 
-              type="file" 
-              accept="image/*" 
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)} 
-            />
-            {form.imageUrl && !file && (
-              <div className="text-sm text-gray-600">
-                Trenutna slika: <a href={form.imageUrl} target="_blank" className="text-blue-600 hover:underline">Pogledaj</a>
-              </div>
-            )}
-          </div>
-          
-          <label className="flex items-center gap-2 text-sm">
-            <input 
-              type="checkbox" 
-              checked={!!form.isActive} 
-              onChange={e => setForm({ ...form, isActive: e.target.checked })}
-            />
-            Aktivan
-          </label>
-          
-          <button 
-            disabled={loading} 
-            className="bg-black text-white px-4 py-2 rounded w-full disabled:opacity-50"
-          >
-            {loading ? "Spremam..." : editingId ? "Ažuriraj" : "Dodaj"}
-          </button>
-        </form>
 
-        <div className="border rounded p-4 max-h-[600px] overflow-y-auto">
-          <h2 className="font-medium mb-2">Lista dijelova ({filtered.length})</h2>
-          <ul className="divide-y">
-            {filtered.map((p: any) => (
-              <li key={p.id} className="py-3 flex gap-3 items-center">
-                {p.imageUrl ? (
-                  <img src={p.imageUrl} alt={p.title} className="w-16 h-16 object-cover rounded" />
-                ) : (
-                  <div className="w-16 h-16 bg-gray-100 rounded flex items-center justify-center text-gray-400 text-xs">
-                    Nema slike
-                  </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium truncate">{p.title}</div>
-                  <div className="text-sm text-gray-600">
-                    {p.sku} · {p.price} {p.currency} · {p.stock} kom
-                  </div>
-                  {!p.isActive && (
-                    <span className="text-xs text-red-600">Neaktivan</span>
-                  )}
+          <form onSubmit={savePart} className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2">
+            <div>
+              <label className={labelClass}>SKU</label>
+              <input
+                type="text"
+                placeholder="SKU broj"
+                value={form.sku}
+                onChange={e => setForm({ ...form, sku: e.target.value })}
+                className={inputClass}
+                required
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Naziv</label>
+              <input
+                type="text"
+                placeholder="Naziv dijela"
+                value={form.title}
+                onChange={e => setForm({ ...form, title: e.target.value })}
+                className={inputClass}
+                required
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className={labelClass}>Opis</label>
+              <textarea
+                placeholder="Detaljan opis dijela"
+                rows={3}
+                value={form.description || ""}
+                onChange={e => setForm({ ...form, description: e.target.value })}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Cijena</label>
+              <input
+                type="number"
+                step="0.01"
+                placeholder="0.00"
+                value={form.price}
+                onChange={e => setForm({ ...form, price: Number(e.target.value) })}
+                className={inputClass}
+                required
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Valuta</label>
+              <input
+                type="text"
+                placeholder="EUR"
+                value={form.currency}
+                onChange={e => setForm({ ...form, currency: e.target.value.toUpperCase() })}
+                className={inputClass}
+                maxLength={3}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Zaliha</label>
+              <input
+                type="number"
+                placeholder="0"
+                value={form.stock}
+                onChange={e => setForm({ ...form, stock: Number(e.target.value) })}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Kategorija</label>
+              <select
+                value={form.categoryId}
+                onChange={e => setForm({ ...form, categoryId: Number(e.target.value) })}
+                className={inputClass}
+              >
+                {cats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+            <div className="md:col-span-2">
+              <label className={labelClass}>Slika</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                className="w-full rounded-2xl border border-white/10 bg-[#111111] px-4 py-3 text-sm text-neutral-100 file:mr-4 file:rounded-full file:border-0 file:bg-[#ff6b00] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-black hover:file:bg-[#ff7f1a]"
+              />
+              {form.imageUrl && !file && (
+                <div className="mt-2 text-sm text-neutral-400">
+                  Trenutna slika: <a href={form.imageUrl} target="_blank" rel="noopener noreferrer" className="text-[#ff6b00] hover:text-[#ff7f1a] hover:underline">Pogledaj</a>
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => editPart(p)}
-                    className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
-                    disabled={loading}
-                  >
-                    Uredi
-                  </button>
-                  <button
-                    onClick={() => deletePart(p.id)}
-                    className="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700"
-                    disabled={loading}
-                  >
-                    Obriši
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="isActive"
+                checked={!!form.isActive}
+                onChange={e => setForm({ ...form, isActive: e.target.checked })}
+                className="h-5 w-5 rounded border-white/20 bg-[#0f0f0f] text-[#ff6b00] focus:ring-[#ff6b00] focus:ring-offset-0"
+              />
+              <label htmlFor="isActive" className="text-sm font-semibold text-neutral-200">
+                Aktivan dio
+              </label>
+            </div>
+            <div className="md:col-span-2 flex gap-4 mt-4">
+              <button
+                type="submit"
+                disabled={loading}
+                className={primaryButtonClass}
+              >
+                {loading ? "Spremam..." : editingId ? "Ažuriraj dio" : "Dodaj dio"}
+              </button>
+            </div>
+          </form>
         </div>
-      </section>
-    </main>
+
+        <div className="rounded-3xl border border-white/10 bg-[#101010] p-10 shadow-[0_35px_90px_-40px_rgba(255,107,0,0.5)]">
+          <h2 className="text-2xl font-bold text-white mb-6">Rezervni dijelovi ({filtered.length})</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-[#1a1a1a] border-b border-white/10">
+                <tr>
+                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Slika</th>
+                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold">SKU</th>
+                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Naziv</th>
+                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Cijena</th>
+                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Valuta</th>
+                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Zaliha</th>
+                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Kategorija</th>
+                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Status</th>
+                  <th className="px-4 py-3 text-center text-neutral-200 font-semibold">Akcije</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((p: any) => (
+                  <tr key={p.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                    <td className="px-4 py-3">
+                      {p.imageUrl ? (
+                        <img src={p.imageUrl} alt={p.title} className="w-16 h-16 object-cover rounded-lg" />
+                      ) : (
+                        <div className="w-16 h-16 bg-[#1a1a1a] rounded-lg flex items-center justify-center text-neutral-600 text-xs">
+                          N/A
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-neutral-100 font-mono text-xs">{p.sku}</td>
+                    <td className="px-4 py-3 text-neutral-100 font-medium">{p.title}</td>
+                    <td className="px-4 py-3 text-neutral-100">{p.price}</td>
+                    <td className="px-4 py-3 text-neutral-100">{p.currency}</td>
+                    <td className="px-4 py-3 text-neutral-100">{p.stock}</td>
+                    <td className="px-4 py-3 text-neutral-100">{p.category || 'N/A'}</td>
+                    <td className="px-4 py-3">
+                      {p.isActive ? (
+                        <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-600 text-white">Aktivan</span>
+                      ) : (
+                        <span className="px-3 py-1 rounded-full text-xs font-bold bg-red-600 text-white">Neaktivan</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <button
+                        onClick={() => editPart(p)}
+                        disabled={loading}
+                        className="bg-[#ff6b00] hover:bg-[#ff7f1a] text-black px-4 py-2 rounded-full mr-2 font-semibold transition-all hover:scale-105 disabled:opacity-50"
+                      >
+                        Uredi
+                      </button>
+                      <button
+                        onClick={() => deletePart(p.id)}
+                        disabled={loading}
+                        className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-full font-semibold transition-all hover:scale-105 disabled:opacity-50"
+                      >
+                        Obriši
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {filtered.length === 0 && (
+            <p className="text-center py-8 text-neutral-400">Nema unesenih rezervnih dijelova</p>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
