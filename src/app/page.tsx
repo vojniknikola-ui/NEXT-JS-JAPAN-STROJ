@@ -166,7 +166,7 @@ export default function Home() {
                     <h3 className="text-lg font-bold text-white mb-2 group-hover:text-[#ff6b00] transition-colors">{part.name}</h3>
                     <p className="text-neutral-400 text-sm mb-3">{part.brand} - {part.model}</p>
                     <div className="flex items-center justify-between">
-                      <span className="text-2xl font-black text-[#ff6b00]">{part.priceWithVAT ? part.priceWithVAT.toFixed(2) : '0.00'} BAM</span>
+                      <span className="text-2xl font-black text-[#ff6b00]">{part.priceWithVAT ? Number(part.priceWithVAT).toFixed(2) : '0.00'} BAM</span>
                       <div className="text-xs text-neutral-500 uppercase tracking-wide">PDV uključen</div>
                     </div>
                   </div>
