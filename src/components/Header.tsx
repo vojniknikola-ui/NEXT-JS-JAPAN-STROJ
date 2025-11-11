@@ -74,27 +74,27 @@ const Header: React.FC<HeaderProps> = ({ activePage, setActivePage, cartItemCoun
           </div>
         </div>
       </div>
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-[#050505]/98 border-t border-white/10 flex justify-around items-center py-3 px-2 z-50 backdrop-blur-sm shadow-2xl">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-gradient-to-t from-[#050505] via-[#050505]/98 to-[#050505]/95 border-t border-white/10 flex justify-around items-center py-4 px-3 z-50 backdrop-blur-sm shadow-[0_0_40px_rgba(0,0,0,0.8)]">
         {navItems.map((item) => (
             <button
               key={item.id}
               onClick={() => handleNavClick(item.id as Page)}
-              className={`relative flex flex-col items-center justify-center flex-1 py-2 px-1 rounded-xl transition-all duration-300 min-w-0 ${
+              className={`relative flex flex-col items-center justify-center flex-1 py-3 px-2 rounded-2xl transition-all duration-300 min-w-0 group ${
                 activePage === item.id
-                  ? 'text-[#ff6b00] bg-[#ff6b00]/10 shadow-lg'
-                  : 'text-neutral-400 hover:text-[#ff6b00] hover:bg-white/5'
+                  ? 'bg-[#ff6b00] text-black shadow-[0_8px_25px_-8px_rgba(255,107,0,0.6)] scale-105'
+                  : 'text-neutral-300 hover:text-[#ff6b00] hover:bg-white/8 hover:scale-105'
               }`}
             >
-              <div className={`p-1 rounded-lg transition-all duration-300 ${
-                activePage === item.id ? 'bg-[#ff6b00]/20' : ''
+              <div className={`p-2 rounded-xl transition-all duration-300 ${
+                activePage === item.id ? 'bg-black/20' : 'group-hover:bg-[#ff6b00]/10'
               }`}>
                 <item.icon className="h-6 w-6 sm:h-7 sm:w-7" />
               </div>
-              <span className="text-[9px] sm:text-[10px] mt-1 text-center font-semibold leading-tight truncate max-w-full">
-                {item.label.length > 8 ? item.label.substring(0, 8) + '...' : item.label}
+              <span className="text-[10px] sm:text-[11px] mt-1.5 text-center font-bold leading-tight truncate max-w-full uppercase tracking-wide">
+                {item.label.length > 10 ? item.label.substring(0, 10) + '...' : item.label}
               </span>
               {item.id === 'cart' && cartItemCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-[#ff3b3b] text-white text-[9px] sm:text-[10px] rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center font-bold shadow-lg">
+                <span className="absolute -top-1 -right-1 bg-[#ff3b3b] text-white text-[10px] sm:text-[11px] rounded-full h-5 w-5 sm:h-6 sm:w-6 flex items-center justify-center font-bold shadow-lg border-2 border-[#050505]">
                   {cartItemCount > 9 ? '9+' : cartItemCount}
                 </span>
               )}
