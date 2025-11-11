@@ -170,10 +170,14 @@ export default function CatalogPage() {
         setLoading(true);
         setError(null);
 
+        console.log('Fetching parts from API...');
         const [partsRes, categoriesRes] = await Promise.all([
           fetch('/api/parts?active=true'),
           fetch('/api/categories')
         ]);
+
+        console.log('Parts response status:', partsRes.status);
+        console.log('Categories response status:', categoriesRes.status);
 
         if (!partsRes.ok) {
           throw new Error(`Greška pri učitavanju dijelova: ${partsRes.status}`);
@@ -188,8 +192,13 @@ export default function CatalogPage() {
           categoriesRes.json()
         ]);
 
+        console.log('Loaded parts:', parts);
+        console.log('Loaded categories:', cats);
+
         // Filter only active parts
         const activeParts = parts.filter((part: PartData) => part.isActive);
+        console.log('Active parts:', activeParts);
+
         setPartsData(activeParts);
         setCategories(cats);
       } catch (error) {
