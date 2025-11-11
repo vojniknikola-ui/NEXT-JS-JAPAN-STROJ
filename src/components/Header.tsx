@@ -59,12 +59,13 @@ const Header: React.FC<HeaderProps> = ({ activePage, setActivePage, cartItemCoun
               ))}
             </nav>
             <div className="hidden lg:flex items-center space-x-3 xl:space-x-4 ml-6 xl:ml-8 pl-6 xl:pl-8 border-l border-white/10">
-                 <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="text-neutral-400 hover:text-[#ff6b00] transition-all duration-300 hover:scale-110">
-                     <FacebookIcon className="h-6 w-6 xl:h-7 xl:w-7" />
+                 <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 hover:bg-[#ff6b00] hover:text-black transition-all duration-300 hover:scale-105 border border-white/10 hover:border-[#ff6b00]">
+                     <FacebookIcon className="h-5 w-5" />
+                     <span className="text-sm font-semibold">Facebook</span>
                  </a>
-                 <a href="https://olx.ba" target="_blank" rel="noopener noreferrer" className="text-neutral-400 hover:text-[#ff6b00] transition-all duration-300 hover:scale-110 flex items-center gap-2">
-                     <OlxIcon className="h-6 w-6 xl:h-7 xl:w-7" />
-                     <span className="text-sm xl:text-base">OLX</span>
+                 <a href="https://olx.ba" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 hover:bg-[#ff6b00] hover:text-black transition-all duration-300 hover:scale-105 border border-white/10 hover:border-[#ff6b00]">
+                     <OlxIcon className="h-5 w-5" />
+                     <span className="text-sm font-semibold">OLX</span>
                  </a>
             </div>
           </div>
