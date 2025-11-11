@@ -69,8 +69,13 @@ const Header: React.FC<HeaderProps> = ({ activePage, setActivePage, cartItemCoun
                  </a>
             </div>
           </div>
-          <div className="lg:hidden">
-            {/* Mobile menu button could go here if needed */}
+          <div className="lg:hidden flex items-center space-x-2">
+            <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="p-2 rounded-full bg-white/5 hover:bg-[#ff6b00] hover:text-black transition-all duration-300 hover:scale-110 border border-white/10 hover:border-[#ff6b00]">
+              <FacebookIcon className="h-5 w-5" />
+            </a>
+            <a href="https://olx.ba" target="_blank" rel="noopener noreferrer" className="p-2 rounded-full bg-white/5 hover:bg-[#ff6b00] hover:text-black transition-all duration-300 hover:scale-110 border border-white/10 hover:border-[#ff6b00]">
+              <OlxIcon className="h-5 w-5" />
+            </a>
           </div>
         </div>
       </div>
