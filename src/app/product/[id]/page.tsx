@@ -196,13 +196,6 @@ export default function ProductDetailPage() {
                       >
                         <WhatsAppIcon className="w-5 h-5 mr-3" /> WhatsApp
                       </a>
-                      <a
-                        href={`viber://forward?text=${shareMessage}`}
-                        className="flex items-center px-4 py-2 text-sm text-neutral-200 hover:bg-white/5 transition-colors"
-                        onClick={() => setShareMenuOpen(false)}
-                      >
-                        <ViberIcon className="w-5 h-5 mr-3" /> Viber
-                      </a>
                       <button
                         onClick={handleCopyLink}
                         className="w-full text-left flex items-center px-4 py-2 text-sm text-neutral-200 hover:bg-white/5 transition-colors"
