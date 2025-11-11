@@ -12,7 +12,7 @@ export function useSpareParts() {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch('/api/spare-parts');
+      const response = await fetch('/api/parts');
       if (!response.ok) {
         throw new Error('Failed to fetch spare parts');
       }
@@ -28,7 +28,7 @@ export function useSpareParts() {
 
   const createSparePart = useCallback(async (sparePart: Omit<SparePart, 'id'>) => {
     try {
-      const response = await fetch('/api/spare-parts', {
+      const response = await fetch('/api/parts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -51,7 +51,7 @@ export function useSpareParts() {
 
   const updateSparePart = useCallback(async (id: number, updates: Partial<SparePart>) => {
     try {
-      const response = await fetch('/api/spare-parts', {
+      const response = await fetch('/api/parts', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -76,7 +76,7 @@ export function useSpareParts() {
 
   const deleteSparePart = useCallback(async (id: number) => {
     try {
-      const response = await fetch(`/api/spare-parts?id=${id}`, {
+      const response = await fetch(`/api/parts/${id}`, {
         method: 'DELETE',
       });
 

@@ -1,324 +1,277 @@
-'use client';
+"use client";
+import { useEffect, useMemo, useState } from "react";
 
-import React, { useEffect, useState } from 'react';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
-import { Page, SparePart, CartItem, Availability } from '@/types';
+type Category = { id: number; name: string };
+type PartInput = {
+  sku: string; 
+  title: string; 
+  brand?: string;
+  model?: string;
+  catalogNumber?: string;
+  application?: string;
+  delivery?: string;
+  description?: string;
+  price: number; 
+  priceWithoutVAT?: number;
+  priceWithVAT?: number;
+  discount?: number;
+  currency: string; 
+  stock: number; 
+  categoryId: number;
+  imageUrl?: string; 
+  thumbUrl?: string; 
+  spec1?: string;
+  spec2?: string;
+  spec3?: string;
+  spec4?: string;
+  spec5?: string;
+  spec6?: string;
+  spec7?: string;
+  specJson?: string; 
+  isActive?: boolean;
+};
 
-const getNextId = (items: SparePart[]) => (items.length ? Math.max(...items.map((item) => item.id)) + 1 : 1);
-
-const createEmptyPart = (id: number): SparePart => ({
-  id,
-  name: '',
-  brand: '',
-  model: '',
-  catalogNumber: '',
-  application: '',
-  delivery: Availability.Available,
-  priceWithoutVAT: 0,
-  priceWithVAT: 0,
-  discount: 0,
-  imageUrl: '',
-  technicalSpecs: {
-    spec1: '',
-    spec2: '',
-    spec3: '',
-    spec4: '',
-    spec5: '',
-    spec6: '',
-    spec7: '',
-  },
-});
-
-export default function AdminPanel() {
-  const [activePage, setActivePage] = useState<Page>('admin');
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [parts, setParts] = useState<SparePart[]>([]);
+export default function AdminParts() {
+  const [cats, setCats] = useState<Category[]>([]);
+  const [parts, setParts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [formData, setFormData] = useState<SparePart>(() => createEmptyPart(getNextId([])));
+  const [form, setForm] = useState<PartInput>({
+    sku: "", 
+    title: "", 
+    brand: "",
+    model: "",
+    catalogNumber: "",
+    application: "",
+    delivery: "available",
+    description: "",
+    price: 0, 
+    priceWithoutVAT: 0,
+    priceWithVAT: 0,
+    discount: 0,
+    currency: "BAM",
+    stock: 0, 
+    categoryId: 1, 
+    spec1: "",
+    spec2: "",
+    spec3: "",
+    spec4: "",
+    spec5: "",
+    spec6: "",
+    spec7: "",
+    isActive: true,
+  } as any);
+  const [q, setQ] = useState("");
 
-  useEffect(() => {
-    // Load cart from API
-    const loadCart = async () => {
-      try {
-        const response = await fetch('/api/cart');
-        if (response.ok) {
-          const data = await response.json();
-          setCartItems(data);
-        }
-      } catch (error) {
-        console.error('Error loading cart:', error);
-        // Fallback to localStorage if API fails
-        if (typeof window !== 'undefined') {
-          const savedCart = localStorage.getItem('japanStrojCart');
-          if (savedCart) {
-            try {
-              setCartItems(JSON.parse(savedCart));
-            } catch (localError) {
-              console.error('Error loading cart from localStorage:', localError);
-            }
-          }
-        }
-      }
-    };
-
-    loadCart();
-
-    // Load spare parts from API
-    const loadSpareParts = async () => {
-      try {
-        const response = await fetch('/api/spare-parts');
-        if (response.ok) {
-          const data = await response.json();
-          console.log('Loaded spare parts:', data); // Debug log
-          setParts(data);
-          if (editingId === null) {
-            setFormData((prev) => (prev.name || prev.brand || prev.catalogNumber ? prev : createEmptyPart(getNextId(data))));
-          }
-        } else {
-          console.error('Failed to load spare parts:', response.status, response.statusText);
-        }
-      } catch (error) {
-        console.error('Error loading spare parts:', error);
-      }
-    };
-
-    loadSpareParts();
-  }, [editingId]);
-
-  // Load example data for demonstration
-  const loadExampleData = () => {
-    const examplePart: SparePart = {
-      id: getNextId(parts),
-      name: 'Primjer dijela - Filter ulja',
-      brand: 'Caterpillar',
-      model: '320D',
-      catalogNumber: 'CAT-320D-FLT-EXAMPLE',
-      application: 'Motor',
-      delivery: Availability.Available,
-      priceWithoutVAT: 38.89,
-      priceWithVAT: 45.5,
-      discount: 0,
-      imageUrl: 'https://picsum.photos/seed/example-filter/400/300',
-      technicalSpecs: {
-        spec1: 'Primjena: Motor',
-        spec2: 'Model: 320D',
-        spec3: 'Brend: Caterpillar',
-        spec4: 'Kataloški broj: CAT-320D-FLT-EXAMPLE',
-        spec5: 'Kapacitet: 10L',
-        spec6: 'Visina: 150mm',
-        spec7: 'Pakovanje: 1 komad',
-      },
-    };
-    setFormData(examplePart);
-  };
-
-  const cartItemCount = cartItems.reduce((total, item) => total + item.quantity, 0);
-
-  const primaryButtonClass = 'inline-flex items-center justify-center gap-2 rounded-full bg-[#ff6b00] px-6 py-3 text-sm font-semibold uppercase tracking-wide text-black shadow-[0_18px_45px_-20px_rgba(255,107,0,0.9)] transition-all hover:scale-105 hover:bg-[#ff7f1a]';
+  const primaryButtonClass = 'inline-flex items-center justify-center gap-2 rounded-full bg-[#ff6b00] px-6 py-3 text-sm font-semibold uppercase tracking-wide text-black shadow-[0_18px_45px_-20px_rgba(255,107,0,0.9)] transition-all hover:scale-105 hover:bg-[#ff7f1a] disabled:opacity-50 disabled:cursor-not-allowed';
   const secondaryButtonClass = 'inline-flex items-center justify-center gap-2 rounded-full border border-white/15 px-6 py-3 text-sm font-semibold uppercase tracking-wide text-neutral-200 transition-all hover:border-[#ff6b00] hover:text-[#ff6b00] hover:scale-105';
   const inputClass = 'w-full rounded-2xl border border-white/10 bg-[#111111] px-4 py-3 text-sm text-neutral-100 placeholder:text-neutral-500 outline-none transition focus:border-[#ff6b00]/50 focus:ring-2 focus:ring-[#ff6b00]/60';
-  const disabledInputClass = 'w-full rounded-2xl border border-white/10 bg-[#1b1b1b] px-4 py-3 text-sm text-neutral-400';
   const labelClass = 'block text-[0.7rem] font-semibold uppercase tracking-[0.35em] text-neutral-400 mb-2';
 
-  const calculateVAT = (price: number) => parseFloat((price * 1.17).toFixed(2));
-
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
-    field: keyof SparePart
-  ) => {
-    const value = e.target.value;
-    if (field === 'priceWithoutVAT' || field === 'discount') {
-      const numericValue = parseFloat(value) || 0;
-      const nextState = { ...formData, [field]: numericValue } as SparePart;
-      if (field === 'priceWithoutVAT') {
-        nextState.priceWithVAT = calculateVAT(numericValue);
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/categories");
+        if (res.ok) {
+          const categories = await res.json();
+          setCats(categories);
+        } else {
+          setCats([{ id: 1, name: "Default" }]);
+        }
+      } catch (error) {
+        setCats([{ id: 1, name: "Default" }]);
       }
-      setFormData(nextState);
-      return;
+      await refresh();
+    })();
+  }, []);
+
+  async function refresh(search?: string) {
+    const url = `/api/parts${search ? `?q=${encodeURIComponent(search)}` : ""}`;
+    const res = await fetch(url);
+    setParts(await res.json());
+  }
+
+  async function uploadImage(): Promise<string | undefined> {
+    if (!file) return undefined;
+    const fd = new FormData();
+    fd.append("file", file);
+    const resp = await fetch("/api/upload", { method: "POST", body: fd });
+    if (!resp.ok) { alert("Upload nije uspio"); return; }
+    const { url } = await resp.json();
+    return url as string;
+  }
+
+  async function savePart(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const imageUrl = file ? await uploadImage() : form.imageUrl;
+      const payload = { 
+        ...form, 
+        price: Number(form.price), 
+        priceWithoutVAT: form.priceWithoutVAT ? Number(form.priceWithoutVAT) : undefined,
+        priceWithVAT: form.priceWithVAT ? Number(form.priceWithVAT) : undefined,
+        discount: form.discount ? Number(form.discount) : 0,
+        stock: Number(form.stock),
+        ...(imageUrl && { imageUrl })
+      };
+
+      if (editingId) {
+        const res = await fetch(`/api/parts/${editingId}`, { 
+          method: "PATCH", 
+          headers: { "Content-Type": "application/json" }, 
+          body: JSON.stringify(payload) 
+        });
+        if (!res.ok) throw new Error("Greška pri ažuriranju");
+        alert("Ažurirano!");
+      } else {
+        const res = await fetch("/api/parts", { 
+          method: "POST", 
+          headers: { "Content-Type": "application/json" }, 
+          body: JSON.stringify(payload) 
+        });
+        if (!res.ok) throw new Error("Greška pri spremanju");
+        alert("Dodano!");
+      }
+
+      resetForm();
+      await refresh();
+    } catch (e: any) {
+      alert(e.message || "Greška");
+    } finally {
+      setLoading(false);
     }
+  }
 
-    if (field === 'delivery') {
-      setFormData({ ...formData, delivery: value as Availability });
-      return;
+  async function deletePart(id: number) {
+    if (!confirm("Jeste li sigurni da želite obrisati ovaj dio?")) return;
+    
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/parts/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Greška pri brisanju");
+      alert("Obrisano!");
+      await refresh();
+    } catch (e: any) {
+      alert(e.message || "Greška");
+    } finally {
+      setLoading(false);
     }
+  }
 
-    setFormData({ ...formData, [field]: value } as SparePart);
-  };
-
-  const handleSpecChange = (e: React.ChangeEvent<HTMLInputElement>, spec: keyof SparePart['technicalSpecs']) => {
-    setFormData({
-      ...formData,
-      technicalSpecs: {
-        ...formData.technicalSpecs,
-        [spec]: e.target.value,
-      },
+  function editPart(p: any) {
+    setEditingId(p.id);
+    setForm({
+      sku: p.sku,
+      title: p.title,
+      brand: p.brand || "",
+      model: p.model || "",
+      catalogNumber: p.catalogNumber || "",
+      application: p.application || "",
+      delivery: p.delivery || "available",
+      description: p.description || "",
+      price: Number(p.price),
+      priceWithoutVAT: Number(p.priceWithoutVAT) || 0,
+      priceWithVAT: Number(p.priceWithVAT) || 0,
+      discount: Number(p.discount) || 0,
+      currency: p.currency,
+      stock: p.stock,
+      categoryId: p.categoryId || 1,
+      imageUrl: p.imageUrl,
+      spec1: p.spec1 || "",
+      spec2: p.spec2 || "",
+      spec3: p.spec3 || "",
+      spec4: p.spec4 || "",
+      spec5: p.spec5 || "",
+      spec6: p.spec6 || "",
+      spec7: p.spec7 || "",
+      isActive: p.isActive,
     });
-  };
+    setFile(null);
+  }
 
-  const handleEdit = (part: SparePart) => {
-    setEditingId(part.id);
-    setFormData({
-      ...part,
-      priceWithVAT: calculateVAT(part.priceWithoutVAT),
-    });
-  };
-
-  const handleAdd = () => {
-    const nextId = getNextId(parts);
+  function resetForm() {
     setEditingId(null);
-    setFormData(createEmptyPart(nextId));
-  };
+    setForm({ 
+      sku: "", 
+      title: "", 
+      brand: "",
+      model: "",
+      catalogNumber: "",
+      application: "",
+      delivery: "available",
+      description: "",
+      price: 0, 
+      priceWithoutVAT: 0,
+      priceWithVAT: 0,
+      discount: 0,
+      currency: "BAM",
+      stock: 0, 
+      categoryId: cats[0]?.id || 1,
+      spec1: "",
+      spec2: "",
+      spec3: "",
+      spec4: "",
+      spec5: "",
+      spec6: "",
+      spec7: "",
+      isActive: true 
+    } as any);
+    setFile(null);
+  }
 
-  const handleSave = async () => {
-    // Validation
-    if (!formData.name.trim()) {
-      alert('Naziv dijela je obavezan!');
-      return;
-    }
-    if (!formData.brand.trim()) {
-      alert('Marka je obavezna!');
-      return;
-    }
-    if (!formData.catalogNumber.trim()) {
-      alert('Kataloški broj je obavezan!');
-      return;
-    }
-    if (formData.priceWithoutVAT <= 0) {
-      alert('Cijena bez PDV-a mora biti veća od 0!');
-      return;
-    }
-
-    const partToSave: SparePart = {
-      ...formData,
-      priceWithVAT: calculateVAT(formData.priceWithoutVAT),
-    };
-
-    // Remove id for new parts (database will auto-generate)
-    const dataToSend = editingId ? partToSave : { ...partToSave, id: undefined };
-
-    try {
-      const method = editingId ? 'PUT' : 'POST';
-      console.log('Saving spare part:', dataToSend); // Debug log
-      const response = await fetch('/api/spare-parts', {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(dataToSend),
-      });
-
-      console.log('Save response status:', response.status); // Debug log
-
-      if (response.ok) {
-        const savedPart = await response.json();
-        console.log('Saved part:', savedPart); // Debug log
-
-        // Refresh the parts list from API to ensure consistency
-        const refreshResponse = await fetch('/api/spare-parts');
-        if (refreshResponse.ok) {
-          const refreshedData = await refreshResponse.json();
-          console.log('Refreshed parts:', refreshedData); // Debug log
-          setParts(refreshedData);
-        }
-
-        // Reset form
-        setEditingId(null);
-        setFormData(createEmptyPart(getNextId(parts)));
-
-        // Show success message
-        alert(editingId ? 'Dio je uspješno ažuriran!' : 'Dio je uspješno dodan!');
-      } else {
-        const errorData = await response.json();
-        console.error('Save error:', errorData); // Debug log
-        alert(`Greška: ${errorData.error || 'Neuspješno spremanje dijela'}`);
-      }
-    } catch (error) {
-      console.error('Error saving spare part:', error);
-      alert('Došlo je do greške prilikom spremanja dijela.');
-    }
-  };
-
-  const handleDelete = async (id: number) => {
-    if (!confirm('Jeste li sigurni da želite obrisati ovaj dio?')) {
-      return;
-    }
-
-    try {
-      const response = await fetch(`/api/spare-parts?id=${id}`, {
-        method: 'DELETE',
-      });
-
-      if (response.ok) {
-        // Refresh the parts list from API to ensure consistency
-        const refreshResponse = await fetch('/api/spare-parts');
-        if (refreshResponse.ok) {
-          const refreshedData = await refreshResponse.json();
-          setParts(refreshedData);
-        }
-
-        if (editingId === id) {
-          setEditingId(null);
-          setFormData(createEmptyPart(getNextId(parts)));
-        }
-        alert('Dio je uspješno obrisan!');
-      } else {
-        const errorData = await response.json();
-        alert(`Greška: ${errorData.error || 'Neuspješno brisanje dijela'}`);
-      }
-    } catch (error) {
-      console.error('Error deleting spare part:', error);
-      alert('Došlo je do greške prilikom brisanja dijela.');
-    }
-  };
+  const filtered = useMemo(() => parts, [parts]);
 
   return (
-    <div className="bg-[#0b0b0b] text-neutral-100 min-h-screen flex flex-col">
-      <Header activePage={activePage} setActivePage={setActivePage} cartItemCount={cartItemCount} />
-      <main className="flex-grow">
-        <div className="min-h-screen bg-gradient-to-b from-[#050505] via-[#0b0b0b] to-[#111111] py-16 px-6">
-          <div className="mx-auto w-full max-w-6xl space-y-14">
-            <div className="flex flex-col gap-3">
-              <span className="inline-flex w-max items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.4em] text-neutral-300">
-                JapanStroj Admin
-              </span>
-              <h1 className="text-4xl font-extrabold text-white md:text-5xl">Upravljanje rezervnim dijelovima</h1>
-              <p className="max-w-2xl text-sm text-neutral-400">
-                Ažurirajte ponudu komponenti, pratite stanja i kontrolirajte dostupnost strojeva u realnom vremenu.
-              </p>
-            </div>
+    <div className="min-h-screen bg-gradient-to-b from-[#050505] via-[#0b0b0b] to-[#111111] py-16 px-6">
+      <div className="mx-auto w-full max-w-7xl space-y-14">
+        <div className="flex flex-col gap-3">
+          <span className="inline-flex w-max items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.4em] text-neutral-300">
+            JapanStroj Admin
+          </span>
+          <h1 className="text-4xl font-extrabold text-white md:text-5xl">Upravljanje rezervnim dijelovima</h1>
+          <p className="max-w-2xl text-sm text-neutral-400">
+            Ažurirajte ponudu komponenti, pratite stanja i kontrolirajte dostupnost u realnom vremenu.
+          </p>
+        </div>
 
-            <div className="rounded-3xl border border-white/10 bg-[#101010] p-10 shadow-[0_35px_90px_-40px_rgba(255,107,0,0.5)]">
-              <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                <h2 className="text-2xl font-bold text-white">{editingId ? 'Uredi postojeći dio' : 'Dodaj novu karticu'}</h2>
-                <div className="flex gap-3">
-                  <button onClick={loadExampleData} className={secondaryButtonClass}>
-                    Učitaj primjer
-                  </button>
-                  <button onClick={handleAdd} className={secondaryButtonClass}>
-                    Novi unos
-                  </button>
-                </div>
-              </div>
+        <div className="flex items-center justify-between">
+          <div className="flex gap-2">
+            <input 
+              value={q} 
+              onChange={(e) => setQ(e.target.value)} 
+              placeholder="Pretraži dijelove..." 
+              className={inputClass}
+              style={{ width: '300px' }}
+            />
+            <button onClick={() => refresh(q)} className={secondaryButtonClass}>
+              Traži
+            </button>
+          </div>
+        </div>
 
-              <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2">
-                <div>
-                  <label className={labelClass}>Naziv</label>
-                  <input
-                    type="text"
-                    placeholder="Naziv dijela"
-                    value={formData.name}
-                    onChange={(e) => handleInputChange(e, 'name')}
-                    className={inputClass}
-                  />
-                </div>
+        <div className="rounded-3xl border border-white/10 bg-[#101010] p-10 shadow-[0_35px_90px_-40px_rgba(255,107,0,0.5)]">
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <h2 className="text-2xl font-bold text-white">{editingId ? 'Uredi postojeći dio' : 'Dodaj novi dio'}</h2>
+            {editingId && (
+              <button onClick={resetForm} className={secondaryButtonClass}>
+                Otkaži izmjene
+              </button>
+            )}
+          </div>
+
+          <form onSubmit={savePart} className="mt-8 space-y-8">
+            <div>
+              <h3 className="text-lg font-bold text-white mb-4 pb-2 border-b border-white/10">Osnovni podaci</h3>
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <div>
                   <label className={labelClass}>Marka</label>
                   <input
                     type="text"
-                    placeholder="Marka (npr. Caterpillar)"
-                    value={formData.brand}
-                    onChange={(e) => handleInputChange(e, 'brand')}
+                    placeholder="Marka"
+                    value={form.brand || ""}
+                    onChange={e => setForm({ ...form, brand: e.target.value })}
                     className={inputClass}
                   />
                 </div>
@@ -327,8 +280,8 @@ export default function AdminPanel() {
                   <input
                     type="text"
                     placeholder="Model"
-                    value={formData.model}
-                    onChange={(e) => handleInputChange(e, 'model')}
+                    value={form.model || ""}
+                    onChange={e => setForm({ ...form, model: e.target.value })}
                     className={inputClass}
                   />
                 </div>
@@ -337,228 +290,351 @@ export default function AdminPanel() {
                   <input
                     type="text"
                     placeholder="Kataloški broj"
-                    value={formData.catalogNumber}
-                    onChange={(e) => handleInputChange(e, 'catalogNumber')}
+                    value={form.catalogNumber || ""}
+                    onChange={e => setForm({ ...form, catalogNumber: e.target.value })}
                     className={inputClass}
                   />
                 </div>
                 <div>
-                  <label className={labelClass}>Primjena</label>
+                  <label className={labelClass}>SKU</label>
                   <input
                     type="text"
-                    placeholder="npr. Hidraulika"
-                    value={formData.application}
-                    onChange={(e) => handleInputChange(e, 'application')}
+                    placeholder="SKU broj"
+                    value={form.sku}
+                    onChange={e => setForm({ ...form, sku: e.target.value })}
+                    className={inputClass}
+                    required
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className={labelClass}>Naziv</label>
+                  <input
+                    type="text"
+                    placeholder="Naziv dijela"
+                    value={form.title}
+                    onChange={e => setForm({ ...form, title: e.target.value })}
+                    className={inputClass}
+                    required
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className={labelClass}>Primjena</label>
+                  <textarea
+                    placeholder="Primjena dijela"
+                    rows={2}
+                    value={form.application || ""}
+                    onChange={e => setForm({ ...form, application: e.target.value })}
                     className={inputClass}
                   />
                 </div>
+                <div className="md:col-span-2">
+                  <label className={labelClass}>Opis</label>
+                  <textarea
+                    placeholder="Detaljan opis dijela"
+                    rows={3}
+                    value={form.description || ""}
+                    onChange={e => setForm({ ...form, description: e.target.value })}
+                    className={inputClass}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-bold text-white mb-4 pb-2 border-b border-white/10">Dostupnost i Cijena</h3>
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                 <div>
                   <label className={labelClass}>Dostupnost/Isporuka</label>
                   <select
-                    value={formData.delivery}
-                    onChange={(e) => handleInputChange(e, 'delivery')}
+                    value={form.delivery || "available"}
+                    onChange={e => setForm({ ...form, delivery: e.target.value })}
                     className={inputClass}
                   >
-                    <option value={Availability.Available}>Dostupno odmah</option>
-                    <option value={Availability.FifteenDays}>Rok isporuke 15 dana</option>
-                    <option value={Availability.OnRequest}>Po dogovoru</option>
+                    <option value="available">Dostupno odmah</option>
+                    <option value="15_days">Za 15 dana</option>
+                    <option value="on_request">Po dogovoru</option>
+                  </select>
+                </div>
+                <div>
+                  <label className={labelClass}>Zaliha</label>
+                  <input
+                    type="number"
+                    placeholder="0"
+                    value={form.stock}
+                    onChange={e => setForm({ ...form, stock: Number(e.target.value) })}
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Kategorija</label>
+                  <select
+                    value={form.categoryId}
+                    onChange={e => setForm({ ...form, categoryId: Number(e.target.value) })}
+                    className={inputClass}
+                  >
+                    {cats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className={labelClass}>Cijena bez PDV-a</label>
                   <input
                     type="number"
-                    placeholder="0.00"
-                    value={formData.priceWithoutVAT}
-                    onChange={(e) => handleInputChange(e, 'priceWithoutVAT')}
-                    className={inputClass}
                     step="0.01"
+                    placeholder="0.00"
+                    value={form.priceWithoutVAT || ""}
+                    onChange={e => setForm({ ...form, priceWithoutVAT: Number(e.target.value) })}
+                    className={inputClass}
                   />
                 </div>
                 <div>
                   <label className={labelClass}>Cijena sa PDV-om (17%)</label>
                   <input
                     type="number"
+                    step="0.01"
                     placeholder="0.00"
-                    value={formData.priceWithVAT.toFixed(2)}
-                    disabled
-                    className={disabledInputClass}
+                    value={form.priceWithVAT || ""}
+                    onChange={e => setForm({ ...form, priceWithVAT: Number(e.target.value) })}
+                    className={inputClass}
                   />
                 </div>
                 <div>
                   <label className={labelClass}>Popust (%)</label>
                   <input
                     type="number"
-                    placeholder="0"
-                    value={formData.discount}
-                    onChange={(e) => handleInputChange(e, 'discount')}
-                    className={inputClass}
                     step="0.01"
-                  />
-                </div>
-                <div>
-                  <label className={labelClass}>Link za sliku (URL)</label>
-                  <input
-                    type="text"
-                    placeholder="https://example.com/slika1.jpg"
-                    value={formData.imageUrl}
-                    onChange={(e) => handleInputChange(e, 'imageUrl')}
+                    min="0"
+                    max="100"
+                    placeholder="0"
+                    value={form.discount || ""}
+                    onChange={e => setForm({ ...form, discount: Number(e.target.value) })}
                     className={inputClass}
                   />
                 </div>
                 <div>
-                  <label className={labelClass}>Stanje na skladištu (interna referenca)</label>
+                  <label className={labelClass}>Cijena (legacy)</label>
                   <input
                     type="number"
-                    placeholder="0"
-                    value={formData.stock || 0}
-                    onChange={(e) => handleInputChange(e, 'stock')}
+                    step="0.01"
+                    placeholder="0.00"
+                    value={form.price}
+                    onChange={e => setForm({ ...form, price: Number(e.target.value) })}
                     className={inputClass}
-                    min="0"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Valuta</label>
+                  <input
+                    type="text"
+                    placeholder="EUR"
+                    value={form.currency}
+                    onChange={e => setForm({ ...form, currency: e.target.value.toUpperCase() })}
+                    className={inputClass}
+                    maxLength={3}
                   />
                 </div>
               </div>
+            </div>
 
-              <div className="mt-8">
-                <h3 className="text-2xl font-bold text-white mb-6">Tehnička specifikacija</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {(['spec1', 'spec2', 'spec3', 'spec4', 'spec5', 'spec6', 'spec7'] as const).map((spec, idx) => (
-                    <div key={spec}>
-                      <label className={labelClass}>Specifikacija {idx + 1}</label>
-                      <input
-                        type="text"
-                        placeholder={`Specifikacija ${idx + 1}`}
-                        value={formData.technicalSpecs[spec]}
-                        onChange={(e) => handleSpecChange(e, spec)}
-                        className={inputClass}
-                      />
-                    </div>
-                  ))}
+            <div>
+              <h3 className="text-lg font-bold text-white mb-4 pb-2 border-b border-white/10">Tehnička Specifikacija</h3>
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <div>
+                  <label className={labelClass}>Specifikacija 1</label>
+                  <input
+                    type="text"
+                    placeholder="Specifikacija 1"
+                    value={form.spec1 || ""}
+                    onChange={e => setForm({ ...form, spec1: e.target.value })}
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Specifikacija 2</label>
+                  <input
+                    type="text"
+                    placeholder="Specifikacija 2"
+                    value={form.spec2 || ""}
+                    onChange={e => setForm({ ...form, spec2: e.target.value })}
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Specifikacija 3</label>
+                  <input
+                    type="text"
+                    placeholder="Specifikacija 3"
+                    value={form.spec3 || ""}
+                    onChange={e => setForm({ ...form, spec3: e.target.value })}
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Specifikacija 4</label>
+                  <input
+                    type="text"
+                    placeholder="Specifikacija 4"
+                    value={form.spec4 || ""}
+                    onChange={e => setForm({ ...form, spec4: e.target.value })}
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Specifikacija 5</label>
+                  <input
+                    type="text"
+                    placeholder="Specifikacija 5"
+                    value={form.spec5 || ""}
+                    onChange={e => setForm({ ...form, spec5: e.target.value })}
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Specifikacija 6</label>
+                  <input
+                    type="text"
+                    placeholder="Specifikacija 6"
+                    value={form.spec6 || ""}
+                    onChange={e => setForm({ ...form, spec6: e.target.value })}
+                    className={inputClass}
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className={labelClass}>Specifikacija 7</label>
+                  <input
+                    type="text"
+                    placeholder="Specifikacija 7"
+                    value={form.spec7 || ""}
+                    onChange={e => setForm({ ...form, spec7: e.target.value })}
+                    className={inputClass}
+                  />
                 </div>
               </div>
+            </div>
 
-              <div className="flex gap-4 mt-8">
-                <button
-                  onClick={handleSave}
-                  className={primaryButtonClass}
-                >
-                  {editingId ? 'Update kartice' : 'Dodaj karticu'}
-                </button>
-                {editingId && (
-                  <button
-                    onClick={handleAdd}
-                    className={secondaryButtonClass}
-                  >
-                    Otkaži
-                  </button>
-                )}
+            <div>
+              <h3 className="text-lg font-bold text-white mb-4 pb-2 border-b border-white/10">Mediji i Status</h3>
+              <div className="grid grid-cols-1 gap-6">
+                <div>
+                  <label className={labelClass}>Slika</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                    className="w-full rounded-2xl border border-white/10 bg-[#111111] px-4 py-3 text-sm text-neutral-100 file:mr-4 file:rounded-full file:border-0 file:bg-[#ff6b00] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-black hover:file:bg-[#ff7f1a]"
+                  />
+                  {form.imageUrl && !file && (
+                    <div className="mt-2 text-sm text-neutral-400">
+                      Trenutna slika: <a href={form.imageUrl} target="_blank" rel="noopener noreferrer" className="text-[#ff6b00] hover:text-[#ff7f1a] hover:underline">Pogledaj</a>
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="isActive"
+                    checked={!!form.isActive}
+                    onChange={e => setForm({ ...form, isActive: e.target.checked })}
+                    className="h-5 w-5 rounded border-white/20 bg-[#0f0f0f] text-[#ff6b00] focus:ring-[#ff6b00] focus:ring-offset-0"
+                  />
+                  <label htmlFor="isActive" className="text-sm font-semibold text-neutral-200">
+                    Aktivan dio
+                  </label>
+                </div>
               </div>
             </div>
 
-            <div className="rounded-3xl border border-white/10 bg-[#101010] p-10 shadow-[0_35px_90px_-40px_rgba(255,107,0,0.5)]">
-              <h2 className="text-2xl font-bold text-white mb-6">Rezervni dijelovi</h2>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-[#1a1a1a] border-b border-white/10">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Naziv</th>
-                      <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Marka</th>
-                      <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Model</th>
-                      <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Primjena</th>
-                      <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Kataloški broj</th>
-                      <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Isporuka</th>
-                      <th className="px-4 py-3 text-right text-neutral-200 font-semibold">Cijena bez PDV-a</th>
-                      <th className="px-4 py-3 text-right text-neutral-200 font-semibold">Cijena sa PDV-om</th>
-                      <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Spec 1</th>
-                      <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Spec 2</th>
-                      <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Spec 3</th>
-                      <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Spec 4</th>
-                      <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Spec 5</th>
-                      <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Spec 6</th>
-                      <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Spec 7</th>
-                      <th className="px-4 py-3 text-right text-neutral-200 font-semibold">Popust %</th>
-                      <th className="px-4 py-3 text-center text-neutral-200 font-semibold">Stanje</th>
-                      <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Link slike</th>
-                      <th className="px-4 py-3 text-center text-neutral-200 font-semibold">Akcije</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {parts.map((part) => (
-                      <tr key={part.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                        <td className="px-4 py-3 text-neutral-100">{part.name}</td>
-                        <td className="px-4 py-3 text-neutral-100">{part.brand}</td>
-                        <td className="px-4 py-3 text-neutral-100">{part.model}</td>
-                        <td className="px-4 py-3 text-neutral-100">{part.application}</td>
-                        <td className="px-4 py-3 text-neutral-100">{part.catalogNumber}</td>
-                        <td className="px-4 py-3">
-                          <span
-                            className={`px-3 py-1 rounded-full text-xs font-bold ${
-                              part.delivery === Availability.Available
-                                ? 'bg-green-600 text-white'
-                                : part.delivery === Availability.FifteenDays
-                                ? 'bg-yellow-600 text-white'
-                                : 'bg-red-600 text-white'
-                            }`}
-                          >
-                            {part.delivery === Availability.Available
-                              ? 'Odmah'
-                              : part.delivery === Availability.FifteenDays
-                              ? '15 dana'
-                              : 'Po dogovoru'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-right text-neutral-100">{part.priceWithoutVAT.toFixed(2)} KM</td>
-                        <td className="px-4 py-3 text-right text-neutral-100">{part.priceWithVAT.toFixed(2)} KM</td>
-                        <td className="px-4 py-3 text-neutral-100">{part.technicalSpecs.spec1}</td>
-                        <td className="px-4 py-3 text-neutral-100">{part.technicalSpecs.spec2}</td>
-                        <td className="px-4 py-3 text-neutral-100">{part.technicalSpecs.spec3}</td>
-                        <td className="px-4 py-3 text-neutral-100">{part.technicalSpecs.spec4}</td>
-                        <td className="px-4 py-3 text-neutral-100">{part.technicalSpecs.spec5}</td>
-                        <td className="px-4 py-3 text-neutral-100">{part.technicalSpecs.spec6}</td>
-                        <td className="px-4 py-3 text-neutral-100">{part.technicalSpecs.spec7}</td>
-                        <td className="px-4 py-3 text-right text-neutral-100">{part.discount.toFixed(2)}%</td>
-                        <td className="px-4 py-3 text-center text-neutral-100">{part.stock || 0}</td>
-                        <td className="px-4 py-3">
-                          {part.imageUrl ? (
-                            <a
-                              href={part.imageUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-[#ff6b00] hover:text-[#ff7f1a] hover:underline font-semibold"
-                            >
-                              Otvori
-                            </a>
-                          ) : (
-                            <span className="text-neutral-500">N/A</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <button
-                            onClick={() => handleEdit(part)}
-                            className="bg-[#ff6b00] hover:bg-[#ff7f1a] text-white px-4 py-2 rounded-full mr-2 font-semibold transition-all hover:scale-105"
-                          >
-                            Update
-                          </button>
-                          <button
-                            onClick={() => handleDelete(part.id)}
-                            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-full font-semibold transition-all hover:scale-105"
-                          >
-                            Obriši
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              {parts.length === 0 && (
-                <p className="text-center py-8 text-neutral-400">Nema unesenih rezervnih dijelova</p>
-              )}
+            <div className="flex gap-4 pt-4 border-t border-white/10">
+              <button
+                type="submit"
+                disabled={loading}
+                className={primaryButtonClass}
+              >
+                {loading ? "Spremam..." : editingId ? "Ažuriraj dio" : "Dodaj dio"}
+              </button>
             </div>
-          </div>
+          </form>
         </div>
-      </main>
-      <Footer />
+
+        <div className="rounded-3xl border border-white/10 bg-[#101010] p-10 shadow-[0_35px_90px_-40px_rgba(255,107,0,0.5)]">
+          <h2 className="text-2xl font-bold text-white mb-6">Rezervni dijelovi ({filtered.length})</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-[#1a1a1a] border-b border-white/10">
+                <tr>
+                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Slika</th>
+                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Marka</th>
+                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Model</th>
+                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Kat. broj</th>
+                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Naziv</th>
+                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Dostupnost</th>
+                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Bez PDV</th>
+                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Sa PDV</th>
+                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Popust %</th>
+                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Status</th>
+                  <th className="px-4 py-3 text-center text-neutral-200 font-semibold">Akcije</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((p: any) => (
+                  <tr key={p.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                    <td className="px-4 py-3">
+                      {p.imageUrl ? (
+                        <img src={p.imageUrl} alt={p.title} className="w-16 h-16 object-cover rounded-lg" />
+                      ) : (
+                        <div className="w-16 h-16 bg-[#1a1a1a] rounded-lg flex items-center justify-center text-neutral-600 text-xs">
+                          N/A
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-neutral-100">{p.brand || '-'}</td>
+                    <td className="px-4 py-3 text-neutral-100">{p.model || '-'}</td>
+                    <td className="px-4 py-3 text-neutral-100 font-mono text-xs">{p.catalogNumber || '-'}</td>
+                    <td className="px-4 py-3 text-neutral-100 font-medium max-w-[200px] truncate">{p.title}</td>
+                    <td className="px-4 py-3 text-neutral-100 text-xs">
+                      {p.delivery === 'available' && 'Odmah'}
+                      {p.delivery === '15_days' && '15 dana'}
+                      {p.delivery === 'on_request' && 'Dogovor'}
+                      {!p.delivery && '-'}
+                    </td>
+                    <td className="px-4 py-3 text-neutral-100">{p.priceWithoutVAT ? `${p.priceWithoutVAT} ${p.currency}` : '-'}</td>
+                    <td className="px-4 py-3 text-neutral-100">{p.priceWithVAT ? `${p.priceWithVAT} ${p.currency}` : '-'}</td>
+                    <td className="px-4 py-3 text-neutral-100">{p.discount ? `${p.discount}%` : '-'}</td>
+                    <td className="px-4 py-3">
+                      {p.isActive ? (
+                        <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-600 text-white">Aktivan</span>
+                      ) : (
+                        <span className="px-3 py-1 rounded-full text-xs font-bold bg-red-600 text-white">Neaktivan</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <div className="flex gap-2 justify-center">
+                        <button
+                          onClick={() => editPart(p)}
+                          disabled={loading}
+                          className="bg-[#ff6b00] hover:bg-[#ff7f1a] text-black px-4 py-2 rounded-full font-semibold transition-all hover:scale-105 disabled:opacity-50 text-xs"
+                        >
+                          Uredi
+                        </button>
+                        <button
+                          onClick={() => deletePart(p.id)}
+                          disabled={loading}
+                          className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-full font-semibold transition-all hover:scale-105 disabled:opacity-50 text-xs"
+                        >
+                          Obriši
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {filtered.length === 0 && (
+            <p className="text-center py-8 text-neutral-400">Nema unesenih rezervnih dijelova</p>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
