@@ -1,16 +1,16 @@
-import { pgTable, serial, varchar, integer, text, boolean, timestamp, numeric } from "drizzle-orm/pg-core";
+import { pgTable, serial, varchar, integer, text, boolean, timestamp, numeric, uniqueIndex } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
 export const categories = pgTable("categories", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 120 }).notNull(),
-  slug: varchar("slug", { length: 140 }).notNull(),
+  slug: varchar("slug", { length: 140 }).notNull().unique(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const parts = pgTable("parts", {
   id: serial("id").primaryKey(),
-  sku: varchar("sku", { length: 64 }).notNull(),
+  sku: varchar("sku", { length: 64 }).notNull().unique(),
   title: varchar("title", { length: 200 }).notNull(),
   description: text("description"),
   price: numeric("price", { precision: 10, scale: 2 }).notNull(),
