@@ -35,6 +35,8 @@ export default function AdminParts() {
   const [cats, setCats] = useState<Category[]>([]);
   const [parts, setParts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<PartInput>({
@@ -77,35 +79,67 @@ export default function AdminParts() {
   const labelClass = 'block text-[0.7rem] font-semibold uppercase tracking-[0.35em] text-neutral-400 mb-2';
 
   useEffect(() => {
-    (async () => {
+    const loadInitialData = async () => {
       try {
-        const res = await fetch("/api/categories");
-        if (res.ok) {
-          const categories = await res.json();
-          setCats(categories);
-        } else {
+        setLoading(true);
+        setError(null);
+
+        // Load categories
+        try {
+          const res = await fetch("/api/categories");
+          if (res.ok) {
+            const categories = await res.json();
+            setCats(categories);
+          } else {
+            setCats([{ id: 1, name: "Default" }]);
+          }
+        } catch (error) {
+          console.warn('Failed to load categories:', error);
           setCats([{ id: 1, name: "Default" }]);
         }
+
+        // Load parts
+        await refresh();
       } catch (error) {
-        setCats([{ id: 1, name: "Default" }]);
+        console.error('Error loading initial data:', error);
+        setError('Greška pri učitavanju podataka');
+      } finally {
+        setLoading(false);
       }
-      await refresh();
-    })();
+    };
+
+    loadInitialData();
   }, []);
 
   async function refresh(search?: string) {
-    const params = new URLSearchParams();
-    if (search) params.append('q', search);
-    if (filterCategory) params.append('categoryId', filterCategory);
-    if (filterStatus) params.append('status', filterStatus);
-    if (filterBrand) params.append('brand', filterBrand);
-    if (sortField) params.append('sort', sortField);
-    if (sortDirection) params.append('order', sortDirection);
+    try {
+      setLoading(true);
+      setError(null);
 
-    const url = `/api/parts?${params.toString()}`;
-    const res = await fetch(url);
-    const data = await res.json();
-    setParts(data);
+      const params = new URLSearchParams();
+      if (search) params.append('q', search);
+      if (filterCategory) params.append('categoryId', filterCategory);
+      if (filterStatus) params.append('status', filterStatus);
+      if (filterBrand) params.append('brand', filterBrand);
+      if (sortField) params.append('sort', sortField);
+      if (sortDirection) params.append('order', sortDirection);
+
+      const url = `/api/parts?${params.toString()}`;
+      const res = await fetch(url);
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      }
+
+      const data = await res.json();
+      setParts(data);
+    } catch (error) {
+      console.error('Error refreshing parts:', error);
+      setError('Greška pri učitavanju dijelova');
+      setParts([]);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function uploadImage(): Promise<string | undefined> {
@@ -120,12 +154,28 @@ export default function AdminParts() {
 
   async function savePart(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true);
+    setSaving(true);
+    setError(null);
+
     try {
+      // Validation
+      if (!form.sku?.trim()) {
+        throw new Error("SKU je obavezan!");
+      }
+      if (!form.title?.trim()) {
+        throw new Error("Naziv dijela je obavezan!");
+      }
+      if (form.priceWithoutVAT && form.priceWithoutVAT < 0) {
+        throw new Error("Cijena bez PDV-a ne može biti negativna!");
+      }
+      if (form.discount && (form.discount < 0 || form.discount > 100)) {
+        throw new Error("Popust mora biti između 0 i 100%!");
+      }
+
       const imageUrl = file ? await uploadImage() : form.imageUrl;
-      const payload = { 
-        ...form, 
-        price: Number(form.price), 
+      const payload = {
+        ...form,
+        price: Number(form.price),
         priceWithoutVAT: form.priceWithoutVAT ? Number(form.priceWithoutVAT) : undefined,
         priceWithVAT: form.priceWithVAT ? Number(form.priceWithVAT) : undefined,
         discount: form.discount ? Number(form.discount) : 0,
@@ -133,44 +183,64 @@ export default function AdminParts() {
         ...(imageUrl && { imageUrl })
       };
 
+      let res;
       if (editingId) {
-        const res = await fetch(`/api/parts/${editingId}`, { 
-          method: "PATCH", 
-          headers: { "Content-Type": "application/json" }, 
-          body: JSON.stringify(payload) 
+        res = await fetch(`/api/parts/${editingId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
         });
-        if (!res.ok) throw new Error("Greška pri ažuriranju");
-        alert("Ažurirano!");
       } else {
-        const res = await fetch("/api/parts", { 
-          method: "POST", 
-          headers: { "Content-Type": "application/json" }, 
-          body: JSON.stringify(payload) 
+        res = await fetch("/api/parts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
         });
-        if (!res.ok) throw new Error("Greška pri spremanju");
-        alert("Dodano!");
       }
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${res.status}: ${res.statusText}`);
+      }
+
+      const result = await res.json();
+      console.log(editingId ? 'Updated part:' : 'Created part:', result);
 
       resetForm();
       await refresh();
+
+      // Success message
+      setError(null);
+      alert(editingId ? "Dio je uspješno ažuriran!" : "Dio je uspješno dodan!");
+
     } catch (e: any) {
-      alert(e.message || "Greška");
+      console.error('Save error:', e);
+      setError(e.message || "Došlo je do greške prilikom spremanja");
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   }
 
   async function deletePart(id: number) {
-    if (!confirm("Jeste li sigurni da želite obrisati ovaj dio?")) return;
-    
+    if (!confirm("Jeste li sigurni da želite obrisati ovaj dio? Ova akcija se ne može poništiti.")) return;
+
     setLoading(true);
+    setError(null);
+
     try {
       const res = await fetch(`/api/parts/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Greška pri brisanju");
-      alert("Obrisano!");
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${res.status}: ${res.statusText}`);
+      }
+
       await refresh();
+      alert("Dio je uspješno obrisan!");
+
     } catch (e: any) {
-      alert(e.message || "Greška");
+      console.error('Delete error:', e);
+      setError(e.message || "Greška pri brisanju dijela");
     } finally {
       setLoading(false);
     }
@@ -667,17 +737,40 @@ export default function AdminParts() {
             <div className="flex gap-4 pt-4 border-t border-white/10">
               <button
                 type="submit"
-                disabled={loading}
+                disabled={saving || loading}
                 className={primaryButtonClass}
               >
-                {loading ? "Spremam..." : editingId ? "Ažuriraj dio" : "Dodaj dio"}
+                {saving ? (
+                  <div className="flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black"></div>
+                    Spremam...
+                  </div>
+                ) : editingId ? "Ažuriraj dio" : "Dodaj dio"}
               </button>
             </div>
           </form>
         </div>
 
+        {/* Error Display */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-900/20 border border-red-500/20 rounded-lg">
+            <div className="flex items-center gap-2">
+              <span className="text-red-400">⚠️</span>
+              <span className="text-red-300">{error}</span>
+            </div>
+          </div>
+        )}
+
         <div className="rounded-3xl border border-white/10 bg-[#101010] p-10 shadow-[0_35px_90px_-40px_rgba(255,107,0,0.5)]">
-          <h2 className="text-2xl font-bold text-white mb-6">Inventory Management - Rezervni dijelovi ({filteredAndSorted.length})</h2>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-white">Inventory Management - Rezervni dijelovi ({filteredAndSorted.length})</h2>
+            {loading && (
+              <div className="flex items-center gap-2 text-neutral-400">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#ff6b00]"></div>
+                <span>Učitavanje...</span>
+              </div>
+            )}
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-[#1a1a1a] border-b border-white/10">
