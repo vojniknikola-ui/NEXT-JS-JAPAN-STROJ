@@ -400,25 +400,24 @@ export default function AdminParts() {
             </button>
           </div>
 
-          <div className="flex gap-4 flex-wrap">
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-neutral-400">Kategorija:</label>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-neutral-400 font-medium">📁 Kategorija</label>
               <select
                 value={filterCategory}
                 onChange={(e) => {
                   setFilterCategory(e.target.value);
-                  setCurrentPage(1); // Reset to first page when filtering
+                  setCurrentPage(1);
                 }}
                 className={inputClass}
-                style={{ width: '150px' }}
               >
                 <option value="">Sve kategorije</option>
                 {cats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>
 
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-neutral-400">Status:</label>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-neutral-400 font-medium">📊 Status</label>
               <select
                 value={filterStatus}
                 onChange={(e) => {
@@ -426,16 +425,15 @@ export default function AdminParts() {
                   setCurrentPage(1);
                 }}
                 className={inputClass}
-                style={{ width: '120px' }}
               >
                 <option value="">Svi statusi</option>
-                <option value="active">Aktivni</option>
-                <option value="inactive">Neaktivni</option>
+                <option value="active">✅ Aktivni</option>
+                <option value="inactive">❌ Neaktivni</option>
               </select>
             </div>
 
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-neutral-400">Brend:</label>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-neutral-400 font-medium">🏷️ Brend</label>
               <input
                 value={filterBrand}
                 onChange={(e) => {
@@ -444,12 +442,11 @@ export default function AdminParts() {
                 }}
                 placeholder="Filtriraj po brendu..."
                 className={inputClass}
-                style={{ width: '200px' }}
               />
             </div>
 
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-neutral-400">Sortiraj po:</label>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-neutral-400 font-medium">🔄 Sortiraj</label>
               <select
                 value={`${sortField}-${sortDirection}`}
                 onChange={(e) => {
@@ -458,18 +455,17 @@ export default function AdminParts() {
                   setSortDirection(direction as 'asc' | 'desc');
                 }}
                 className={inputClass}
-                style={{ width: '180px' }}
               >
-                <option value="createdAt-desc">Najnoviji prvi</option>
-                <option value="createdAt-asc">Najstariji prvi</option>
-                <option value="title-asc">Naziv A-Z</option>
-                <option value="title-desc">Naziv Z-A</option>
-                <option value="brand-asc">Brend A-Z</option>
-                <option value="brand-desc">Brend Z-A</option>
-                <option value="priceWithoutVAT-desc">Cijena visoka-niska</option>
-                <option value="priceWithoutVAT-asc">Cijena niska-visoka</option>
-                <option value="stock-desc">Zaliha visoka-niska</option>
-                <option value="stock-asc">Zaliha niska-visoka</option>
+                <option value="createdAt-desc">🕒 Najnoviji prvi</option>
+                <option value="createdAt-asc">📅 Najstariji prvi</option>
+                <option value="title-asc">🔤 Naziv A-Z</option>
+                <option value="title-desc">🔡 Naziv Z-A</option>
+                <option value="brand-asc">🏷️ Brend A-Z</option>
+                <option value="brand-desc">🏷️ Brend Z-A</option>
+                <option value="priceWithoutVAT-desc">💰 Cijena ▼</option>
+                <option value="priceWithoutVAT-asc">💰 Cijena ▲</option>
+                <option value="stock-desc">📦 Zaliha ▼</option>
+                <option value="stock-asc">📦 Zaliha ▲</option>
               </select>
             </div>
           </div>
@@ -812,19 +808,57 @@ export default function AdminParts() {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-2xl font-bold text-white">Inventory Management - Rezervni dijelovi ({filteredAndSorted.length})</h2>
-              <div className="flex items-center gap-4 mt-1">
-                <p className="text-sm text-neutral-400">
-                  {filterCategory && `📁 ${cats.find(c => c.id === parseInt(filterCategory))?.name || filterCategory}`}
-                  {filterStatus && ` | ${filterStatus === 'active' ? '✅ Aktivni' : '❌ Neaktivni'}`}
-                  {filterBrand && ` | 🏷️ ${filterBrand}`}
-                  {sortField !== 'createdAt' && ` | 🔄 Sortirano po ${sortField === 'title' ? 'nazivu' : sortField === 'brand' ? 'brendu' : sortField === 'priceWithoutVAT' ? 'cijeni' : sortField === 'stock' ? 'zalihi' : sortField}`}
-                </p>
-                {(filterCategory || filterStatus || filterBrand) && (
+              <div className="flex items-center gap-4 mt-1 flex-wrap">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {filterCategory && (
+                    <span className="px-2 py-1 bg-blue-900/30 text-blue-300 rounded-full text-xs flex items-center gap-1">
+                      📁 {cats.find(c => c.id === parseInt(filterCategory))?.name || filterCategory}
+                      <button
+                        onClick={() => setFilterCategory('')}
+                        className="hover:text-red-400 ml-1"
+                        title="Ukloni filter"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  )}
+                  {filterStatus && (
+                    <span className="px-2 py-1 bg-green-900/30 text-green-300 rounded-full text-xs flex items-center gap-1">
+                      {filterStatus === 'active' ? '✅ Aktivni' : '❌ Neaktivni'}
+                      <button
+                        onClick={() => setFilterStatus('')}
+                        className="hover:text-red-400 ml-1"
+                        title="Ukloni filter"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  )}
+                  {filterBrand && (
+                    <span className="px-2 py-1 bg-purple-900/30 text-purple-300 rounded-full text-xs flex items-center gap-1">
+                      🏷️ {filterBrand}
+                      <button
+                        onClick={() => setFilterBrand('')}
+                        className="hover:text-red-400 ml-1"
+                        title="Ukloni filter"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  )}
+                  {sortField !== 'createdAt' && (
+                    <span className="px-2 py-1 bg-orange-900/30 text-orange-300 rounded-full text-xs flex items-center gap-1">
+                      🔄 {sortField === 'title' ? 'Naziv' : sortField === 'brand' ? 'Brend' : sortField === 'priceWithoutVAT' ? 'Cijena' : sortField === 'stock' ? 'Zaliha' : sortField}
+                      {sortDirection === 'asc' ? ' ↑' : ' ↓'}
+                    </span>
+                  )}
+                </div>
+                {(filterCategory || filterStatus || filterBrand || sortField !== 'createdAt') && (
                   <button
                     onClick={resetFilters}
-                    className="text-xs text-[#ff6b00] hover:text-[#ff7f1a] underline"
+                    className="text-xs text-[#ff6b00] hover:text-[#ff7f1a] underline font-medium"
                   >
-                    Resetuj filtere
+                    🗑️ Resetuj sve filtere
                   </button>
                 )}
               </div>
