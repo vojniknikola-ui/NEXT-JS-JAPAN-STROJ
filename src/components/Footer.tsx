@@ -35,8 +35,8 @@ const Footer: React.FC = () => {
                 <FacebookIcon className="h-5 w-5" />
                 <span className="text-sm font-semibold">Facebook</span>
               </a>
-              <a href="https://olx.ba" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 hover:bg-[#ff6b00] hover:text-black transition-all duration-300 hover:scale-105 border border-white/10 hover:border-[#ff6b00]">
-                <span className="text-sm font-semibold">OLX</span>
+              <a href="https://olx.ba" target="_blank" rel="noopener noreferrer" className="text-neutral-400 hover:text-[#ff6b00] transition-colors">
+                OLX
               </a>
             </div>
           </div>
