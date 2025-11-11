@@ -22,9 +22,16 @@ export default function Home() {
     }
 
     // Load spare parts from API
-    fetch('/api/spare-parts')
-      .then(res => res.json())
-      .then(data => setSpareParts(data))
+    console.log('Loading spare parts from home page...');
+    fetch('/api/parts?active=true')
+      .then(res => {
+        console.log('Home page parts response status:', res.status);
+        return res.json();
+      })
+      .then(data => {
+        console.log('Home page loaded parts:', data);
+        setSpareParts(data);
+      })
       .catch(error => console.error('Error loading spare parts:', error));
   }, []);
 
