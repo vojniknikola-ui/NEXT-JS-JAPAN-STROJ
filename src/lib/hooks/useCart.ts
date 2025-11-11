@@ -11,18 +11,23 @@ export function useCart() {
   useEffect(() => {
     const loadCart = async () => {
       try {
+        console.log('Loading cart from API...');
         const response = await fetch('/api/cart');
         if (response.ok) {
           const data = await response.json();
+          console.log('Cart loaded from API:', data);
           setCartItems(data);
+        } else {
+          console.warn('API returned non-ok status:', response.status);
         }
       } catch (error) {
-        console.error('Error loading cart:', error);
+        console.error('Error loading cart from API:', error);
         // Fallback to localStorage if API fails
         if (typeof window !== 'undefined') {
           const savedCart = localStorage.getItem('japanStrojCart');
           if (savedCart) {
             try {
+              console.log('Loading cart from localStorage:', savedCart);
               setCartItems(JSON.parse(savedCart));
             } catch (localError) {
               console.error('Error loading cart from localStorage:', localError);
@@ -42,17 +47,24 @@ export function useCart() {
     if (isLoaded) {
       const saveCart = async () => {
         try {
-          await fetch('/api/cart', {
+          console.log('Saving cart to API:', cartItems);
+          const response = await fetch('/api/cart', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify(cartItems),
           });
+          if (response.ok) {
+            console.log('Cart saved successfully to API');
+          } else {
+            console.warn('Cart save failed with status:', response.status);
+          }
         } catch (error) {
           console.error('Error saving cart to API:', error);
           // Fallback to localStorage if API fails
           if (typeof window !== 'undefined') {
+            console.log('Saving cart to localStorage as fallback');
             localStorage.setItem('japanStrojCart', JSON.stringify(cartItems));
           }
         }
