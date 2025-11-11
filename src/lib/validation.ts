@@ -13,7 +13,7 @@ export const partCreateSchema = z.object({
   priceWithoutVAT: z.coerce.number().nonnegative().optional(),
   priceWithVAT: z.coerce.number().nonnegative().optional(),
   discount: z.coerce.number().min(0).max(100).default(0),
-  currency: z.string().length(3).default("EUR"),
+  currency: z.string().length(3).default("BAM"),
   stock: z.coerce.number().int().nonnegative().default(0),
   categoryId: z.coerce.number().int(),
   imageUrl: z.string().optional(),
