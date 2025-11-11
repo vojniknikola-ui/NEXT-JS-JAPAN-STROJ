@@ -52,90 +52,162 @@ export default function ProformaInvoiceModal({
     try {
       const doc = new jsPDF();
 
-      // Company header
-      doc.setFontSize(20);
+      // Set page margins and dimensions
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 20;
+      const contentWidth = pageWidth - (margin * 2);
+
+      // Header with company logo area (placeholder)
+      doc.setFillColor(255, 107, 0); // Orange background
+      doc.rect(0, 0, pageWidth, 25, 'F');
+
+      // Company name in header
+      doc.setFontSize(18);
       doc.setFont('helvetica', 'bold');
-      doc.text('Japan Stroj d.o.o.', 20, 30);
-
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'normal');
-      doc.text('Adresa: Sarajevo, Bosna i Hercegovina', 20, 40);
-      doc.text('Telefon: +387 61 234 567', 20, 50);
-      doc.text('Email: info@japanstroj.ba', 20, 60);
-
-      // Invoice title
-      doc.setFontSize(16);
-      doc.setFont('helvetica', 'bold');
-      doc.text('PREDRAČUN', 105, 80, { align: 'center' });
-
-      // Invoice number and date
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      const invoiceNumber = `PR-${Date.now()}`;
-      const currentDate = new Date().toLocaleDateString('bs-BA');
-      doc.text(`Broj predračuna: ${invoiceNumber}`, 20, 95);
-      doc.text(`Datum: ${currentDate}`, 20, 105);
+      doc.setTextColor(255, 255, 255);
+      doc.text('JAPAN STROJ d.o.o.', margin, 17);
 
       // Company details
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(255, 255, 255);
+      doc.text('Sarajevo, Bosna i Hercegovina | Tel: +387 61 234 567 | Email: info@japanstroj.ba', margin, 23);
+
+      // Reset text color
+      doc.setTextColor(0, 0, 0);
+
+      // Invoice title with background
+      doc.setFillColor(240, 240, 240);
+      doc.rect(margin, 35, contentWidth, 15, 'F');
+
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(255, 107, 0);
+      doc.text('PREDRAČUN', pageWidth / 2, 47, { align: 'center' });
+
+      // Invoice details box
+      doc.setDrawColor(200, 200, 200);
+      doc.setLineWidth(0.5);
+      doc.rect(margin, 60, contentWidth, 25);
+
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(0, 0, 0);
+
+      const invoiceNumber = `PR-${Date.now()}`;
+      const currentDate = new Date().toLocaleDateString('bs-BA');
+
+      doc.text(`Broj predračuna: ${invoiceNumber}`, margin + 5, 72);
+      doc.text(`Datum izdavanja: ${currentDate}`, margin + 5, 80);
+      doc.text(`Rok važenja: ${new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('bs-BA')}`, pageWidth - margin - 80, 72);
+
+      // Customer details section
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
-      doc.text('Podaci o kupcu:', 20, 120);
+      doc.setTextColor(255, 107, 0);
+      doc.text('PODACI O KUPCU', margin, 100);
+
+      // Customer details box
+      doc.setDrawColor(255, 107, 0);
+      doc.setLineWidth(1);
+      doc.rect(margin, 105, contentWidth, 35);
 
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
-      doc.text(`Naziv firme: ${companyDetails.companyName}`, 20, 135);
-      doc.text(`ID broj: ${companyDetails.idNumber}`, 20, 145);
-      doc.text(`PDV broj: ${companyDetails.pdvNumber}`, 20, 155);
-      doc.text(`Ime i prezime: ${companyDetails.name}`, 20, 165);
-      doc.text(`Adresa: ${companyDetails.address}`, 20, 175);
+      doc.setTextColor(0, 0, 0);
 
-      // Table header
-      let yPosition = 195;
+      doc.text(`Naziv firme: ${companyDetails.companyName}`, margin + 5, 115);
+      doc.text(`ID broj: ${companyDetails.idNumber}`, margin + 5, 125);
+      doc.text(`PDV broj: ${companyDetails.pdvNumber}`, margin + 5, 135);
+
+      doc.text(`Kontakt osoba: ${companyDetails.name}`, pageWidth / 2 + 10, 115);
+      doc.text(`Adresa: ${companyDetails.address}`, pageWidth / 2 + 10, 125);
+
+      // Items table
+      let yPosition = 155;
+
+      // Table header with background
+      doc.setFillColor(255, 107, 0);
+      doc.rect(margin, yPosition, contentWidth, 12, 'F');
+
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
-      doc.text('R.br.', 20, yPosition);
-      doc.text('Naziv artikla', 35, yPosition);
-      doc.text('Količina', 120, yPosition);
-      doc.text('Cijena (BAM)', 150, yPosition);
-      doc.text('Ukupno (BAM)', 180, yPosition);
+      doc.setTextColor(255, 255, 255);
+
+      doc.text('R.br.', margin + 3, yPosition + 8);
+      doc.text('Naziv artikla', margin + 18, yPosition + 8);
+      doc.text('Brend/Model', margin + 85, yPosition + 8);
+      doc.text('Kol.', margin + 125, yPosition + 8);
+      doc.text('Cijena (BAM)', margin + 140, yPosition + 8);
+      doc.text('Ukupno (BAM)', margin + 175, yPosition + 8);
 
       // Table rows
+      yPosition += 12;
       doc.setFont('helvetica', 'normal');
-      yPosition += 10;
+      doc.setTextColor(0, 0, 0);
 
       cartItems.forEach((item, index) => {
-        doc.text((index + 1).toString(), 20, yPosition);
-        doc.text(item.part.name.substring(0, 30), 35, yPosition);
-        doc.text(item.quantity.toString(), 125, yPosition);
-        doc.text(item.part.priceWithVAT.toFixed(2), 155, yPosition);
-        doc.text((item.part.priceWithVAT * item.quantity).toFixed(2), 185, yPosition);
-        yPosition += 10;
+        const rowHeight = 10;
 
-        // Add brand and model if available
-        if (item.part.brand || item.part.model) {
-          doc.setFontSize(8);
-          const details = [];
-          if (item.part.brand) details.push(`Brend: ${item.part.brand}`);
-          if (item.part.model) details.push(`Model: ${item.part.model}`);
-          doc.text(details.join(', '), 35, yPosition);
-          yPosition += 8;
-          doc.setFontSize(10);
+        // Alternate row background
+        if (index % 2 === 0) {
+          doc.setFillColor(248, 248, 248);
+          doc.rect(margin, yPosition, contentWidth, rowHeight, 'F');
         }
+
+        doc.text((index + 1).toString(), margin + 3, yPosition + 7);
+        doc.text(item.part.name.substring(0, 25), margin + 18, yPosition + 7);
+
+        const brandModel = [];
+        if (item.part.brand) brandModel.push(item.part.brand);
+        if (item.part.model) brandModel.push(item.part.model);
+        doc.text(brandModel.join(' / ').substring(0, 15), margin + 85, yPosition + 7);
+
+        doc.text(item.quantity.toString(), margin + 130, yPosition + 7);
+        doc.text(item.part.priceWithVAT.toFixed(2), margin + 145, yPosition + 7);
+        doc.text((item.part.priceWithVAT * item.quantity).toFixed(2), margin + 180, yPosition + 7);
+
+        yPosition += rowHeight;
       });
 
-      // Total
-      yPosition += 10;
-      doc.setFont('helvetica', 'bold');
-      doc.text('UKUPNO:', 150, yPosition);
-      doc.text(cartTotal.toFixed(2) + ' BAM', 180, yPosition);
+      // Total section
+      yPosition += 5;
+      doc.setDrawColor(255, 107, 0);
+      doc.setLineWidth(1);
+      doc.line(margin + 140, yPosition, pageWidth - margin, yPosition);
 
-      // Footer
+      yPosition += 8;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.text('UKUPNO ZA PLATITI:', margin + 120, yPosition);
+      doc.text(cartTotal.toFixed(2) + ' BAM', margin + 175, yPosition);
+
+      // Footer section
       yPosition += 20;
-      doc.setFontSize(8);
+      doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
-      doc.text('Ovaj predračun važi 7 dana od datuma izdavanja.', 20, yPosition);
-      yPosition += 10;
-      doc.text('Plaćanje se vrši prema dogovoru ili putem bankovnog transfera.', 20, yPosition);
+      doc.setTextColor(100, 100, 100);
+
+      const footerText = [
+        'Ovaj predračun važi 7 dana od datuma izdavanja.',
+        'Plaćanje se vrši prema dogovoru ili putem bankovnog transfera.',
+        'Sva roba je pokrivena garancijom kvaliteta.',
+        'Za dodatne informacije kontaktirajte nas na: +387 61 234 567'
+      ];
+
+      footerText.forEach((text, index) => {
+        doc.text(text, margin, yPosition + (index * 5));
+      });
+
+      // Bottom border
+      doc.setDrawColor(255, 107, 0);
+      doc.setLineWidth(2);
+      doc.line(margin, pageHeight - 15, pageWidth - margin, pageHeight - 15);
+
+      doc.setFontSize(8);
+      doc.setTextColor(150, 150, 150);
+      doc.text('Japan Stroj d.o.o. - Vaš pouzdani partner za rezervne dijelove', pageWidth / 2, pageHeight - 8, { align: 'center' });
 
       // Save the PDF
       doc.save(`predracun-${invoiceNumber}.pdf`);
