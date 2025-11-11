@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { CartItem, SparePart } from '@/types';
+import { SparePart, CartItem } from '@/types';
 
 export function useCart() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -74,98 +74,63 @@ export function useCart() {
     }
   }, [cartItems, isLoaded]);
 
-  const addToCart = useCallback((part: SparePart) => {
-    setCartItems((prevItems) => {
-      const existingIndex = prevItems.findIndex((item) => item.id === part.id);
-
-      if (existingIndex >= 0) {
-        const updatedItems = [...prevItems];
-        updatedItems[existingIndex] = {
-          ...updatedItems[existingIndex],
-          quantity: updatedItems[existingIndex].quantity + 1
-        };
-        return updatedItems;
+  const addToCart = useCallback((sparePart: SparePart) => {
+    console.log('Adding to cart:', sparePart);
+    setCartItems(prevItems => {
+      const existingItem = prevItems.find(item => item.part.id === sparePart.id);
+      if (existingItem) {
+        // Increase quantity if item already exists
+        return prevItems.map(item =>
+          item.part.id === sparePart.id
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
+        );
       } else {
-        return [...prevItems, { ...part, quantity: 1 }];
+        // Add new item
+        return [...prevItems, { part: sparePart, quantity: 1 }];
       }
     });
   }, []);
 
-  const updateQuantity = useCallback((productId: number, quantity: number) => {
+  const removeFromCart = useCallback((partId: number) => {
+    console.log('Removing from cart:', partId);
+    setCartItems(prevItems => prevItems.filter(item => item.part.id !== partId));
+  }, []);
+
+  const updateQuantity = useCallback((partId: number, quantity: number) => {
+    console.log('Updating quantity:', partId, quantity);
     if (quantity <= 0) {
-      removeFromCart(productId);
+      removeFromCart(partId);
       return;
     }
-    setCartItems((prevItems) =>
-      prevItems.map((item) =>
-        item.id === productId ? { ...item, quantity } : item
+    setCartItems(prevItems =>
+      prevItems.map(item =>
+        item.part.id === partId ? { ...item, quantity } : item
       )
     );
-  }, []);
-
-  const removeFromCart = useCallback((productId: number) => {
-    setCartItems((prevItems) => prevItems.filter((item) => item.id !== productId));
-  }, []);
+  }, [removeFromCart]);
 
   const clearCart = useCallback(async () => {
+    console.log('Clearing cart');
     setCartItems([]);
     try {
-      await fetch('/api/cart', {
-        method: 'DELETE',
-      });
+      await fetch('/api/cart', { method: 'DELETE' });
     } catch (error) {
       console.error('Error clearing cart from API:', error);
-      // Fallback to localStorage if API fails
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('japanStrojCart');
-      }
     }
   }, []);
 
   const cartItemCount = cartItems.reduce((total, item) => total + item.quantity, 0);
-
-  // Calculate pricing
-  const subtotal = cartItems.reduce((total, item) => {
-    return total + (item.priceWithoutVAT * item.quantity);
-  }, 0);
-
-  const vatAmount = subtotal * 0.17;
-  const totalBeforeDiscount = subtotal + vatAmount;
-
-  // Calculate bulk discount
-  let bulkDiscountPercent = 0;
-  if (totalBeforeDiscount >= 5000) {
-    bulkDiscountPercent = 5;
-  } else if (totalBeforeDiscount >= 2000) {
-    bulkDiscountPercent = 3;
-  }
-
-  const bulkDiscountAmount = totalBeforeDiscount * (bulkDiscountPercent / 100);
-  const subtotalAfterDiscount = totalBeforeDiscount - bulkDiscountAmount;
-
-  // Calculate shipping
-  const freeShippingThreshold = 200;
-  const shippingCost = subtotalAfterDiscount >= freeShippingThreshold ? 0 : 15;
-  const finalTotal = subtotalAfterDiscount + shippingCost;
+  const cartTotal = cartItems.reduce((total, item) => total + (item.part.priceWithVAT * item.quantity), 0);
 
   return {
     cartItems,
     cartItemCount,
-    isLoaded,
+    cartTotal,
     addToCart,
-    updateQuantity,
     removeFromCart,
+    updateQuantity,
     clearCart,
-    pricing: {
-      subtotal,
-      vatAmount,
-      totalBeforeDiscount,
-      bulkDiscountPercent,
-      bulkDiscountAmount,
-      subtotalAfterDiscount,
-      shippingCost,
-      freeShippingThreshold,
-      finalTotal,
-    },
+    isLoaded,
   };
 }

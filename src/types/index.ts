@@ -33,7 +33,8 @@ export interface SparePart {
 
 export type Product = SparePart;
 
-export interface CartItem extends SparePart {
+export interface CartItem {
+  part: SparePart;
   quantity: number;
 }
 
