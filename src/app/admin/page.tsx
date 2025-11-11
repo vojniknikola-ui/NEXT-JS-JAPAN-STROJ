@@ -557,27 +557,44 @@ export default function AdminParts() {
         </div>
 
         <div className="rounded-3xl border border-white/10 bg-[#101010] p-10 shadow-[0_35px_90px_-40px_rgba(255,107,0,0.5)]">
-          <h2 className="text-2xl font-bold text-white mb-6">Rezervni dijelovi ({filtered.length})</h2>
+          <h2 className="text-2xl font-bold text-white mb-6">Inventory Management - Rezervni dijelovi ({filtered.length})</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-[#1a1a1a] border-b border-white/10">
                 <tr>
+                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold">ID</th>
                   <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Slika</th>
+                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold">SKU</th>
                   <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Marka</th>
                   <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Model</th>
                   <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Kat. broj</th>
                   <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Naziv</th>
+                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Primjena</th>
+                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Opis</th>
                   <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Dostupnost</th>
+                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Zaliha</th>
                   <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Bez PDV</th>
                   <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Sa PDV</th>
                   <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Popust %</th>
+                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Valuta</th>
+                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Spec 1</th>
+                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Spec 2</th>
+                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Spec 3</th>
+                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Spec 4</th>
+                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Spec 5</th>
+                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Spec 6</th>
+                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Spec 7</th>
+                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Kategorija</th>
                   <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Status</th>
+                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Kreirano</th>
+                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Ažurirano</th>
                   <th className="px-4 py-3 text-center text-neutral-200 font-semibold">Akcije</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((p: any) => (
                   <tr key={p.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                    <td className="px-4 py-3 text-neutral-100 font-mono text-xs">{p.id}</td>
                     <td className="px-4 py-3">
                       {p.imageUrl ? (
                         <img src={p.imageUrl} alt={p.title} className="w-16 h-16 object-cover rounded-lg" />
@@ -587,19 +604,32 @@ export default function AdminParts() {
                         </div>
                       )}
                     </td>
+                    <td className="px-4 py-3 text-neutral-100 font-mono text-xs">{p.sku}</td>
                     <td className="px-4 py-3 text-neutral-100">{p.brand || '-'}</td>
                     <td className="px-4 py-3 text-neutral-100">{p.model || '-'}</td>
                     <td className="px-4 py-3 text-neutral-100 font-mono text-xs">{p.catalogNumber || '-'}</td>
                     <td className="px-4 py-3 text-neutral-100 font-medium max-w-[200px] truncate">{p.title}</td>
+                    <td className="px-4 py-3 text-neutral-100 max-w-[150px] truncate">{p.application || '-'}</td>
+                    <td className="px-4 py-3 text-neutral-100 max-w-[200px] truncate">{p.description || '-'}</td>
                     <td className="px-4 py-3 text-neutral-100 text-xs">
                       {p.delivery === 'available' && 'Odmah'}
                       {p.delivery === '15_days' && '15 dana'}
                       {p.delivery === 'on_request' && 'Dogovor'}
                       {!p.delivery && '-'}
                     </td>
+                    <td className="px-4 py-3 text-neutral-100 text-center">{p.stock || 0}</td>
                     <td className="px-4 py-3 text-neutral-100">{p.priceWithoutVAT ? `${p.priceWithoutVAT} ${p.currency}` : '-'}</td>
                     <td className="px-4 py-3 text-neutral-100">{p.priceWithVAT ? `${p.priceWithVAT} ${p.currency}` : '-'}</td>
                     <td className="px-4 py-3 text-neutral-100">{p.discount ? `${p.discount}%` : '-'}</td>
+                    <td className="px-4 py-3 text-neutral-100 font-mono text-xs">{p.currency}</td>
+                    <td className="px-4 py-3 text-neutral-100 max-w-[120px] truncate">{p.spec1 || '-'}</td>
+                    <td className="px-4 py-3 text-neutral-100 max-w-[120px] truncate">{p.spec2 || '-'}</td>
+                    <td className="px-4 py-3 text-neutral-100 max-w-[120px] truncate">{p.spec3 || '-'}</td>
+                    <td className="px-4 py-3 text-neutral-100 max-w-[120px] truncate">{p.spec4 || '-'}</td>
+                    <td className="px-4 py-3 text-neutral-100 max-w-[120px] truncate">{p.spec5 || '-'}</td>
+                    <td className="px-4 py-3 text-neutral-100 max-w-[120px] truncate">{p.spec6 || '-'}</td>
+                    <td className="px-4 py-3 text-neutral-100 max-w-[120px] truncate">{p.spec7 || '-'}</td>
+                    <td className="px-4 py-3 text-neutral-100">{p.category || '-'}</td>
                     <td className="px-4 py-3">
                       {p.isActive ? (
                         <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-600 text-white">Aktivan</span>
@@ -607,6 +637,8 @@ export default function AdminParts() {
                         <span className="px-3 py-1 rounded-full text-xs font-bold bg-red-600 text-white">Neaktivan</span>
                       )}
                     </td>
+                    <td className="px-4 py-3 text-neutral-100 text-xs">{p.createdAt ? new Date(p.createdAt).toLocaleDateString('bs-BA') : '-'}</td>
+                    <td className="px-4 py-3 text-neutral-100 text-xs">{p.updatedAt ? new Date(p.updatedAt).toLocaleDateString('bs-BA') : '-'}</td>
                     <td className="px-4 py-3 text-center">
                       <div className="flex gap-2 justify-center">
                         <button
