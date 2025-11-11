@@ -42,36 +42,41 @@ export function useCart() {
     loadCart();
   }, []);
 
-  // Save cart to API whenever it changes
+  // Save cart to API whenever it changes (but only after initial load)
   useEffect(() => {
-    if (isLoaded) {
-      const saveCart = async () => {
-        try {
-          console.log('Saving cart to API:', cartItems);
-          const response = await fetch('/api/cart', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(cartItems),
-          });
-          if (response.ok) {
-            console.log('Cart saved successfully to API');
-          } else {
-            console.warn('Cart save failed with status:', response.status);
-          }
-        } catch (error) {
-          console.error('Error saving cart to API:', error);
-          // Fallback to localStorage if API fails
-          if (typeof window !== 'undefined') {
-            console.log('Saving cart to localStorage as fallback');
-            localStorage.setItem('japanStrojCart', JSON.stringify(cartItems));
-          }
-        }
-      };
-
-      saveCart();
+    if (!isLoaded) {
+      return;
     }
+
+    const saveCart = async () => {
+      try {
+        console.log('Saving cart to API:', cartItems);
+        const response = await fetch('/api/cart', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(cartItems),
+        });
+        if (response.ok) {
+          console.log('Cart saved successfully to API');
+        } else {
+          console.warn('Cart save failed with status:', response.status);
+        }
+      } catch (error) {
+        console.error('Error saving cart to API:', error);
+        if (typeof window !== 'undefined') {
+          console.log('Saving cart to localStorage as fallback');
+          localStorage.setItem('japanStrojCart', JSON.stringify(cartItems));
+        }
+      }
+    };
+
+    const timeoutId = setTimeout(() => {
+      saveCart();
+    }, 100);
+
+    return () => clearTimeout(timeoutId);
   }, [cartItems, isLoaded]);
 
   const addToCart = useCallback((sparePart: SparePart) => {
