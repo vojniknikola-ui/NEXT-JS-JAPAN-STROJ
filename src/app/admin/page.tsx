@@ -405,7 +405,10 @@ export default function AdminParts() {
               <label className="text-sm text-neutral-400">Kategorija:</label>
               <select
                 value={filterCategory}
-                onChange={(e) => setFilterCategory(e.target.value)}
+                onChange={(e) => {
+                  setFilterCategory(e.target.value);
+                  setCurrentPage(1); // Reset to first page when filtering
+                }}
                 className={inputClass}
                 style={{ width: '150px' }}
               >
@@ -418,7 +421,10 @@ export default function AdminParts() {
               <label className="text-sm text-neutral-400">Status:</label>
               <select
                 value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
+                onChange={(e) => {
+                  setFilterStatus(e.target.value);
+                  setCurrentPage(1);
+                }}
                 className={inputClass}
                 style={{ width: '120px' }}
               >
@@ -432,11 +438,39 @@ export default function AdminParts() {
               <label className="text-sm text-neutral-400">Brend:</label>
               <input
                 value={filterBrand}
-                onChange={(e) => setFilterBrand(e.target.value)}
+                onChange={(e) => {
+                  setFilterBrand(e.target.value);
+                  setCurrentPage(1);
+                }}
                 placeholder="Filtriraj po brendu..."
                 className={inputClass}
                 style={{ width: '200px' }}
               />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-neutral-400">Sortiraj po:</label>
+              <select
+                value={`${sortField}-${sortDirection}`}
+                onChange={(e) => {
+                  const [field, direction] = e.target.value.split('-');
+                  setSortField(field);
+                  setSortDirection(direction as 'asc' | 'desc');
+                }}
+                className={inputClass}
+                style={{ width: '180px' }}
+              >
+                <option value="createdAt-desc">Najnoviji prvi</option>
+                <option value="createdAt-asc">Najstariji prvi</option>
+                <option value="title-asc">Naziv A-Z</option>
+                <option value="title-desc">Naziv Z-A</option>
+                <option value="brand-asc">Brend A-Z</option>
+                <option value="brand-desc">Brend Z-A</option>
+                <option value="priceWithoutVAT-desc">Cijena visoka-niska</option>
+                <option value="priceWithoutVAT-asc">Cijena niska-visoka</option>
+                <option value="stock-desc">Zaliha visoka-niska</option>
+                <option value="stock-asc">Zaliha niska-visoka</option>
+              </select>
             </div>
           </div>
         </div>
@@ -747,6 +781,19 @@ export default function AdminParts() {
                   </div>
                 ) : editingId ? "Ažuriraj dio" : "Dodaj dio"}
               </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const confirmed = confirm('Jeste li sigurni da želite resetovati formu? Sve unesene podatke ćete izgubiti.');
+                  if (confirmed) {
+                    resetForm();
+                  }
+                }}
+                disabled={saving || loading}
+                className={secondaryButtonClass}
+              >
+                Resetuj formu
+              </button>
             </div>
           </form>
         </div>
@@ -763,13 +810,87 @@ export default function AdminParts() {
 
         <div className="rounded-3xl border border-white/10 bg-[#101010] p-10 shadow-[0_35px_90px_-40px_rgba(255,107,0,0.5)]">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-white">Inventory Management - Rezervni dijelovi ({filteredAndSorted.length})</h2>
-            {loading && (
-              <div className="flex items-center gap-2 text-neutral-400">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#ff6b00]"></div>
-                <span>Učitavanje...</span>
+            <div>
+              <h2 className="text-2xl font-bold text-white">Inventory Management - Rezervni dijelovi ({filteredAndSorted.length})</h2>
+              <div className="flex items-center gap-4 mt-1">
+                <p className="text-sm text-neutral-400">
+                  {filterCategory && `📁 ${cats.find(c => c.id === parseInt(filterCategory))?.name || filterCategory}`}
+                  {filterStatus && ` | ${filterStatus === 'active' ? '✅ Aktivni' : '❌ Neaktivni'}`}
+                  {filterBrand && ` | 🏷️ ${filterBrand}`}
+                  {sortField !== 'createdAt' && ` | 🔄 Sortirano po ${sortField === 'title' ? 'nazivu' : sortField === 'brand' ? 'brendu' : sortField === 'priceWithoutVAT' ? 'cijeni' : sortField === 'stock' ? 'zalihi' : sortField}`}
+                </p>
+                {(filterCategory || filterStatus || filterBrand) && (
+                  <button
+                    onClick={resetFilters}
+                    className="text-xs text-[#ff6b00] hover:text-[#ff7f1a] underline"
+                  >
+                    Resetuj filtere
+                  </button>
+                )}
               </div>
-            )}
+            </div>
+            <div className="flex items-center gap-4">
+              {loading && (
+                <div className="flex items-center gap-2 text-neutral-400">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#ff6b00]"></div>
+                  <span>Učitavanje...</span>
+                </div>
+              )}
+              <button
+                onClick={() => refresh()}
+                disabled={loading}
+                className={secondaryButtonClass}
+                title="Osvježi podatke"
+              >
+                🔄 Osvježi
+              </button>
+              <button
+                onClick={() => {
+                  const csvData = paginatedParts.map(p => ({
+                    ID: p.id,
+                    SKU: p.sku,
+                    Naziv: p.title,
+                    Brend: p.brand || '',
+                    Model: p.model || '',
+                    'Kat. broj': p.catalogNumber || '',
+                    Primjena: p.application || '',
+                    Opis: p.description || '',
+                    Dostupnost: p.delivery === 'available' ? 'Odmah' : p.delivery === '15_days' ? '15 dana' : 'Po dogovoru',
+                    Zaliha: p.stock || 0,
+                    'Bez PDV': p.priceWithoutVAT ? `${p.priceWithoutVAT} ${p.currency}` : '',
+                    'Sa PDV': p.priceWithVAT ? `${p.priceWithVAT} ${p.currency}` : '',
+                    Popust: p.discount ? `${p.discount}%` : '',
+                    Valuta: p.currency,
+                    'Spec 1': p.spec1 || '',
+                    'Spec 2': p.spec2 || '',
+                    'Spec 3': p.spec3 || '',
+                    'Spec 4': p.spec4 || '',
+                    'Spec 5': p.spec5 || '',
+                    'Spec 6': p.spec6 || '',
+                    'Spec 7': p.spec7 || '',
+                    Kategorija: p.category || '',
+                    Status: p.isActive ? 'Aktivan' : 'Neaktivan',
+                    'Kreirano': p.createdAt ? new Date(p.createdAt).toLocaleDateString('bs-BA') : '',
+                    'Ažurirano': p.updatedAt ? new Date(p.updatedAt).toLocaleDateString('bs-BA') : '',
+                  }));
+
+                  const csvContent = [
+                    Object.keys(csvData[0]).join(','),
+                    ...csvData.map(row => Object.values(row).map(val => `"${val}"`).join(','))
+                  ].join('\n');
+
+                  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                  const link = document.createElement('a');
+                  link.href = URL.createObjectURL(blob);
+                  link.download = `rezervni-dijelovi-${new Date().toISOString().split('T')[0]}.csv`;
+                  link.click();
+                }}
+                className={secondaryButtonClass}
+                title="Preuzmi CSV"
+              >
+                📊 CSV Export
+              </button>
+            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -885,7 +1006,15 @@ export default function AdminParts() {
               <div className="text-sm text-neutral-400">
                 Prikazujem {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, filteredAndSorted.length)} od {filteredAndSorted.length} dijelova
               </div>
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                  className="px-3 py-2 text-sm bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
+                  title="Prva stranica"
+                >
+                  ⏮️
+                </button>
                 <button
                   onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                   disabled={currentPage === 1}
@@ -893,15 +1022,39 @@ export default function AdminParts() {
                 >
                   Prethodna
                 </button>
-                <span className="px-4 py-2 text-sm text-neutral-300">
-                  {currentPage} / {totalPages}
-                </span>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    const pageNum = Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + i;
+                    if (pageNum > totalPages) return null;
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={`px-3 py-2 text-sm rounded-lg transition-colors ${
+                          pageNum === currentPage
+                            ? 'bg-[#ff6b00] text-black'
+                            : 'bg-white/5 hover:bg-white/10'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                </div>
                 <button
                   onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                   disabled={currentPage === totalPages}
                   className="px-4 py-2 text-sm bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
                 >
                   Sljedeća
+                </button>
+                <button
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-2 text-sm bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
+                  title="Posljednja stranica"
+                >
+                  ⏭️
                 </button>
               </div>
             </div>
