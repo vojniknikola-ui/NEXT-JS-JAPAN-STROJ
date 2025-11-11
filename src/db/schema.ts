@@ -68,3 +68,20 @@ export const carts = pgTable('carts', {
   createdAt: timestamp('created_at').notNull(),
   updatedAt: timestamp('updated_at').notNull(),
 });
+
+export const invoices = pgTable('invoices', {
+  id: serial('id').primaryKey(),
+  invoiceNumber: varchar('invoice_number', { length: 50 }).notNull().unique(),
+  customerName: varchar('customer_name', { length: 200 }).notNull(),
+  customerId: varchar('customer_id', { length: 50 }),
+  customerPdv: varchar('customer_pdv', { length: 50 }),
+  customerContact: varchar('customer_contact', { length: 200 }),
+  customerAddress: text('customer_address'),
+  cartData: text('cart_data').notNull(), // JSON string of cart items
+  totalAmount: numeric('total_amount', { precision: 10, scale: 2 }).notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (table) => ({
+  invoiceNumberIdx: uniqueIndex('invoices_invoice_number_idx').on(table.invoiceNumber),
+  createdAtIdx: index('invoices_created_at_idx').on(table.createdAt),
+}));
