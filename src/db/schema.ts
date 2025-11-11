@@ -1,4 +1,4 @@
-import { pgTable, serial, varchar, integer, text, boolean, timestamp, numeric, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, serial, varchar, integer, text, boolean, timestamp, numeric, uniqueIndex, index } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
 export const categories = pgTable("categories", {
@@ -39,17 +39,15 @@ export const parts = pgTable("parts", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
-  // Database indexes for better performance
   skuIdx: uniqueIndex("parts_sku_idx").on(table.sku),
-  brandIdx: uniqueIndex("parts_brand_idx").on(table.brand),
-  modelIdx: uniqueIndex("parts_model_idx").on(table.model),
-  categoryIdx: uniqueIndex("parts_category_idx").on(table.categoryId),
-  isActiveIdx: uniqueIndex("parts_is_active_idx").on(table.isActive),
-  createdAtIdx: uniqueIndex("parts_created_at_idx").on(table.createdAt),
-  updatedAtIdx: uniqueIndex("parts_updated_at_idx").on(table.updatedAt),
-  // Composite indexes for common queries
-  brandModelIdx: uniqueIndex("parts_brand_model_idx").on(table.brand, table.model),
-  categoryActiveIdx: uniqueIndex("parts_category_active_idx").on(table.categoryId, table.isActive),
+  brandIdx: index("parts_brand_idx").on(table.brand),
+  modelIdx: index("parts_model_idx").on(table.model),
+  categoryIdx: index("parts_category_idx").on(table.categoryId),
+  isActiveIdx: index("parts_is_active_idx").on(table.isActive),
+  createdAtIdx: index("parts_created_at_idx").on(table.createdAt),
+  titleIdx: index("parts_title_idx").on(table.title),
+  brandModelIdx: index("parts_brand_model_idx").on(table.brand, table.model),
+  categoryActiveIdx: index("parts_category_active_idx").on(table.categoryId, table.isActive),
 }));
 
 export const categoriesRelations = relations(categories, ({ many }) => ({

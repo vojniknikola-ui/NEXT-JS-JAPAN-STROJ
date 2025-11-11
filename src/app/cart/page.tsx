@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import ProformaInvoiceModal from '@/components/ProformaInvoiceModal';
 import { Page } from '@/types';
 import { useCart } from '@/lib/hooks/useCart';
 import { MinusIcon, PlusIcon, TrashIcon, ShoppingBagIcon, ArrowLeftIcon } from '@/lib/icons';
@@ -14,6 +15,7 @@ export default function CartPage() {
    const { cartItems, cartItemCount, cartTotal, updateQuantity, removeFromCart, clearCart } = useCart();
    const [isOrdering, setIsOrdering] = useState(false);
    const [showClearConfirm, setShowClearConfirm] = useState(false);
+   const [showProformaModal, setShowProformaModal] = useState(false);
 
   const handleOrder = async () => {
     if (cartItems.length === 0) return;
@@ -236,6 +238,15 @@ export default function CartPage() {
                       Isprazni košaricu
                     </button>
                     <button
+                      onClick={() => setShowProformaModal(true)}
+                      className="flex-1 bg-gradient-to-r from-[#1a1a1a] to-[#0f0f0f] border border-[#ff6b00]/50 text-[#ff6b00] hover:bg-[#ff6b00]/10 active:bg-[#ff6b00]/20 px-4 sm:px-6 py-3 sm:py-4 rounded-full font-semibold text-sm sm:text-base transition-all active:scale-95 sm:hover:scale-105 touch-manipulation flex items-center justify-center gap-2"
+                    >
+                      <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      Predračun
+                    </button>
+                    <button
                       onClick={handleOrder}
                       disabled={isOrdering}
                       className="flex-1 bg-gradient-to-r from-[#ff6b00] to-[#ff8533] hover:from-[#ff8533] hover:to-[#ff6b00] active:bg-[#ff7f1a] text-black px-4 sm:px-6 py-3 sm:py-4 rounded-full font-bold text-base sm:text-lg transition-all active:scale-95 sm:hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 touch-manipulation shadow-lg hover:shadow-xl relative overflow-hidden group"
@@ -317,6 +328,14 @@ export default function CartPage() {
                     </div>
                   </div>
                 )}
+
+                {/* Proforma Invoice Modal */}
+                <ProformaInvoiceModal
+                  isOpen={showProformaModal}
+                  onClose={() => setShowProformaModal(false)}
+                  cartItems={cartItems}
+                  cartTotal={cartTotal}
+                />
               </div>
             )}
           </div>

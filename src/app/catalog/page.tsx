@@ -187,11 +187,12 @@ export default function CatalogPage() {
           throw new Error(`Greška pri učitavanju kategorija: ${categoriesRes.status}`);
         }
 
-        const [parts, cats] = await Promise.all([
+        const [partsResponse, cats] = await Promise.all([
           partsRes.json(),
           categoriesRes.json()
         ]);
 
+        const parts = Array.isArray(partsResponse) ? partsResponse : (partsResponse.items || []);
         const activeParts = parts.filter((part: PartData) => part.isActive);
 
         setPartsData(activeParts);

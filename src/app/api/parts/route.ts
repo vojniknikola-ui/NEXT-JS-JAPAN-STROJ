@@ -1,8 +1,10 @@
 import { db } from "@/db";
 import { parts, categories } from "@/db/schema";
-import { and, eq, ilike, desc } from "drizzle-orm";
+import { and, eq, ilike, desc, gt } from "drizzle-orm";
 import { partCreateSchema } from "@/lib/validation";
 import { revalidatePath } from "next/cache";
+
+export const runtime = 'edge';
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -12,14 +14,16 @@ export async function GET(req: Request) {
   const brand = searchParams.get("brand");
   const sort = searchParams.get("sort") || "createdAt";
   const order = searchParams.get("order") || "desc";
+  const cursor = searchParams.get("cursor");
+  const limit = Math.min(Number(searchParams.get("limit") ?? 50), 100);
 
   const where = [];
+  if (cursor) where.push(gt(parts.id, Number(cursor)));
   if (q) where.push(ilike(parts.title, `%${q}%`));
   if (cat) where.push(eq(parts.categoryId, Number(cat)));
   if (status) where.push(eq(parts.isActive, status === 'active'));
   if (brand) where.push(ilike(parts.brand, `%${brand}%`));
 
-  // Build order by clause
   let orderBy;
   switch (sort) {
     case 'id':
@@ -56,7 +60,7 @@ export async function GET(req: Request) {
       orderBy = desc(parts.createdAt);
   }
 
-  const data = await db.select({
+  const rows = await db.select({
     id: parts.id,
     sku: parts.sku,
     title: parts.title,
@@ -65,7 +69,6 @@ export async function GET(req: Request) {
     catalogNumber: parts.catalogNumber,
     application: parts.application,
     delivery: parts.delivery,
-    description: parts.description,
     price: parts.price,
     priceWithoutVAT: parts.priceWithoutVAT,
     priceWithVAT: parts.priceWithVAT,
@@ -82,22 +85,22 @@ export async function GET(req: Request) {
     spec5: parts.spec5,
     spec6: parts.spec6,
     spec7: parts.spec7,
-    specJson: parts.specJson,
     isActive: parts.isActive,
-    createdAt: parts.createdAt,
-    updatedAt: parts.updatedAt,
     category: categories.name,
   })
   .from(parts)
   .leftJoin(categories, eq(parts.categoryId, categories.id))
   .where(where.length ? and(...where) : undefined)
   .orderBy(orderBy)
-  .limit(1000); // Limit results for performance
+  .limit(limit + 1);
 
-  // Add cache headers for better performance
-  return Response.json(data, {
+  const hasMore = rows.length > limit;
+  const items = hasMore ? rows.slice(0, limit) : rows;
+  const nextCursor = hasMore && items.length > 0 ? String(items[items.length - 1].id) : null;
+
+  return Response.json({ items, nextCursor, hasMore }, {
     headers: {
-      'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600', // Cache for 5 minutes, serve stale for 10 minutes
+      'Cache-Control': 's-maxage=60, stale-while-revalidate=300',
     },
   });
 }

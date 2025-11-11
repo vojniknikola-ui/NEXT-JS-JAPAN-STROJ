@@ -1,9 +1,15 @@
 import { db } from "@/db";
 import { categories } from "@/db/schema";
 
+export const runtime = 'edge';
+
 export async function GET() {
   const data = await db.select().from(categories).orderBy(categories.name);
-  return Response.json(data);
+  return Response.json(data, {
+    headers: {
+      'Cache-Control': 's-maxage=300, stale-while-revalidate=600',
+    },
+  });
 }
 
 export async function POST(req: Request) {
