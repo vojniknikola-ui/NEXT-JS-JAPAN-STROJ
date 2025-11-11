@@ -1,0 +1,15 @@
+ALTER TABLE "parts" ADD COLUMN "brand" varchar(100);
+ALTER TABLE "parts" ADD COLUMN "model" varchar(100);
+ALTER TABLE "parts" ADD COLUMN "catalog_number" varchar(100);
+ALTER TABLE "parts" ADD COLUMN "application" text;
+ALTER TABLE "parts" ADD COLUMN "delivery" varchar(20) DEFAULT 'available';
+ALTER TABLE "parts" ADD COLUMN "price_without_vat" numeric(10, 2);
+ALTER TABLE "parts" ADD COLUMN "price_with_vat" numeric(10, 2);
+ALTER TABLE "parts" ADD COLUMN "discount" numeric(5, 2) DEFAULT '0';
+ALTER TABLE "parts" ADD COLUMN "spec_1" text;
+ALTER TABLE "parts" ADD COLUMN "spec_2" text;
+ALTER TABLE "parts" ADD COLUMN "spec_3" text;
+ALTER TABLE "parts" ADD COLUMN "spec_4" text;
+ALTER TABLE "parts" ADD COLUMN "spec_5" text;
+ALTER TABLE "parts" ADD COLUMN "spec_6" text;
+ALTER TABLE "parts" ADD COLUMN "spec_7" text;
