@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -166,6 +166,7 @@ export default function CatalogPage() {
   const [addedToCart, setAddedToCart] = useState<Set<number>>(new Set());
   const [displayLimit, setDisplayLimit] = useState(12);
   const [loadingMore, setLoadingMore] = useState(false);
+  const observerTarget = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -307,6 +308,37 @@ export default function CatalogPage() {
 
   const hasActiveFilters = searchQuery || selectedCategory || selectedBrands.length > 0 || 
     selectedAvailability.length > 0 || showOnlyDiscount;
+
+  const loadMore = useCallback(async () => {
+    if (loadingMore || displayLimit >= filteredParts.length) return;
+    
+    setLoadingMore(true);
+    await new Promise(resolve => setTimeout(resolve, 500));
+    setDisplayLimit(prev => Math.min(prev + 12, filteredParts.length));
+    setLoadingMore(false);
+  }, [loadingMore, displayLimit, filteredParts.length]);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !loadingMore && displayLimit < filteredParts.length) {
+          loadMore();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const currentTarget = observerTarget.current;
+    if (currentTarget) {
+      observer.observe(currentTarget);
+    }
+
+    return () => {
+      if (currentTarget) {
+        observer.unobserve(currentTarget);
+      }
+    };
+  }, [loadMore, loadingMore, displayLimit, filteredParts.length]);
 
   return (
     <div className="bg-[#0b0b0b] text-neutral-100 min-h-screen flex flex-col">
@@ -553,28 +585,11 @@ export default function CatalogPage() {
                     </div>
 
                     {filteredParts.length > displayLimit && (
-                      <div className="text-center mt-12">
-                        <button
-                          onClick={async () => {
-                            setLoadingMore(true);
-                            await new Promise(resolve => setTimeout(resolve, 500));
-                            setDisplayLimit(prev => Math.min(prev + 12, filteredParts.length));
-                            setLoadingMore(false);
-                          }}
-                          disabled={loadingMore}
-                          className="bg-[#101010] border border-white/10 hover:border-[#ff6b00]/50 text-neutral-200 hover:text-[#ff6b00] px-8 py-4 rounded-full font-semibold transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto"
-                        >
-                          {loadingMore ? (
-                            <>
-                              <div className="w-4 h-4 border-2 border-[#ff6b00]/30 border-t-[#ff6b00] rounded-full animate-spin"></div>
-                              Učitavanje...
-                            </>
-                          ) : (
-                            <>
-                              Učitaj još dijelova ({filteredParts.length - displayLimit} preostalo)
-                            </>
-                          )}
-                        </button>
+                      <div ref={observerTarget} className="text-center mt-12 py-8">
+                        <div className="flex items-center justify-center gap-2 text-neutral-400">
+                          <div className="w-5 h-5 border-2 border-[#ff6b00]/30 border-t-[#ff6b00] rounded-full animate-spin"></div>
+                          <span>Učitavanje još {Math.min(12, filteredParts.length - displayLimit)} dijelova...</span>
+                        </div>
                       </div>
                     )}
                   </>
