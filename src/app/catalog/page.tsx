@@ -37,14 +37,14 @@ interface PartData {
 }
 
 const AvailabilityBadge: React.FC<{ availability: string }> = ({ availability }) => {
-  const baseClasses = 'px-2 py-1 text-xs font-semibold rounded-full uppercase tracking-wide';
+  const baseClasses = 'px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-semibold rounded-full uppercase tracking-wide';
   switch (availability) {
     case 'available':
-      return <div className={`${baseClasses} bg-emerald-500/90 text-white`}>Dostupno odmah</div>;
+      return <div className={`${baseClasses} bg-emerald-500/90 text-white`}>Dostupno</div>;
     case '15_days':
-      return <div className={`${baseClasses} bg-[#ff6b00] text-black`}>Rok isporuke 15 dana</div>;
+      return <div className={`${baseClasses} bg-[#ff6b00] text-black`}>15 dana</div>;
     case 'on_request':
-      return <div className={`${baseClasses} bg-red-500/90 text-white`}>Dostupnost po dogovoru</div>;
+      return <div className={`${baseClasses} bg-red-500/90 text-white`}>Po dogovoru</div>;
     default:
       return null;
   }
@@ -57,66 +57,66 @@ const ProductCard: React.FC<{ part: PartData; onAddToCart: (part: PartData) => v
     : parseFloat(part.priceWithVAT || part.price);
 
   return (
-    <article className="group bg-[#101010] border border-white/5 rounded-2xl overflow-hidden hover:border-[#ff6b00]/30 transition-all duration-300 hover:shadow-[0_10px_40px_-15px_rgba(255,107,0,0.3)] hover:-translate-y-1">
-      <div className="relative aspect-square bg-[#1a1a1a] overflow-hidden cursor-pointer" onClick={() => router.push(`/product/${part.id}`)}>
+    <article className="group bg-[#101010] border border-white/5 rounded-xl sm:rounded-2xl overflow-hidden active:border-[#ff6b00]/30 transition-all duration-300 sm:hover:shadow-[0_10px_40px_-15px_rgba(255,107,0,0.3)] sm:hover:-translate-y-1">
+      <div className="relative aspect-square bg-[#1a1a1a] overflow-hidden cursor-pointer touch-manipulation" onClick={() => router.push(`/product/${part.id}`)}>
         {part.imageUrl ? (
           <img
             src={part.imageUrl}
             alt={part.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            className="w-full h-full object-cover sm:group-hover:scale-105 transition-transform duration-300"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-neutral-600">
             <div className="text-center">
-              <div className="w-16 h-16 mx-auto mb-2 bg-[#ff6b00]/10 rounded-full flex items-center justify-center">
-                <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-2 bg-[#ff6b00]/10 rounded-full flex items-center justify-center">
+                <svg className="w-6 h-6 sm:w-8 sm:h-8" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
                 </svg>
               </div>
-              <p className="text-xs">Nema slike</p>
+              <p className="text-[10px] sm:text-xs">Nema slike</p>
             </div>
           </div>
         )}
-        <div className="absolute top-3 right-3">
+        <div className="absolute top-2 sm:top-3 right-2 sm:right-3">
           <AvailabilityBadge availability={part.delivery || 'available'} />
         </div>
         {part.discount && parseFloat(part.discount) > 0 && (
-          <div className="absolute top-3 left-3 bg-green-500 text-white px-2 py-1 rounded-full text-xs font-bold">
+          <div className="absolute top-2 sm:top-3 left-2 sm:left-3 bg-green-500 text-white px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold">
             -{part.discount}%
           </div>
         )}
       </div>
 
-      <div className="p-6">
-        <div className="mb-3">
-          <div className="text-xs text-neutral-500 mb-1 font-mono">{part.sku}</div>
-          <h3 className="font-semibold text-white mb-1 line-clamp-2 group-hover:text-[#ff6b00] transition-colors cursor-pointer" onClick={() => router.push(`/product/${part.id}`)}>
+      <div className="p-4 sm:p-5 md:p-6">
+        <div className="mb-2 sm:mb-3">
+          <div className="text-[10px] sm:text-xs text-neutral-500 mb-1 font-mono truncate">{part.sku}</div>
+          <h3 className="text-sm sm:text-base font-semibold text-white mb-1 line-clamp-2 sm:group-hover:text-[#ff6b00] transition-colors cursor-pointer" onClick={() => router.push(`/product/${part.id}`)}>
             {part.title}
           </h3>
           {(part.brand || part.model) && (
-            <p className="text-sm text-neutral-400">
+            <p className="text-xs sm:text-sm text-neutral-400 truncate">
               {part.brand}{part.brand && part.model && ' • '}{part.model}
             </p>
           )}
           {part.catalogNumber && (
-            <p className="text-xs text-neutral-500 mt-1">
+            <p className="text-[10px] sm:text-xs text-neutral-500 mt-1 truncate">
               Kat. broj: {part.catalogNumber}
             </p>
           )}
         </div>
 
-        <div className="space-y-2 mb-4">
+        <div className="space-y-1 sm:space-y-2 mb-3 sm:mb-4">
           {part.priceWithoutVAT && (
-            <p className="text-sm text-neutral-400">
+            <p className="text-xs sm:text-sm text-neutral-400">
               Bez PDV-a: {parseFloat(part.priceWithoutVAT).toFixed(2)} {part.currency}
             </p>
           )}
-          <div className="flex items-center gap-2">
-            <span className="text-lg font-bold text-[#ff6b00]">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+            <span className="text-base sm:text-lg font-bold text-[#ff6b00]">
               {priceAfterDiscount.toFixed(2)} {part.currency}
             </span>
             {part.discount && parseFloat(part.discount) > 0 && (
-              <span className="text-sm text-neutral-500 line-through">
+              <span className="text-xs sm:text-sm text-neutral-500 line-through">
                 {parseFloat(part.priceWithVAT || part.price).toFixed(2)} {part.currency}
               </span>
             )}
@@ -126,21 +126,21 @@ const ProductCard: React.FC<{ part: PartData; onAddToCart: (part: PartData) => v
         <button
           onClick={() => onAddToCart(part)}
           disabled={isAdded}
-          className={`w-full px-4 py-3 rounded-full font-semibold text-sm uppercase tracking-wide transition-all duration-300 flex items-center justify-center gap-2 ${
+          className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-full font-semibold text-xs sm:text-sm uppercase tracking-wide transition-all duration-300 flex items-center justify-center gap-1.5 sm:gap-2 touch-manipulation ${
             isAdded
               ? 'bg-emerald-500 text-white shadow-emerald-500/70'
-              : 'bg-gradient-to-br from-[#ff6b00] to-[#ff8c33] text-white hover:from-[#ff7f1a] hover:to-[#ffa04d] hover:scale-105 shadow-[0_8px_25px_rgba(255,107,0,0.6)] hover:shadow-[0_12px_35px_rgba(255,107,0,0.8)]'
+              : 'bg-gradient-to-br from-[#ff6b00] to-[#ff8c33] text-white active:scale-95 sm:hover:scale-105 shadow-[0_8px_25px_rgba(255,107,0,0.6)] sm:hover:shadow-[0_12px_35px_rgba(255,107,0,0.8)]'
           }`}
         >
           {isAdded ? (
             <>
-              <CheckIcon className="w-4 h-4" />
-              Dodano!
+              <CheckIcon className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="text-[11px] sm:text-xs">Dodano!</span>
             </>
           ) : (
             <>
-              <CartIcon className="w-4 h-4" />
-              Dodaj u košaricu
+              <CartIcon className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="text-[11px] sm:text-xs">Dodaj u košaricu</span>
             </>
           )}
         </button>
@@ -344,57 +344,57 @@ export default function CatalogPage() {
     <div className="bg-[#0b0b0b] text-neutral-100 min-h-screen flex flex-col">
       <Header activePage={activePage} setActivePage={setActivePage} cartItemCount={cartItemCount} />
 
-      <main className="flex-grow">
-        <div className="container mx-auto px-4 py-12">
+      <main className="flex-grow pb-20 lg:pb-0">
+        <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 md:py-10 lg:py-12">
           <div className="max-w-7xl mx-auto">
-            <div className="mb-8">
-              <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
+            <div className="mb-6 sm:mb-8">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-3 sm:mb-4">
                 Katalog rezervnih dijelova
               </h1>
-              <p className="text-lg text-neutral-400 max-w-2xl">
+              <p className="text-sm sm:text-base md:text-lg text-neutral-400 max-w-2xl">
                 Pronađite savršene rezervne dijelove za vaše građevinske strojeve i mašine.
                 Preko {partsData.length} artikala dostupnih odmah.
               </p>
             </div>
 
-            <div className="flex gap-6">
+            <div className="flex gap-4 lg:gap-6">
               <aside className={`
-                fixed lg:sticky lg:top-24 left-0 top-0 h-full lg:h-auto w-80 bg-[#0b0b0b] lg:bg-transparent
-                border-r border-white/10 lg:border-0 p-6 lg:p-0 z-40 overflow-y-auto
+                fixed lg:sticky lg:top-24 left-0 top-0 h-full lg:h-auto w-full sm:w-80 bg-[#0b0b0b] lg:bg-transparent
+                border-r border-white/10 lg:border-0 p-4 sm:p-6 lg:p-0 z-40 overflow-y-auto
                 transition-transform duration-300 lg:translate-x-0
                 ${showMobileFilters ? 'translate-x-0' : '-translate-x-full'}
               `}>
-                <div className="lg:sticky lg:top-24 space-y-6">
-                  <div className="flex items-center justify-between lg:hidden mb-6">
-                    <h2 className="text-xl font-bold text-white">Filteri</h2>
+                <div className="lg:sticky lg:top-24 space-y-4 sm:space-y-6">
+                  <div className="flex items-center justify-between lg:hidden mb-4 sm:mb-6">
+                    <h2 className="text-lg sm:text-xl font-bold text-white">Filteri</h2>
                     <button
                       onClick={() => setShowMobileFilters(false)}
-                      className="p-2 text-neutral-400 hover:text-white"
+                      className="p-2.5 text-neutral-400 hover:text-white active:scale-95 touch-manipulation rounded-lg hover:bg-white/5"
                     >
-                      <XIcon className="w-6 h-6" />
+                      <XIcon className="w-5 h-5 sm:w-6 sm:h-6" />
                     </button>
                   </div>
 
                   <div className="relative">
-                    <SearchIcon className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-neutral-400" />
+                    <SearchIcon className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-neutral-400" />
                     <input
                       type="text"
                       placeholder="Pretraži..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-12 pr-4 py-3 bg-[#101010] border border-white/10 rounded-xl text-white placeholder-neutral-500 focus:border-[#ff6b00]/50 focus:ring-2 focus:ring-[#ff6b00]/20 outline-none transition-all"
+                      className="w-full pl-10 sm:pl-12 pr-3 sm:pr-4 py-2.5 sm:py-3 bg-[#101010] border border-white/10 rounded-lg sm:rounded-xl text-sm sm:text-base text-white placeholder-neutral-500 focus:border-[#ff6b00]/50 focus:ring-2 focus:ring-[#ff6b00]/20 outline-none transition-all"
                     />
                   </div>
 
-                  <div className="bg-[#101010] border border-white/10 rounded-xl p-4">
-                    <h3 className="text-sm font-semibold text-white mb-3 uppercase tracking-wide">Kategorije</h3>
-                    <div className="space-y-2">
+                  <div className="bg-[#101010] border border-white/10 rounded-lg sm:rounded-xl p-3 sm:p-4">
+                    <h3 className="text-xs sm:text-sm font-semibold text-white mb-2 sm:mb-3 uppercase tracking-wide">Kategorije</h3>
+                    <div className="space-y-1.5 sm:space-y-2">
                       <button
                         onClick={() => setSelectedCategory(null)}
-                        className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
+                        className={`w-full text-left px-3 py-2 rounded-lg text-xs sm:text-sm transition-all touch-manipulation ${
                           selectedCategory === null
                             ? 'bg-[#ff6b00] text-black font-semibold'
-                            : 'text-neutral-300 hover:bg-white/5'
+                            : 'text-neutral-300 active:bg-white/5'
                         }`}
                       >
                         Sve kategorije
@@ -403,10 +403,10 @@ export default function CatalogPage() {
                         <button
                           key={category.id}
                           onClick={() => setSelectedCategory(category.id)}
-                          className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
+                          className={`w-full text-left px-3 py-2 rounded-lg text-xs sm:text-sm transition-all touch-manipulation ${
                             selectedCategory === category.id
                               ? 'bg-[#ff6b00] text-black font-semibold'
-                              : 'text-neutral-300 hover:bg-white/5'
+                              : 'text-neutral-300 active:bg-white/5'
                           }`}
                         >
                           {category.name}
@@ -415,11 +415,11 @@ export default function CatalogPage() {
                     </div>
                   </div>
 
-                  <div className="bg-[#101010] border border-white/10 rounded-xl p-4">
-                    <h3 className="text-sm font-semibold text-white mb-3 uppercase tracking-wide">Brend</h3>
-                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                  <div className="bg-[#101010] border border-white/10 rounded-lg sm:rounded-xl p-3 sm:p-4">
+                    <h3 className="text-xs sm:text-sm font-semibold text-white mb-2 sm:mb-3 uppercase tracking-wide">Brend</h3>
+                    <div className="space-y-1.5 sm:space-y-2 max-h-48 overflow-y-auto">
                       {availableBrands.map((brand) => (
-                        <label key={brand} className="flex items-center gap-2 cursor-pointer group">
+                        <label key={brand} className="flex items-center gap-2 cursor-pointer group touch-manipulation">
                           <input
                             type="checkbox"
                             checked={selectedBrands.includes(brand)}
@@ -430,23 +430,23 @@ export default function CatalogPage() {
                                 setSelectedBrands(selectedBrands.filter(b => b !== brand));
                               }
                             }}
-                            className="w-4 h-4 rounded border-white/20 bg-[#1a1a1a] text-[#ff6b00] focus:ring-[#ff6b00]/50 focus:ring-2"
+                            className="w-4 h-4 sm:w-5 sm:h-5 rounded border-white/20 bg-[#1a1a1a] text-[#ff6b00] focus:ring-[#ff6b00]/50 focus:ring-2"
                           />
-                          <span className="text-sm text-neutral-300 group-hover:text-white transition-colors">{brand}</span>
+                          <span className="text-xs sm:text-sm text-neutral-300 group-hover:text-white transition-colors">{brand}</span>
                         </label>
                       ))}
                     </div>
                   </div>
 
-                  <div className="bg-[#101010] border border-white/10 rounded-xl p-4">
-                    <h3 className="text-sm font-semibold text-white mb-3 uppercase tracking-wide">Dostupnost</h3>
-                    <div className="space-y-2">
+                  <div className="bg-[#101010] border border-white/10 rounded-lg sm:rounded-xl p-3 sm:p-4">
+                    <h3 className="text-xs sm:text-sm font-semibold text-white mb-2 sm:mb-3 uppercase tracking-wide">Dostupnost</h3>
+                    <div className="space-y-1.5 sm:space-y-2">
                       {[
                         { value: 'available', label: 'Dostupno odmah' },
                         { value: '15_days', label: 'Rok isporuke 15 dana' },
                         { value: 'on_request', label: 'Po dogovoru' }
                       ].map(({ value, label }) => (
-                        <label key={value} className="flex items-center gap-2 cursor-pointer group">
+                        <label key={value} className="flex items-center gap-2 cursor-pointer group touch-manipulation">
                           <input
                             type="checkbox"
                             checked={selectedAvailability.includes(value)}
@@ -457,18 +457,18 @@ export default function CatalogPage() {
                                 setSelectedAvailability(selectedAvailability.filter(a => a !== value));
                               }
                             }}
-                            className="w-4 h-4 rounded border-white/20 bg-[#1a1a1a] text-[#ff6b00] focus:ring-[#ff6b00]/50 focus:ring-2"
+                            className="w-4 h-4 sm:w-5 sm:h-5 rounded border-white/20 bg-[#1a1a1a] text-[#ff6b00] focus:ring-[#ff6b00]/50 focus:ring-2"
                           />
-                          <span className="text-sm text-neutral-300 group-hover:text-white transition-colors">{label}</span>
+                          <span className="text-xs sm:text-sm text-neutral-300 group-hover:text-white transition-colors">{label}</span>
                         </label>
                       ))}
                     </div>
                   </div>
 
-                  <div className="bg-[#101010] border border-white/10 rounded-xl p-4">
-                    <h3 className="text-sm font-semibold text-white mb-3 uppercase tracking-wide">Cijena</h3>
+                  <div className="bg-[#101010] border border-white/10 rounded-lg sm:rounded-xl p-3 sm:p-4">
+                    <h3 className="text-xs sm:text-sm font-semibold text-white mb-2 sm:mb-3 uppercase tracking-wide">Cijena</h3>
                     <div className="space-y-3">
-                      <div className="flex items-center justify-between text-sm text-neutral-400">
+                      <div className="flex items-center justify-between text-xs sm:text-sm text-neutral-400">
                         <span>{priceRange[0]} BAM</span>
                         <span>{priceRange[1]} BAM</span>
                       </div>
@@ -479,27 +479,27 @@ export default function CatalogPage() {
                         step="50"
                         value={priceRange[1]}
                         onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
-                        className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-[#ff6b00]"
+                        className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-[#ff6b00] touch-manipulation"
                       />
                     </div>
                   </div>
 
-                  <div className="bg-[#101010] border border-white/10 rounded-xl p-4">
-                    <label className="flex items-center gap-2 cursor-pointer group">
+                  <div className="bg-[#101010] border border-white/10 rounded-lg sm:rounded-xl p-3 sm:p-4">
+                    <label className="flex items-center gap-2 cursor-pointer group touch-manipulation">
                       <input
                         type="checkbox"
                         checked={showOnlyDiscount}
                         onChange={(e) => setShowOnlyDiscount(e.target.checked)}
-                        className="w-4 h-4 rounded border-white/20 bg-[#1a1a1a] text-[#ff6b00] focus:ring-[#ff6b00]/50 focus:ring-2"
+                        className="w-4 h-4 sm:w-5 sm:h-5 rounded border-white/20 bg-[#1a1a1a] text-[#ff6b00] focus:ring-[#ff6b00]/50 focus:ring-2"
                       />
-                      <span className="text-sm text-neutral-300 group-hover:text-white transition-colors font-semibold">Samo sa popustom</span>
+                      <span className="text-xs sm:text-sm text-neutral-300 group-hover:text-white transition-colors font-semibold">Samo sa popustom</span>
                     </label>
                   </div>
 
                   {hasActiveFilters && (
                     <button
                       onClick={clearFilters}
-                      className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-400 px-4 py-3 rounded-xl font-semibold transition-all"
+                      className="w-full bg-red-500/10 active:bg-red-500/20 text-red-400 px-4 py-3 rounded-lg sm:rounded-xl font-semibold transition-all active:scale-95 touch-manipulation text-sm sm:text-base"
                     >
                       Očisti sve filtere
                     </button>
@@ -515,16 +515,16 @@ export default function CatalogPage() {
               )}
 
               <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-4">
+                <div className="flex items-center justify-between mb-4 sm:mb-6">
+                  <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
                     <button
                       onClick={() => setShowMobileFilters(true)}
-                      className="lg:hidden flex items-center gap-2 px-4 py-2 bg-[#101010] border border-white/10 rounded-xl text-neutral-200 hover:border-[#ff6b00]/50 transition-all"
+                      className="lg:hidden flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-[#101010] border border-white/10 rounded-lg sm:rounded-xl text-neutral-200 active:border-[#ff6b00]/50 transition-all active:scale-95 touch-manipulation text-sm sm:text-base"
                     >
-                      <FilterIcon className="w-5 h-5" />
-                      Filteri
+                      <FilterIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+                      <span>Filteri</span>
                     </button>
-                    <p className="text-neutral-400 text-sm">
+                    <p className="text-neutral-400 text-xs sm:text-sm">
                       {loading ? 'Učitavanje...' : `${filteredParts.length} ${filteredParts.length === 1 ? 'rezultat' : filteredParts.length < 5 ? 'rezultata' : 'rezultata'}`}
                     </p>
                   </div>
@@ -573,7 +573,7 @@ export default function CatalogPage() {
                   </div>
                 ) : (
                   <>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-5 lg:gap-6">
                       {filteredParts.slice(0, displayLimit).map((part) => (
                         <ProductCard
                           key={part.id}
@@ -585,9 +585,9 @@ export default function CatalogPage() {
                     </div>
 
                     {filteredParts.length > displayLimit && (
-                      <div ref={observerTarget} className="text-center mt-12 py-8">
-                        <div className="flex items-center justify-center gap-2 text-neutral-400">
-                          <div className="w-5 h-5 border-2 border-[#ff6b00]/30 border-t-[#ff6b00] rounded-full animate-spin"></div>
+                      <div ref={observerTarget} className="text-center mt-8 sm:mt-10 md:mt-12 py-6 sm:py-8">
+                        <div className="flex items-center justify-center gap-2 text-neutral-400 text-sm sm:text-base">
+                          <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-[#ff6b00]/30 border-t-[#ff6b00] rounded-full animate-spin"></div>
                           <span>Učitavanje još {Math.min(12, filteredParts.length - displayLimit)} dijelova...</span>
                         </div>
                       </div>

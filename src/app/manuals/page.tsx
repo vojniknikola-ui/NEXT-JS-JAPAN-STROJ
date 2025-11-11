@@ -35,38 +35,38 @@ export default function ManualsPage() {
   return (
     <div className="bg-[#0b0b0b] text-neutral-100 min-h-screen flex flex-col">
       <Header activePage={activePage} setActivePage={setActivePage} cartItemCount={cartItemCount} />
-      <main className="flex-grow">
-        <div className="container mx-auto px-4 py-16">
-          <div className="text-center mb-16">
-            <h1 className="text-4xl font-bold text-white mb-4">Priručnici i dokumentacija</h1>
-            <p className="text-xl text-neutral-400 max-w-2xl mx-auto">
+      <main className="flex-grow pb-20 lg:pb-0">
+        <div className="container mx-auto px-3 sm:px-4 py-8 sm:py-12 md:py-16">
+          <div className="text-center mb-8 sm:mb-12 md:mb-16">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-3 sm:mb-4 px-2">Priručnici i dokumentacija</h1>
+            <p className="text-sm sm:text-base md:text-lg lg:text-xl text-neutral-400 max-w-2xl mx-auto px-4">
               Preuzmite tehničku dokumentaciju, servisne priručnike i upute za korištenje građevinskih strojeva.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6 lg:gap-8">
             {mockManuals.map((manual) => (
-              <div key={manual.id} className="bg-[#101010] border border-white/5 rounded-2xl p-6 hover:border-[#ff6b00]/50 transition-all duration-300">
-                <div className="text-4xl mb-4">📚</div>
-                <h3 className="text-xl font-semibold text-white mb-3">{manual.title}</h3>
-                <p className="text-neutral-400 mb-6">{manual.description}</p>
-                <button className="w-full bg-[#ff6b00] hover:bg-[#ff7f1a] text-white py-3 rounded-full font-semibold transition-all duration-300 hover:scale-105">
+              <div key={manual.id} className="bg-[#101010] border border-white/5 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 active:border-[#ff6b00]/50 transition-all duration-300">
+                <div className="text-3xl sm:text-4xl mb-3 sm:mb-4">📚</div>
+                <h3 className="text-base sm:text-lg md:text-xl font-semibold text-white mb-2 sm:mb-3 line-clamp-2">{manual.title}</h3>
+                <p className="text-sm sm:text-base text-neutral-400 mb-4 sm:mb-5 md:mb-6 line-clamp-3">{manual.description}</p>
+                <button className="w-full bg-[#ff6b00] active:bg-[#ff7f1a] text-white py-2.5 sm:py-3 rounded-full font-semibold transition-all duration-300 active:scale-95 sm:hover:scale-105 touch-manipulation text-sm sm:text-base">
                   Preuzmi priručnik
                 </button>
               </div>
             ))}
           </div>
 
-          <div className="mt-16 text-center">
-            <div className="bg-[#101010] border border-white/5 rounded-2xl p-8 max-w-2xl mx-auto">
-              <h2 className="text-2xl font-bold text-white mb-4">Dodatna dokumentacija</h2>
-              <p className="text-neutral-400 mb-6">
+          <div className="mt-10 sm:mt-12 md:mt-16 text-center">
+            <div className="bg-[#101010] border border-white/5 rounded-xl sm:rounded-2xl p-5 sm:p-6 md:p-8 max-w-2xl mx-auto">
+              <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-white mb-3 sm:mb-4">Dodatna dokumentacija</h2>
+              <p className="text-sm sm:text-base text-neutral-400 mb-4 sm:mb-5 md:mb-6">
                 Za specifične tehničke podatke ili dodatne priručnike, kontaktirajte našu tehničku podršku.
               </p>
-              <div className="space-y-2 text-left">
-                <p className="text-neutral-300"><strong>Email:</strong> podrska@japanstroj.ba</p>
-                <p className="text-neutral-300"><strong>Telefon:</strong> +387 12 345 678</p>
-                <p className="text-neutral-300"><strong>Radno vrijeme:</strong> Pon-Pet 8:00-16:00</p>
+              <div className="space-y-1.5 sm:space-y-2 text-left">
+                <p className="text-xs sm:text-sm md:text-base text-neutral-300"><strong>Email:</strong> podrska@japanstroj.ba</p>
+                <p className="text-xs sm:text-sm md:text-base text-neutral-300"><strong>Telefon:</strong> +387 12 345 678</p>
+                <p className="text-xs sm:text-sm md:text-base text-neutral-300"><strong>Radno vrijeme:</strong> Pon-Pet 8:00-16:00</p>
               </div>
             </div>
           </div>

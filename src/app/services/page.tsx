@@ -72,49 +72,49 @@ export default function ServicesPage() {
   return (
     <div className="bg-[#0b0b0b] text-neutral-100 min-h-screen flex flex-col">
       <Header activePage={activePage} setActivePage={setActivePage} cartItemCount={cartItemCount} />
-      <main className="flex-grow">
-        <div className="container mx-auto px-4 py-16">
-          <div className="text-center mb-8 sm:mb-12 md:mb-16 lg:mb-20">
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 sm:px-4 py-1 text-xs sm:text-sm font-semibold uppercase tracking-[0.4em] text-neutral-300 mb-3 sm:mb-4 md:mb-6">
+      <main className="flex-grow pb-20 lg:pb-0">
+        <div className="container mx-auto px-3 sm:px-4 py-8 sm:py-12 md:py-16">
+          <div className="text-center mb-6 sm:mb-8 md:mb-12 lg:mb-16">
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 sm:px-4 py-1 text-[10px] sm:text-xs md:text-sm font-semibold uppercase tracking-[0.3em] sm:tracking-[0.4em] text-neutral-300 mb-3 sm:mb-4 md:mb-6">
               Profesionalne usluge
             </span>
-            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-extrabold text-white mb-3 sm:mb-4 md:mb-6 leading-tight">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-extrabold text-white mb-3 sm:mb-4 md:mb-6 leading-tight px-2">
               Stručnost i preciznost u <span className="text-[#ff6b00]">svakom detalju</span>
             </h1>
-            <p className="text-sm sm:text-base md:text-lg lg:text-xl text-neutral-400 max-w-4xl mx-auto leading-relaxed px-4">
+            <p className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl text-neutral-400 max-w-4xl mx-auto leading-relaxed px-4">
               Više od 20 godina iskustva u popravci i održavanju građevinskih strojeva.
               Koristimo najmoderniju opremu i originalne dijelove za maksimalnu pouzdanost vaših strojeva.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 mb-12 sm:mb-16">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6 md:gap-8 lg:gap-12 mb-8 sm:mb-12 md:mb-16">
             {services.map((service, index) => (
-              <div key={index} className="bg-[#101010] border border-white/5 rounded-3xl overflow-hidden shadow-2xl hover:shadow-[0_25px_60px_-20px_rgba(255,107,0,0.4)] transition-all duration-500 group">
-                <div className="relative h-48 sm:h-64 overflow-hidden">
+              <div key={index} className="bg-[#101010] border border-white/5 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl sm:hover:shadow-[0_25px_60px_-20px_rgba(255,107,0,0.4)] transition-all duration-500 group">
+                <div className="relative h-40 sm:h-48 md:h-56 lg:h-64 overflow-hidden">
                   <img
                     src={service.image}
                     alt={service.title}
-                    className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700"
+                    className="w-full h-full object-cover transform sm:group-hover:scale-110 transition-transform duration-700"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
-                  <div className="absolute top-4 sm:top-6 left-4 sm:left-6 text-3xl sm:text-5xl">{service.icon}</div>
-                  <div className="absolute bottom-4 sm:bottom-6 left-4 sm:left-6 right-4 sm:right-6">
-                    <h3 className="text-xl sm:text-2xl font-bold text-white mb-1 sm:mb-2">{service.title}</h3>
+                  <div className="absolute top-3 sm:top-4 md:top-6 left-3 sm:left-4 md:left-6 text-2xl sm:text-3xl md:text-4xl lg:text-5xl">{service.icon}</div>
+                  <div className="absolute bottom-3 sm:bottom-4 md:bottom-6 left-3 sm:left-4 md:left-6 right-3 sm:right-4 md:right-6">
+                    <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-white mb-1 sm:mb-2">{service.title}</h3>
                   </div>
                 </div>
-                <div className="p-6 sm:p-8">
-                  <p className="text-neutral-300 text-base sm:text-lg leading-relaxed mb-4 sm:mb-6">{service.description}</p>
+                <div className="p-4 sm:p-5 md:p-6 lg:p-8">
+                  <p className="text-neutral-300 text-sm sm:text-base md:text-lg leading-relaxed mb-4 sm:mb-5 md:mb-6">{service.description}</p>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 mb-4 sm:mb-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-2 md:gap-3 mb-4 sm:mb-5 md:mb-6">
                     {service.features.map((feature, idx) => (
-                      <div key={idx} className="flex items-center gap-2">
+                      <div key={idx} className="flex items-center gap-1.5 sm:gap-2">
                         <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-[#ff6b00] rounded-full flex-shrink-0"></div>
                         <span className="text-xs sm:text-sm text-neutral-400">{feature}</span>
                       </div>
                     ))}
                   </div>
 
-                  <button className="w-full bg-gradient-to-r from-[#ff6b00] to-[#ff8c33] hover:from-[#ff7f1a] hover:to-[#ffa04d] text-white font-semibold py-3 sm:py-4 px-4 sm:px-6 rounded-full transition-all duration-300 hover:scale-105 hover:shadow-[0_10px_30px_rgba(255,107,0,0.4)] text-sm sm:text-base">
+                  <button className="w-full bg-gradient-to-r from-[#ff6b00] to-[#ff8c33] active:from-[#ff7f1a] active:to-[#ffa04d] text-white font-semibold py-2.5 sm:py-3 md:py-4 px-4 sm:px-6 rounded-full transition-all duration-300 active:scale-95 sm:hover:scale-105 sm:hover:shadow-[0_10px_30px_rgba(255,107,0,0.4)] text-xs sm:text-sm md:text-base touch-manipulation">
                     Zatraži ponudu
                   </button>
                 </div>
@@ -122,34 +122,34 @@ export default function ServicesPage() {
             ))}
           </div>
 
-          <div className="mt-12 sm:mt-20">
-            <div className="bg-gradient-to-r from-[#ff6b00] via-[#ff7f1a] to-[#ff6b00] rounded-[24px] sm:rounded-[32px] px-6 sm:px-8 md:px-12 lg:px-20 py-12 sm:py-16 text-center shadow-[0_30px_80px_-30px_rgba(255,107,0,0.7)]">
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-neutral-900 mb-4 sm:mb-6">Spremni za servis vašeg stroja?</h2>
-              <p className="text-base sm:text-lg text-neutral-900/80 max-w-2xl mx-auto mb-8 sm:mb-10 px-4">
+          <div className="mt-8 sm:mt-12 md:mt-16 lg:mt-20">
+            <div className="bg-gradient-to-r from-[#ff6b00] via-[#ff7f1a] to-[#ff6b00] rounded-2xl sm:rounded-[24px] md:rounded-[32px] px-4 sm:px-6 md:px-8 lg:px-12 xl:px-20 py-8 sm:py-10 md:py-12 lg:py-16 text-center shadow-[0_30px_80px_-30px_rgba(255,107,0,0.7)]">
+              <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-neutral-900 mb-3 sm:mb-4 md:mb-6 px-2">Spremni za servis vašeg stroja?</h2>
+              <p className="text-sm sm:text-base md:text-lg text-neutral-900/80 max-w-2xl mx-auto mb-6 sm:mb-8 md:mb-10 px-4">
                 Kontaktirajte naše stručnjake za besplatnu procjenu i termin servisiranja.
                 Garantujemo kvalitetan rad i konkurentne cijene.
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-8 sm:mb-10">
-                <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 sm:p-6">
-                  <div className="text-2xl sm:text-3xl mb-2 sm:mb-3">📞</div>
-                  <h3 className="font-semibold text-neutral-900 mb-1 sm:mb-2 text-sm sm:text-base">Telefon</h3>
-                  <p className="text-neutral-800 text-sm sm:text-base">+387 61 924 848</p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 md:gap-6 mb-6 sm:mb-8 md:mb-10">
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6">
+                  <div className="text-xl sm:text-2xl md:text-3xl mb-1.5 sm:mb-2 md:mb-3">📞</div>
+                  <h3 className="font-semibold text-neutral-900 mb-1 sm:mb-2 text-xs sm:text-sm md:text-base">Telefon</h3>
+                  <p className="text-neutral-800 text-xs sm:text-sm md:text-base">+387 61 924 848</p>
                 </div>
-                <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 sm:p-6">
-                  <div className="text-2xl sm:text-3xl mb-2 sm:mb-3">✉️</div>
-                  <h3 className="font-semibold text-neutral-900 mb-1 sm:mb-2 text-sm sm:text-base">Email</h3>
-                  <p className="text-neutral-800 text-sm sm:text-base">info@japanstroj.ba</p>
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6">
+                  <div className="text-xl sm:text-2xl md:text-3xl mb-1.5 sm:mb-2 md:mb-3">✉️</div>
+                  <h3 className="font-semibold text-neutral-900 mb-1 sm:mb-2 text-xs sm:text-sm md:text-base">Email</h3>
+                  <p className="text-neutral-800 text-xs sm:text-sm md:text-base">info@japanstroj.ba</p>
                 </div>
-                <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 sm:p-6">
-                  <div className="text-2xl sm:text-3xl mb-2 sm:mb-3">📍</div>
-                  <h3 className="font-semibold text-neutral-900 mb-1 sm:mb-2 text-sm sm:text-base">Lokacija</h3>
-                  <p className="text-neutral-800 text-sm sm:text-base">Sarajevo, BiH</p>
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6">
+                  <div className="text-xl sm:text-2xl md:text-3xl mb-1.5 sm:mb-2 md:mb-3">📍</div>
+                  <h3 className="font-semibold text-neutral-900 mb-1 sm:mb-2 text-xs sm:text-sm md:text-base">Lokacija</h3>
+                  <p className="text-neutral-800 text-xs sm:text-sm md:text-base">Sarajevo, BiH</p>
                 </div>
               </div>
-              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-4">
+              <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 md:gap-4 justify-center px-2 sm:px-4">
                 <a
                   href="tel:+38761924848"
-                  className="inline-flex items-center justify-center gap-2 sm:gap-3 bg-neutral-900 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-full font-semibold text-base sm:text-lg hover:bg-black transition-all duration-300 hover:scale-105"
+                  className="inline-flex items-center justify-center gap-2 sm:gap-3 bg-neutral-900 text-white px-5 sm:px-6 md:px-8 py-2.5 sm:py-3 md:py-4 rounded-full font-semibold text-sm sm:text-base md:text-lg active:bg-black transition-all duration-300 active:scale-95 sm:hover:scale-105 touch-manipulation"
                 >
                   <span>📞</span>
                   Pozovite odmah
@@ -158,7 +158,7 @@ export default function ServicesPage() {
                   href="https://wa.me/38761924848?text=Pozdrav,%20zanima%20me%20servis%20za%20moj%20stroj"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-2 sm:gap-3 bg-green-600 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-full font-semibold text-base sm:text-lg hover:bg-green-700 transition-all duration-300 hover:scale-105"
+                  className="inline-flex items-center justify-center gap-2 sm:gap-3 bg-green-600 text-white px-5 sm:px-6 md:px-8 py-2.5 sm:py-3 md:py-4 rounded-full font-semibold text-sm sm:text-base md:text-lg active:bg-green-700 transition-all duration-300 active:scale-95 sm:hover:scale-105 touch-manipulation"
                 >
                   <span>💬</span>
                   WhatsApp
