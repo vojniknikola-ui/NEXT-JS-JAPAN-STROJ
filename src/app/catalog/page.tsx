@@ -164,7 +164,7 @@ export default function CatalogPage() {
         setError(null);
 
         const [partsRes, categoriesRes] = await Promise.all([
-          fetch('/api/parts'),
+          fetch('/api/parts?active=true'),
           fetch('/api/categories')
         ]);
 
@@ -181,7 +181,9 @@ export default function CatalogPage() {
           categoriesRes.json()
         ]);
 
-        setPartsData(parts);
+        // Filter only active parts
+        const activeParts = parts.filter((part: PartData) => part.isActive);
+        setPartsData(activeParts);
         setCategories(cats);
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -207,7 +209,7 @@ export default function CatalogPage() {
 
       const matchesCategory = !selectedCategory || part.categoryId === selectedCategory;
 
-      return matchesSearch && matchesCategory && part.isActive;
+      return matchesSearch && matchesCategory;
     });
   }, [partsData, searchQuery, selectedCategory]);
 
@@ -276,7 +278,7 @@ export default function CatalogPage() {
               </h1>
               <p className="text-lg text-neutral-400 max-w-2xl">
                 Pronađite savršene rezervne dijelove za vaše građevinske strojeve i mašine.
-                Preko 1000 artikala dostupnih odmah.
+                Preko {partsData.length} artikala dostupnih odmah.
               </p>
             </div>
 

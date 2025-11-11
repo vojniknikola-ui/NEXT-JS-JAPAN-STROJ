@@ -39,19 +39,48 @@ export default function ProductDetailPage() {
   useEffect(() => {
     // Load product from API
     if (productId) {
-      fetch('/api/spare-parts')
+      fetch(`/api/parts/${productId}`)
         .then(res => res.json())
         .then(data => {
-          const foundProduct = data.find((p: SparePart) => p.id === productId);
-          setProduct(foundProduct || null);
+          // Convert PartData to SparePart format
+          const sparePart: SparePart = {
+            id: data.id,
+            name: data.title,
+            brand: data.brand || '',
+            model: data.model || '',
+            catalogNumber: data.catalogNumber || '',
+            application: data.application || '',
+            delivery: data.delivery === 'available' ? Availability.Available :
+                     data.delivery === '15_days' ? Availability.FifteenDays :
+                     Availability.OnRequest,
+            priceWithoutVAT: parseFloat(data.priceWithoutVAT || data.price),
+            priceWithVAT: parseFloat(data.priceWithVAT || data.price),
+            discount: parseFloat(data.discount || '0'),
+            imageUrl: data.imageUrl || '',
+            technicalSpecs: {
+              spec1: data.spec1 || '',
+              spec2: data.spec2 || '',
+              spec3: data.spec3 || '',
+              spec4: data.spec4 || '',
+              spec5: data.spec5 || '',
+              spec6: data.spec6 || '',
+              spec7: data.spec7 || '',
+            },
+            stock: data.stock,
+          };
+
+          setProduct(sparePart);
 
           // Generate recommendations after product is loaded
-          if (foundProduct) {
-            const recommendedProducts = getRecommendations(foundProduct, 3);
+          if (sparePart) {
+            const recommendedProducts = getRecommendations(sparePart, 3);
             setRecommendations(recommendedProducts);
           }
         })
-        .catch(error => console.error('Error loading product:', error));
+        .catch(error => {
+          console.error('Error loading product:', error);
+          setProduct(null);
+        });
     }
   }, [productId]);
 
