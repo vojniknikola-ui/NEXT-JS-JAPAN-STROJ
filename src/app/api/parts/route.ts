@@ -91,9 +91,15 @@ export async function GET(req: Request) {
   .from(parts)
   .leftJoin(categories, eq(parts.categoryId, categories.id))
   .where(where.length ? and(...where) : undefined)
-  .orderBy(orderBy);
+  .orderBy(orderBy)
+  .limit(1000); // Limit results for performance
 
-  return Response.json(data);
+  // Add cache headers for better performance
+  return Response.json(data, {
+    headers: {
+      'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600', // Cache for 5 minutes, serve stale for 10 minutes
+    },
+  });
 }
 
 export async function POST(req: Request) {

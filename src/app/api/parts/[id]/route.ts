@@ -8,7 +8,12 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   const { id } = await params;
   const [row] = await db.select().from(parts).where(eq(parts.id, Number(id)));
   if (!row) return new Response("Not found", { status: 404 });
-  return Response.json(row);
+
+  return Response.json(row, {
+    headers: {
+      'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
+    },
+  });
 }
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
