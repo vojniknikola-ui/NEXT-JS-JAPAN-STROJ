@@ -19,7 +19,7 @@ export class OrderService {
     const { items, pricing } = orderData;
 
     const itemsText = items.map(item =>
-      `${item.name} (${item.catalogNumber}) - ${item.quantity} kom x ${item.priceWithVAT.toFixed(2)} BAM = ${(item.priceWithVAT * item.quantity).toFixed(2)} BAM`
+      `${item.part.name} (${item.part.catalogNumber}) - ${item.quantity} kom x ${item.part.priceWithVAT.toFixed(2)} BAM = ${(item.part.priceWithVAT * item.quantity).toFixed(2)} BAM`
     ).join('\n');
 
     return encodeURIComponent(
