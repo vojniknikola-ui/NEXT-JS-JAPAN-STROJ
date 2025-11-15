@@ -255,6 +255,74 @@ export default function AdminParts() {
 
     return () => controller.abort();
   }, [debouncedSearch, hasLoaded, refresh]);
+  async function refresh(
+    search?: string,
+    overrides?: { categoryId?: string; status?: string; brand?: string }
+  ) {
+    try {
+      setLoading(true);
+    }
+    setError(null);
+
+    try {
+      const params = new URLSearchParams();
+      const searchTerm = search ?? q;
+      if (typeof search === 'string') {
+        setQ(search);
+      }
+      if (searchTerm?.trim()) params.append('q', searchTerm.trim());
+      const categoryId = overrides?.categoryId ?? filterCategory;
+      const status = overrides?.status ?? filterStatus;
+      const brand = overrides?.brand ?? filterBrand;
+      if (categoryId) params.append('categoryId', categoryId);
+      if (status) params.append('status', status);
+      if (brand) params.append('brand', brand);
+      if (sortField) params.append('sort', sortField);
+      if (sortDirection) params.append('order', sortDirection);
+
+      const url = `/api/parts?${params.toString()}`;
+      const res = await fetch(url, { signal });
+
+  useEffect(() => {
+    if (!hasLoaded) return;
+
+      const data = await res.json();
+      console.log('Loaded parts data:', data); // Debug log
+
+      const items = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.items)
+          ? data.items
+          : [];
+
+      setParts(items);
+      setCurrentPage((prev) => (typeof search !== 'undefined' || overrides ? 1 : prev));
+    } catch (error) {
+      if ((error as Error)?.name === 'AbortError') {
+        return;
+      }
+      console.error('Error refreshing parts:', error);
+      setError('Greška pri učitavanju dijelova');
+      setParts([]);
+    } finally {
+      if (!skipLoadingState) {
+        setLoading(false);
+      }
+    }
+  }, [filterBrand, filterCategory, filterStatus, sortDirection, sortField]);
+
+  useEffect(() => {
+    if (!hasLoaded) return;
+
+    const controller = new AbortController();
+    refresh({
+      search: debouncedSearch,
+      resetPage: true,
+      signal: controller.signal,
+    });
+
+    return () => controller.abort();
+  }, [debouncedSearch, hasLoaded, refresh]);
 
   useEffect(() => {
     if (!hasLoaded) return;
@@ -420,6 +488,7 @@ export default function AdminParts() {
     let filtered = [...parts];
 
     const searchTerm = debouncedSearch.trim().toLowerCase();
+    const searchTerm = q.trim().toLowerCase();
     if (searchTerm) {
       filtered = filtered.filter((p) => {
         const haystack = [
@@ -439,6 +508,7 @@ export default function AdminParts() {
       });
     }
 
+    // Apply filters
     if (filterCategory) {
       filtered = filtered.filter(p => p.categoryId === parseInt(filterCategory, 10));
     }
@@ -465,6 +535,13 @@ export default function AdminParts() {
         return sortDirection === 'asc' ? comparison : -comparison;
       }
 
+      }
+
+      if (typeof aVal === 'string' && typeof bVal === 'string') {
+        const comparison = aVal.localeCompare(bVal, 'bs', { sensitivity: 'base' });
+        return sortDirection === 'asc' ? comparison : -comparison;
+      }
+
       const numericA = Number(aVal ?? 0);
       const numericB = Number(bVal ?? 0);
       if (numericA < numericB) return sortDirection === 'asc' ? -1 : 1;
@@ -474,6 +551,7 @@ export default function AdminParts() {
 
     return filtered;
   }, [parts, filterCategory, filterStatus, filterBrand, sortField, sortDirection, debouncedSearch]);
+  }, [parts, filterCategory, filterStatus, filterBrand, sortField, sortDirection, q]);
 
   const summaryMetrics = useMemo(() => {
     const total = parts.length;
@@ -543,6 +621,7 @@ export default function AdminParts() {
     setCurrentPage(1);
     setSortField('createdAt');
     setSortDirection('desc');
+    refresh('', { categoryId: '', status: '', brand: '' });
   };
 
   return (
@@ -604,6 +683,7 @@ export default function AdminParts() {
                 onClick={() => refresh({ search: q.trim(), resetPage: true })}
                 className={`${secondaryButtonClass} w-full sm:w-auto justify-center`}
               >
+              <button onClick={() => refresh(q)} className={`${secondaryButtonClass} w-full sm:w-auto justify-center`}>
                 Traži
               </button>
             </div>
@@ -1096,6 +1176,7 @@ export default function AdminParts() {
               )}
               <button
                 onClick={() => refresh({ search: q.trim(), resetPage: false })}
+                onClick={() => refresh(q)}
                 disabled={loading}
                 className={secondaryButtonClass}
                 title="Osvježi podatke"
