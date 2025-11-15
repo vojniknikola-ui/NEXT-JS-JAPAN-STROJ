@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect, useMemo, useCallback, useRef, memo } from 'react';
+import Link from 'next/link';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Page, SparePart, Availability } from '@/types';
@@ -36,7 +36,7 @@ interface PartData {
   spec7?: string | null;
 }
 
-const AvailabilityBadge: React.FC<{ availability: string }> = ({ availability }) => {
+const AvailabilityBadge: React.FC<{ availability: string }> = memo(({ availability }) => {
   const baseClasses = 'px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-semibold rounded-full uppercase tracking-wide';
   switch (availability) {
     case 'available':
@@ -48,21 +48,31 @@ const AvailabilityBadge: React.FC<{ availability: string }> = ({ availability })
     default:
       return null;
   }
-};
+});
 
-const ProductCard: React.FC<{ part: PartData; onAddToCart: (part: PartData) => void; isAdded: boolean }> = ({ part, onAddToCart, isAdded }) => {
-  const router = useRouter();
-  const priceAfterDiscount = part.priceWithVAT && part.discount
-    ? parseFloat(part.priceWithVAT) * (1 - parseFloat(part.discount) / 100)
-    : parseFloat(part.priceWithVAT || part.price);
+AvailabilityBadge.displayName = 'AvailabilityBadge';
+
+const ProductCard = memo<{ part: PartData; onAddToCart: (part: PartData) => void; isAdded: boolean }>(({ part, onAddToCart, isAdded }) => {
+  const priceAfterDiscount = useMemo(() => {
+    if (part.priceWithVAT && part.discount) {
+      return parseFloat(part.priceWithVAT) * (1 - parseFloat(part.discount) / 100);
+    }
+    return parseFloat(part.priceWithVAT || part.price);
+  }, [part.discount, part.price, part.priceWithVAT]);
+
+  const productHref = useMemo(() => `/product/${part.id}`, [part.id]);
 
   return (
     <article className="group bg-[#101010] border border-white/5 rounded-xl sm:rounded-2xl overflow-hidden active:border-[#ff6b00]/30 transition-all duration-300 sm:hover:shadow-[0_10px_40px_-15px_rgba(255,107,0,0.3)] sm:hover:-translate-y-1">
-      <div className="relative aspect-square bg-[#1a1a1a] overflow-hidden cursor-pointer touch-manipulation" onClick={() => router.push(`/product/${part.id}`)}>
+      <Link
+        href={productHref}
+        className="relative block aspect-square bg-[#1a1a1a] overflow-hidden touch-manipulation"
+      >
         {part.imageUrl ? (
           <img
             src={part.imageUrl}
             alt={part.title}
+            loading="lazy"
             className="w-full h-full object-cover sm:group-hover:scale-105 transition-transform duration-300"
           />
         ) : (
@@ -85,14 +95,17 @@ const ProductCard: React.FC<{ part: PartData; onAddToCart: (part: PartData) => v
             -{part.discount}%
           </div>
         )}
-      </div>
+      </Link>
 
       <div className="p-4 sm:p-5 md:p-6">
         <div className="mb-2 sm:mb-3">
           <div className="text-[10px] sm:text-xs text-neutral-500 mb-1 font-mono truncate">{part.sku}</div>
-          <h3 className="text-sm sm:text-base font-semibold text-white mb-1 line-clamp-2 sm:group-hover:text-[#ff6b00] transition-colors cursor-pointer" onClick={() => router.push(`/product/${part.id}`)}>
+          <Link
+            href={productHref}
+            className="block text-sm sm:text-base font-semibold text-white mb-1 line-clamp-2 sm:group-hover:text-[#ff6b00] transition-colors"
+          >
             {part.title}
-          </h3>
+          </Link>
           {(part.brand || part.model) && (
             <p className="text-xs sm:text-sm text-neutral-400 truncate">
               {part.brand}{part.brand && part.model && ' • '}{part.model}
@@ -147,7 +160,12 @@ const ProductCard: React.FC<{ part: PartData; onAddToCart: (part: PartData) => v
       </div>
     </article>
   );
-};
+}, (prev, next) => {
+  const samePricing = prev.part.price === next.part.price && prev.part.priceWithVAT === next.part.priceWithVAT && prev.part.discount === next.part.discount;
+  return prev.isAdded === next.isAdded && prev.part.id === next.part.id && samePricing;
+});
+
+ProductCard.displayName = 'ProductCard';
 
 export default function CatalogPage() {
   const [activePage, setActivePage] = useState<Page>('catalog');
