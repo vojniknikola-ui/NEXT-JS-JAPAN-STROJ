@@ -134,7 +134,14 @@ export default function AdminParts() {
 
       const data = await res.json();
       console.log('Loaded parts data:', data); // Debug log
-      setParts(data);
+
+      const items = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.items)
+          ? data.items
+          : [];
+
+      setParts(items);
     } catch (error) {
       console.error('Error refreshing parts:', error);
       setError('Greška pri učitavanju dijelova');
