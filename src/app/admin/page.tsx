@@ -111,16 +111,26 @@ export default function AdminParts() {
     loadInitialData();
   }, []);
 
-  async function refresh(search?: string) {
+  async function refresh(
+    search?: string,
+    overrides?: { categoryId?: string; status?: string; brand?: string }
+  ) {
     try {
       setLoading(true);
       setError(null);
 
       const params = new URLSearchParams();
-      if (search) params.append('q', search);
-      if (filterCategory) params.append('categoryId', filterCategory);
-      if (filterStatus) params.append('status', filterStatus);
-      if (filterBrand) params.append('brand', filterBrand);
+      const searchTerm = search ?? q;
+      if (typeof search === 'string') {
+        setQ(search);
+      }
+      if (searchTerm?.trim()) params.append('q', searchTerm.trim());
+      const categoryId = overrides?.categoryId ?? filterCategory;
+      const status = overrides?.status ?? filterStatus;
+      const brand = overrides?.brand ?? filterBrand;
+      if (categoryId) params.append('categoryId', categoryId);
+      if (status) params.append('status', status);
+      if (brand) params.append('brand', brand);
       if (sortField) params.append('sort', sortField);
       if (sortDirection) params.append('order', sortDirection);
 
@@ -142,6 +152,7 @@ export default function AdminParts() {
           : [];
 
       setParts(items);
+      setCurrentPage((prev) => (typeof search !== 'undefined' || overrides ? 1 : prev));
     } catch (error) {
       console.error('Error refreshing parts:', error);
       setError('Greška pri učitavanju dijelova');
@@ -320,6 +331,26 @@ export default function AdminParts() {
   const filteredAndSorted = useMemo(() => {
     let filtered = [...parts];
 
+    const searchTerm = q.trim().toLowerCase();
+    if (searchTerm) {
+      filtered = filtered.filter((p) => {
+        const haystack = [
+          p.title,
+          p.brand,
+          p.model,
+          p.sku,
+          p.catalogNumber,
+          p.application,
+          p.description,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+
+        return haystack.includes(searchTerm);
+      });
+    }
+
     // Apply filters
     if (filterCategory) {
       filtered = filtered.filter(p => p.categoryId === parseInt(filterCategory));
@@ -350,7 +381,7 @@ export default function AdminParts() {
     });
 
     return filtered;
-  }, [parts, filterCategory, filterStatus, filterBrand, sortField, sortDirection]);
+  }, [parts, filterCategory, filterStatus, filterBrand, sortField, sortDirection, q]);
 
   // Pagination
   const totalPages = Math.ceil(filteredAndSorted.length / itemsPerPage);
@@ -374,11 +405,12 @@ export default function AdminParts() {
     setFilterBrand('');
     setQ('');
     setCurrentPage(1);
+    refresh('', { categoryId: '', status: '', brand: '' });
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#050505] via-[#0b0b0b] to-[#111111] py-16 px-6">
-      <div className="mx-auto w-full max-w-7xl space-y-14">
+    <div className="min-h-screen bg-gradient-to-b from-[#050505] via-[#0b0b0b] to-[#111111] py-14 px-4 sm:px-6">
+      <div className="mx-auto w-full max-w-7xl space-y-12 sm:space-y-14">
         <div className="flex flex-col gap-3">
           <span className="inline-flex w-max items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.4em] text-neutral-300">
             JapanStroj Admin
@@ -391,22 +423,21 @@ export default function AdminParts() {
 
         {/* Filters and Search */}
         <div className="flex flex-col gap-4">
-          <div className="flex items-center justify-between">
-            <div className="flex gap-2">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <input
                 id="search-parts"
                 name="search-parts"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="Pretraži dijelove..."
-                className={inputClass}
-                style={{ width: '300px' }}
+                className={`${inputClass} w-full sm:w-72`}
               />
-              <button onClick={() => refresh(q)} className={secondaryButtonClass}>
+              <button onClick={() => refresh(q)} className={`${secondaryButtonClass} w-full sm:w-auto justify-center`}>
                 Traži
               </button>
             </div>
-            <button onClick={resetFilters} className={secondaryButtonClass}>
+            <button onClick={resetFilters} className={`${secondaryButtonClass} w-full sm:w-auto justify-center`}>
               Resetuj filtere
             </button>
           </div>
@@ -484,7 +515,7 @@ export default function AdminParts() {
           </div>
         </div>
 
-        <div className="rounded-3xl border border-white/10 bg-[#101010] p-10 shadow-[0_35px_90px_-40px_rgba(255,107,0,0.5)]">
+        <div className="rounded-3xl border border-white/10 bg-[#101010] p-6 sm:p-8 lg:p-10 shadow-[0_35px_90px_-40px_rgba(255,107,0,0.5)]">
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <h2 className="text-2xl font-bold text-white">{editingId ? 'Uredi postojeći dio' : 'Dodaj novi dio'}</h2>
             {editingId && (
@@ -827,11 +858,11 @@ export default function AdminParts() {
           </div>
         )}
 
-        <div className="rounded-3xl border border-white/10 bg-[#101010] p-10 shadow-[0_35px_90px_-40px_rgba(255,107,0,0.5)]">
-          <div className="flex items-center justify-between mb-6">
-            <div>
+        <div className="rounded-3xl border border-white/10 bg-[#101010] p-4 sm:p-6 lg:p-10 shadow-[0_35px_90px_-40px_rgba(255,107,0,0.5)]">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between mb-6">
+            <div className="space-y-2">
               <h2 className="text-2xl font-bold text-white">Inventory Management - Rezervni dijelovi ({filteredAndSorted.length})</h2>
-              <div className="flex items-center gap-4 mt-1 flex-wrap">
+              <div className="flex items-center gap-3 mt-1 flex-wrap">
                 <div className="flex items-center gap-2 flex-wrap">
                   {filterCategory && (
                     <span className="px-2 py-1 bg-blue-900/30 text-blue-300 rounded-full text-xs flex items-center gap-1">
@@ -886,7 +917,7 @@ export default function AdminParts() {
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-3">
               {loading && (
                 <div className="flex items-center gap-2 text-neutral-400">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#ff6b00]"></div>
@@ -894,7 +925,7 @@ export default function AdminParts() {
                 </div>
               )}
               <button
-                onClick={() => refresh()}
+                onClick={() => refresh(q)}
                 disabled={loading}
                 className={secondaryButtonClass}
                 title="Osvježi podatke"
@@ -1059,11 +1090,11 @@ export default function AdminParts() {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between mt-6 pt-6 border-t border-white/10">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mt-6 pt-6 border-t border-white/10">
               <div className="text-sm text-neutral-400">
                 Prikazujem {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, filteredAndSorted.length)} od {filteredAndSorted.length} dijelova
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   onClick={() => setCurrentPage(1)}
                   disabled={currentPage === 1}
