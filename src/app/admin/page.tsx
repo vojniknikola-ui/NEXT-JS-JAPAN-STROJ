@@ -162,52 +162,30 @@ export default function AdminParts() {
     loadInitialData();
   }, [refresh]);
 
-  type RefreshOptions = {
-    search?: string;
-    categoryId?: string;
-    status?: string;
-    brand?: string;
-    sort?: string;
-    order?: 'asc' | 'desc';
-    resetPage?: boolean;
-    signal?: AbortSignal;
-    skipLoadingState?: boolean;
-  };
-
-  const refresh = useCallback(async (options: RefreshOptions = {}) => {
-    const {
-      search,
-      categoryId,
-      status,
-      brand,
-      sort,
-      order,
-      resetPage,
-      signal,
-      skipLoadingState,
-    } = options;
-
-    if (!skipLoadingState) {
+  async function refresh(
+    search?: string,
+    overrides?: { categoryId?: string; status?: string; brand?: string }
+  ) {
+    try {
       setLoading(true);
     }
     setError(null);
 
     try {
       const params = new URLSearchParams();
-      const searchTerm = typeof search === 'string' ? search : searchRef.current;
+      const searchTerm = search ?? q;
+      if (typeof search === 'string') {
+        setQ(search);
+      }
       if (searchTerm?.trim()) params.append('q', searchTerm.trim());
-
-      const categoryFilter = categoryId ?? filterCategory;
-      const statusFilter = status ?? filterStatus;
-      const brandFilter = brand ?? filterBrand;
-      const sortParam = sort ?? sortField;
-      const orderParam = order ?? sortDirection;
-
-      if (categoryFilter) params.append('categoryId', categoryFilter);
-      if (statusFilter) params.append('status', statusFilter);
-      if (brandFilter) params.append('brand', brandFilter);
-      if (sortParam) params.append('sort', sortParam);
-      if (orderParam) params.append('order', orderParam);
+      const categoryId = overrides?.categoryId ?? filterCategory;
+      const status = overrides?.status ?? filterStatus;
+      const brand = overrides?.brand ?? filterBrand;
+      if (categoryId) params.append('categoryId', categoryId);
+      if (status) params.append('status', status);
+      if (brand) params.append('brand', brand);
+      if (sortField) params.append('sort', sortField);
+      if (sortDirection) params.append('order', sortDirection);
 
       const url = `/api/parts?${params.toString()}`;
       const res = await fetch(url, { signal });
@@ -217,18 +195,16 @@ export default function AdminParts() {
       }
 
       const data = await res.json();
+      console.log('Loaded parts data:', data); // Debug log
 
-      const items: Part[] = Array.isArray(data)
+      const items = Array.isArray(data)
         ? data
         : Array.isArray(data?.items)
           ? data.items
           : [];
 
       setParts(items);
-
-      if (resetPage) {
-        setCurrentPage(1);
-      }
+      setCurrentPage((prev) => (typeof search !== 'undefined' || overrides ? 1 : prev));
     } catch (error) {
       if ((error as Error)?.name === 'AbortError') {
         return;
@@ -419,7 +395,7 @@ export default function AdminParts() {
   const filteredAndSorted = useMemo(() => {
     let filtered = [...parts];
 
-    const searchTerm = debouncedSearch.trim().toLowerCase();
+    const searchTerm = q.trim().toLowerCase();
     if (searchTerm) {
       filtered = filtered.filter((p) => {
         const haystack = [
@@ -439,6 +415,7 @@ export default function AdminParts() {
       });
     }
 
+    // Apply filters
     if (filterCategory) {
       filtered = filtered.filter(p => p.categoryId === parseInt(filterCategory, 10));
     }
@@ -473,7 +450,7 @@ export default function AdminParts() {
     });
 
     return filtered;
-  }, [parts, filterCategory, filterStatus, filterBrand, sortField, sortDirection, debouncedSearch]);
+  }, [parts, filterCategory, filterStatus, filterBrand, sortField, sortDirection, q]);
 
   const summaryMetrics = useMemo(() => {
     const total = parts.length;
@@ -541,8 +518,7 @@ export default function AdminParts() {
     setFilterBrand('');
     setQ('');
     setCurrentPage(1);
-    setSortField('createdAt');
-    setSortDirection('desc');
+    refresh('', { categoryId: '', status: '', brand: '' });
   };
 
   return (
@@ -600,10 +576,7 @@ export default function AdminParts() {
                 placeholder="Pretraži dijelove..."
                 className={`${inputClass} w-full sm:w-72`}
               />
-              <button
-                onClick={() => refresh({ search: q.trim(), resetPage: true })}
-                className={`${secondaryButtonClass} w-full sm:w-auto justify-center`}
-              >
+              <button onClick={() => refresh(q)} className={`${secondaryButtonClass} w-full sm:w-auto justify-center`}>
                 Traži
               </button>
             </div>
@@ -1095,7 +1068,7 @@ export default function AdminParts() {
                 </div>
               )}
               <button
-                onClick={() => refresh({ search: q.trim(), resetPage: false })}
+                onClick={() => refresh(q)}
                 disabled={loading}
                 className={secondaryButtonClass}
                 title="Osvježi podatke"
