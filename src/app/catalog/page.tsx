@@ -264,11 +264,11 @@ export default function CatalogPage() {
                       )}
                     </button>
                     <div className="flex items-center gap-2">
-                      <p className="text-neutral-400 text-xs sm:text-sm">
+                      <p className="text-neutral-300 text-xs sm:text-sm">
                         {loading ? 'Učitavanje...' : `${filteredParts.length} ${filteredParts.length === 1 ? 'rezultat' : filteredParts.length < 5 ? 'rezultata' : 'rezultata'}`}
                       </p>
                       {hasActiveFilters && (
-                        <span className="text-xs text-primary-400 bg-primary-500/10 px-2 py-1 rounded-full">
+                        <span className="text-xs text-primary-300 bg-primary-500/20 px-2 py-1 rounded-full border border-primary-500/30">
                           Filtrirano
                         </span>
                       )}

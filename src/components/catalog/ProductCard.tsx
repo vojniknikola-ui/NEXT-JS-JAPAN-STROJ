@@ -95,7 +95,7 @@ const ProductCard = memo<{ part: PartData; onAddToCart: (part: PartData) => void
 
       <div className="p-4 sm:p-5 md:p-6">
         <div className="mb-2 sm:mb-3">
-          <div className="text-[10px] sm:text-xs text-neutral-500 mb-1 font-mono truncate">{part.sku}</div>
+          <div className="text-[10px] sm:text-xs text-neutral-400 mb-1 font-mono truncate">{part.sku}</div>
           <Link
             href={productHref}
             className="block text-sm sm:text-base font-semibold text-white mb-1 line-clamp-2 sm:group-hover:text-[#ff6b00] transition-colors"
@@ -108,7 +108,7 @@ const ProductCard = memo<{ part: PartData; onAddToCart: (part: PartData) => void
             </p>
           )}
           {part.catalogNumber && (
-            <p className="text-[10px] sm:text-xs text-neutral-500 mt-1 truncate">
+            <p className="text-[10px] sm:text-xs text-neutral-400 mt-1 truncate">
               Kat. broj: {part.catalogNumber}
             </p>
           )}
@@ -125,7 +125,7 @@ const ProductCard = memo<{ part: PartData; onAddToCart: (part: PartData) => void
               {priceAfterDiscount.toFixed(2)} {part.currency}
             </span>
             {part.discount && parseFloat(part.discount) > 0 && (
-              <span className="text-xs sm:text-sm text-neutral-500 line-through">
+              <span className="text-xs sm:text-sm text-neutral-400 line-through">
                 {parseFloat(part.priceWithVAT || part.price).toFixed(2)} {part.currency}
               </span>
             )}

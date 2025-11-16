@@ -252,15 +252,28 @@ export default function Home() {
                   }}
                 >
                   <div className="relative overflow-hidden aspect-square sm:aspect-auto sm:h-40 md:h-48 bg-secondary-800">
-                    <Image
-                      src={part.imageUrl}
-                      alt={part.name}
-                      fill
-                      className="object-cover sm:group-hover:scale-110 transition-transform duration-700"
-                      sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                      placeholder="blur"
-                      blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R+IRjWjBqO6O2mhP//Z"
-                    />
+                    {part.imageUrl ? (
+                      <Image
+                        src={part.imageUrl}
+                        alt={part.name}
+                        fill
+                        className="object-cover sm:group-hover:scale-110 transition-transform duration-700"
+                        sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                        placeholder="blur"
+                        blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R+IRjWjBqO6O2mhP//Z"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-neutral-600">
+                        <div className="text-center">
+                          <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-2 bg-[#ff6b00]/10 rounded-full flex items-center justify-center">
+                            <svg className="w-6 h-6 sm:w-8 sm:h-8" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
+                            </svg>
+                          </div>
+                          <p className="text-[10px] sm:text-xs">Nema slike</p>
+                        </div>
+                      </div>
+                    )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 sm:group-hover:opacity-100 transition-opacity duration-500" />
                     <div className="absolute top-3 sm:top-4 right-3 sm:right-4 opacity-0 sm:group-hover:opacity-100 transition-all duration-500 transform translate-y-2 sm:group-hover:translate-y-0">
                       <div className="bg-primary-500 text-white p-1.5 sm:p-2 rounded-full shadow-lg hover:bg-primary-600 transition-colors">
@@ -283,7 +296,7 @@ export default function Home() {
                       <span className="text-xl sm:text-2xl font-black text-primary-400 group-hover:text-primary-300 transition-colors">
                         {part.priceWithVAT ? Number(part.priceWithVAT).toFixed(2) : '0.00'} BAM
                       </span>
-                      <div className="text-[10px] sm:text-xs text-neutral-500 uppercase tracking-wide bg-neutral-800/50 px-2 py-1 rounded-full">PDV uključen</div>
+                      <div className="text-[10px] sm:text-xs text-neutral-400 uppercase tracking-wide bg-neutral-800/50 px-2 py-1 rounded-full">PDV uključen</div>
                     </div>
                   </div>
                 </div>

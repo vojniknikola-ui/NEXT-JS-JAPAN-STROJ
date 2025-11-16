@@ -138,7 +138,7 @@ export default function CartPage() {
                                 sizes="(max-width: 640px) 80px, 96px"
                               />
                             ) : (
-                              <span className="text-neutral-500 text-xs sm:text-sm font-medium">N/A</span>
+                              <span className="text-neutral-400 text-xs sm:text-sm font-medium">N/A</span>
                             )}
                           </div>
                           <div className="absolute -top-1 -right-1 w-6 h-6 bg-[#ff6b00] rounded-full flex items-center justify-center text-xs font-bold text-black">
@@ -226,7 +226,7 @@ export default function CartPage() {
                       </p>
                       <p className="text-xs sm:text-sm text-neutral-400">PDV uključen</p>
                       {cartTotal < 500 && (
-                        <p className="text-xs text-neutral-500 mt-1">
+                        <p className="text-xs text-neutral-400 mt-1">
                           Još {(500 - cartTotal).toFixed(2)} BAM za besplatnu dostavu
                         </p>
                       )}
