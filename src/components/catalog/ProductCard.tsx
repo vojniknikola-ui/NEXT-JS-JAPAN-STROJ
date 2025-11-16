@@ -37,7 +37,7 @@ const AvailabilityBadge: React.FC<{ availability: string }> = memo(({ availabili
     case 'available':
       return <div className={`${baseClasses} bg-emerald-500/90 text-white`}>Dostupno</div>;
     case '15_days':
-      return <div className={`${baseClasses} bg-[#ff6b00] text-black`}>15 dana</div>;
+      return <div className={`${baseClasses} bg-[#ff6b00] text-white`}>15 dana</div>;
     case 'on_request':
       return <div className={`${baseClasses} bg-red-500/90 text-white`}>Po dogovoru</div>;
     default:

@@ -287,7 +287,7 @@ export default function CatalogPage() {
                     <p className="text-neutral-400 mb-6">{error}</p>
                     <button
                       onClick={() => window.location.reload()}
-                      className="bg-[#ff6b00] hover:bg-[#ff7f1a] text-black px-6 py-3 rounded-full font-semibold transition-all hover:scale-105"
+                      className="bg-[#ff6b00] hover:bg-[#ff7f1a] text-white px-6 py-3 rounded-full font-semibold transition-all hover:scale-105"
                     >
                       Pokušaj ponovo
                     </button>
@@ -312,7 +312,7 @@ export default function CatalogPage() {
                     </p>
                     <button
                       onClick={clearFilters}
-                      className="bg-[#ff6b00] hover:bg-[#ff7f1a] text-black px-6 py-3 rounded-full font-semibold transition-all hover:scale-105"
+                      className="bg-[#ff6b00] hover:bg-[#ff7f1a] text-white px-6 py-3 rounded-full font-semibold transition-all hover:scale-105"
                     >
                       Prikaži sve dijelove
                     </button>

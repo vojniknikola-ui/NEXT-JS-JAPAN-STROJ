@@ -91,7 +91,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
               onClick={() => setSelectedCategory(null)}
               className={`w-full text-left px-3 py-2 rounded-lg text-xs sm:text-sm transition-all touch-manipulation focus-ring ${
                 selectedCategory === null
-                  ? 'bg-primary-500 text-black font-semibold shadow-lg'
+                  ? 'bg-primary-500 text-white font-semibold shadow-lg'
                   : 'text-neutral-300 hover:bg-white/5 active:bg-white/10'
               }`}
               aria-pressed={selectedCategory === null}
@@ -104,7 +104,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
                 onClick={() => setSelectedCategory(category.id)}
                 className={`w-full text-left px-3 py-2 rounded-lg text-xs sm:text-sm transition-all touch-manipulation focus-ring ${
                   selectedCategory === category.id
-                    ? 'bg-primary-500 text-black font-semibold shadow-lg'
+                    ? 'bg-primary-500 text-white font-semibold shadow-lg'
                     : 'text-neutral-300 hover:bg-white/5 active:bg-white/10'
                 }`}
                 aria-pressed={selectedCategory === category.id}

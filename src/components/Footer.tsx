@@ -27,12 +27,12 @@ const Footer: React.FC = () => {
           <div className="sm:col-span-2 md:col-span-1">
             <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-white">Pratite nas</h3>
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 justify-center md:justify-start">
-              <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full bg-white/5 hover:bg-[#ff6b00] hover:text-black transition-all duration-300 hover:scale-105 border border-white/10 hover:border-[#ff6b00] text-sm sm:text-base">
+              <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full bg-white/5 hover:bg-[#ff6b00] hover:text-white transition-all duration-300 hover:scale-105 border border-white/10 hover:border-[#ff6b00] text-sm sm:text-base">
                 <FacebookIcon className="h-4 w-4 sm:h-5 sm:w-5" />
                 <span className="font-semibold">Facebook</span>
               </a>
-              <a href="https://olx.ba" target="_blank" rel="noopener noreferrer" className="text-neutral-400 hover:text-[#ff6b00] transition-colors text-sm sm:text-base font-medium">
-                OLX
+              <a href="https://olx.ba" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full bg-white/5 hover:bg-[#ff6b00] hover:text-white transition-all duration-300 hover:scale-105 border border-white/10 hover:border-[#ff6b00] text-sm sm:text-base">
+                <span className="font-semibold">OLX</span>
               </a>
             </div>
           </div>

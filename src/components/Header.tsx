@@ -78,7 +78,7 @@ const Header: React.FC = () => {
                 onClick={() => handleNavClick(item.id)}
                 className={`relative px-3 xl:px-4 py-2 rounded-full text-sm xl:text-base font-semibold uppercase tracking-wide transition-all duration-200 ${
                   getCurrentPage() === item.id
-                    ? 'bg-[#ff6b00] text-black shadow-[0_8px_24px_-12px_rgba(255,107,0,0.9)]'
+                    ? 'bg-[#ff6b00] text-white shadow-[0_8px_24px_-12px_rgba(255,107,0,0.9)]'
                     : 'text-neutral-200 hover:text-[#ff6b00] hover:bg-white/10'
                 }`}
               >
@@ -144,7 +144,7 @@ const Header: React.FC = () => {
                   onClick={() => handleNavClick(item.id)}
                   className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
                     getCurrentPage() === item.id
-                      ? 'bg-[#ff6b00] text-black'
+                      ? 'bg-[#ff6b00] text-white'
                       : 'text-neutral-200 hover:text-[#ff6b00] hover:bg-white/10'
                   }`}
                 >
