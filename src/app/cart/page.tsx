@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import ProformaInvoiceModal from '@/components/ProformaInvoiceModal';
@@ -11,7 +12,6 @@ import { MinusIcon, PlusIcon, TrashIcon, ShoppingBagIcon, ArrowLeftIcon } from '
 
 export default function CartPage() {
    const router = useRouter();
-   const [activePage, setActivePage] = useState<Page>('cart');
    const { cartItems, cartItemCount, cartTotal, updateQuantity, removeFromCart, clearCart } = useCart();
    const [isOrdering, setIsOrdering] = useState(false);
    const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -35,8 +35,9 @@ export default function CartPage() {
     const encodedMessage = encodeURIComponent(fullMessage);
 
     // Try WhatsApp first, fallback to Viber
-    const whatsappUrl = `https://wa.me/38761234567?text=${encodedMessage}`;
-    const viberUrl = `viber://chat?number=%2B38761234567&text=${encodedMessage}`;
+    const phoneNumber = process.env.NEXT_PUBLIC_PHONE_NUMBER || '+38761234567';
+    const whatsappUrl = `https://wa.me/${phoneNumber.replace('+', '')}?text=${encodedMessage}`;
+    const viberUrl = `viber://chat?number=${encodeURIComponent(phoneNumber)}&text=${encodedMessage}`;
 
     // Open WhatsApp, if not available try Viber
     window.open(whatsappUrl, '_blank');
@@ -53,7 +54,7 @@ export default function CartPage() {
 
   return (
     <div className="bg-gradient-to-br from-[#0b0b0b] via-[#0a0a0a] to-[#080808] text-neutral-100 min-h-screen flex flex-col">
-      <Header activePage={activePage} setActivePage={setActivePage} cartItemCount={cartItemCount} />
+      <Header />
 
       <main className="flex-grow pb-20 lg:pb-0 relative">
         {/* Background Pattern */}
@@ -87,10 +88,10 @@ export default function CartPage() {
               /* Empty Cart */
               <div className="text-center py-12 sm:py-16 md:py-20">
                 <div className="relative">
-                  <div className="w-24 h-24 sm:w-32 sm:h-32 mx-auto mb-4 sm:mb-6 bg-gradient-to-br from-[#ff6b00]/20 to-[#ff6b00]/5 rounded-full flex items-center justify-center animate-pulse">
+                  <div className="w-24 h-24 sm:w-32 sm:h-32 mx-auto mb-4 sm:mb-6 bg-gradient-to-br from-[#ff6b00]/20 to-[#ff6b00]/5 rounded-full flex items-center justify-center">
                     <ShoppingBagIcon className="w-12 h-12 sm:w-16 sm:h-16 text-[#ff6b00]" />
                   </div>
-                  <div className="absolute -top-2 -right-2 w-8 h-8 bg-[#ff6b00] rounded-full flex items-center justify-center animate-bounce">
+                  <div className="absolute -top-2 -right-2 w-8 h-8 bg-[#ff6b00] rounded-full flex items-center justify-center">
                     <span className="text-black font-bold text-sm">+</span>
                   </div>
                 </div>
@@ -127,17 +128,19 @@ export default function CartPage() {
                       <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
                         {/* Product Image */}
                         <div className="flex-shrink-0 self-start relative">
-                          {item.part.imageUrl ? (
-                            <img
-                              src={item.part.imageUrl}
-                              alt={item.part.name}
-                              className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-lg shadow-md"
-                            />
-                          ) : (
-                            <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-[#1a1a1a] to-[#0f0f0f] rounded-lg flex items-center justify-center border border-white/5">
+                          <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-[#1a1a1a] to-[#0f0f0f] rounded-lg flex items-center justify-center border border-white/5 overflow-hidden">
+                            {item.part.imageUrl ? (
+                              <Image
+                                src={item.part.imageUrl}
+                                alt={item.part.name}
+                                fill
+                                className="object-cover"
+                                sizes="(max-width: 640px) 80px, 96px"
+                              />
+                            ) : (
                               <span className="text-neutral-500 text-xs sm:text-sm font-medium">N/A</span>
-                            </div>
-                          )}
+                            )}
+                          </div>
                           <div className="absolute -top-1 -right-1 w-6 h-6 bg-[#ff6b00] rounded-full flex items-center justify-center text-xs font-bold text-black">
                             {item.quantity}
                           </div>
@@ -186,7 +189,7 @@ export default function CartPage() {
 
                             {/* Price */}
                             <div className="text-right">
-                              <p className="text-lg sm:text-xl md:text-2xl font-bold text-[#ff6b00] animate-pulse">
+                              <p className="text-lg sm:text-xl md:text-2xl font-bold text-[#ff6b00]">
                                 {(item.part.priceWithVAT * item.quantity).toFixed(2)} BAM
                               </p>
                               {item.quantity > 1 && (
@@ -218,7 +221,7 @@ export default function CartPage() {
                       )}
                     </div>
                     <div className="text-left sm:text-right">
-                      <p className="text-2xl sm:text-3xl md:text-4xl font-black text-[#ff6b00] mb-1 sm:mb-2 animate-pulse">
+                      <p className="text-2xl sm:text-3xl md:text-4xl font-black text-[#ff6b00] mb-1 sm:mb-2">
                         {cartTotal.toFixed(2)} BAM
                       </p>
                       <p className="text-xs sm:text-sm text-neutral-400">PDV uključen</p>
@@ -272,7 +275,7 @@ export default function CartPage() {
                 {/* Order Info */}
                 <div className="bg-gradient-to-br from-[#101010] to-[#0a0a0a] border border-[#ff6b00]/20 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 hover:border-[#ff6b00]/40 transition-all duration-300">
                   <h3 className="text-base sm:text-lg font-bold text-white mb-3 sm:mb-4 flex items-center gap-2">
-                    <div className="w-2 h-2 bg-[#ff6b00] rounded-full animate-pulse"></div>
+                    <div className="w-2 h-2 bg-[#ff6b00] rounded-full"></div>
                     Informacije o narudžbi
                   </h3>
                   <div className="space-y-2 sm:space-y-3 text-xs sm:text-sm text-neutral-300">

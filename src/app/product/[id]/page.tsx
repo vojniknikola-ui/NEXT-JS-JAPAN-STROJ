@@ -2,12 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Page, SparePart, Availability } from '@/types';
 import { ShareIcon, FacebookIcon, CopyIcon, CheckIcon, CartIcon, WhatsAppIcon, ViberIcon } from '@/lib/icons';
 import { useCart } from '@/lib/hooks/useCart';
 import { useSpareParts } from '@/lib/hooks/useSpareParts';
+import { transformPartDataToSparePart } from '@/utils/dataTransform';
 
 const AvailabilityBadge: React.FC<{ availability: Availability }> = ({ availability }) => {
   const baseClasses = 'px-2 sm:px-3 py-1 text-[10px] sm:text-xs font-semibold rounded-full uppercase tracking-wide text-white';
@@ -25,10 +27,10 @@ const AvailabilityBadge: React.FC<{ availability: Availability }> = ({ availabil
 
 export default function ProductDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const productId = parseInt(params.id as string);
 
-  const [activePage, setActivePage] = useState<Page>('productDetail');
-  const { cartItemCount, addToCart } = useCart();
+  const { addToCart } = useCart();
   const { getRecommendations } = useSpareParts();
   const [product, setProduct] = useState<SparePart | null>(null);
   const [recommendations, setRecommendations] = useState<SparePart[]>([]);
@@ -42,33 +44,7 @@ export default function ProductDetailPage() {
       fetch(`/api/parts/${productId}`)
         .then(res => res.json())
         .then(data => {
-          // Convert PartData to SparePart format
-          const sparePart: SparePart = {
-            id: data.id,
-            name: data.title,
-            brand: data.brand || '',
-            model: data.model || '',
-            catalogNumber: data.catalogNumber || '',
-            application: data.application || '',
-            delivery: data.delivery === 'available' ? Availability.Available :
-                     data.delivery === '15_days' ? Availability.FifteenDays :
-                     Availability.OnRequest,
-            priceWithoutVAT: parseFloat(data.priceWithoutVAT || data.price),
-            priceWithVAT: parseFloat(data.priceWithVAT || data.price),
-            discount: parseFloat(data.discount || '0'),
-            imageUrl: data.imageUrl || '',
-            technicalSpecs: {
-              spec1: data.spec1 || '',
-              spec2: data.spec2 || '',
-              spec3: data.spec3 || '',
-              spec4: data.spec4 || '',
-              spec5: data.spec5 || '',
-              spec6: data.spec6 || '',
-              spec7: data.spec7 || '',
-            },
-            stock: data.stock,
-          };
-
+          const sparePart = transformPartDataToSparePart(data);
           setProduct(sparePart);
 
           // Generate recommendations after product is loaded
@@ -137,12 +113,12 @@ export default function ProductDetailPage() {
   if (!product) {
     return (
       <div className="bg-[#0b0b0b] text-neutral-100 min-h-screen flex flex-col">
-        <Header activePage={activePage} setActivePage={setActivePage} cartItemCount={cartItemCount} />
+        <Header />
         <main className="flex-grow flex items-center justify-center">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-white mb-4">Proizvod nije pronađen</h1>
             <button
-              onClick={() => setActivePage('catalog')}
+              onClick={() => router.push('/catalog')}
               className="bg-[#ff6b00] hover:bg-[#ff7f1a] text-white px-6 py-3 rounded-full font-semibold transition-all duration-300 hover:scale-105"
             >
               Povratak na katalog
@@ -156,7 +132,7 @@ export default function ProductDetailPage() {
 
   return (
     <div className="bg-[#0b0b0b] text-neutral-100 min-h-screen flex flex-col">
-      <Header activePage={activePage} setActivePage={setActivePage} cartItemCount={cartItemCount} />
+      <Header />
       <main className="flex-grow pb-20 lg:pb-0">
         <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 md:py-10 lg:py-12">
           <div className="max-w-6xl mx-auto">

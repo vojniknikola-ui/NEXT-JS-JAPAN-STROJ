@@ -1,28 +1,12 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Page } from '@/types';
 
 export default function ServicesPage() {
-  const [activePage, setActivePage] = React.useState<Page>('services');
-  const [cartItems, setCartItems] = React.useState<any[]>([]);
-
-  React.useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedCart = localStorage.getItem('japanStrojCart');
-      if (savedCart) {
-        try {
-          setCartItems(JSON.parse(savedCart));
-        } catch (error) {
-          console.error('Error loading cart:', error);
-        }
-      }
-    }
-  }, []);
-
-  const cartItemCount = cartItems.reduce((total, item) => total + item.quantity, 0);
 
   const services = [
     {
@@ -71,7 +55,7 @@ export default function ServicesPage() {
 
   return (
     <div className="bg-[#0b0b0b] text-neutral-100 min-h-screen flex flex-col">
-      <Header activePage={activePage} setActivePage={setActivePage} cartItemCount={cartItemCount} />
+      <Header />
       <main className="flex-grow pb-20 lg:pb-0">
         <div className="container mx-auto px-3 sm:px-4 py-8 sm:py-12 md:py-16">
           <div className="text-center mb-6 sm:mb-8 md:mb-12 lg:mb-16">
@@ -91,10 +75,12 @@ export default function ServicesPage() {
             {services.map((service, index) => (
               <div key={index} className="bg-[#101010] border border-white/5 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl sm:hover:shadow-[0_25px_60px_-20px_rgba(255,107,0,0.4)] transition-all duration-500 group">
                 <div className="relative h-40 sm:h-48 md:h-56 lg:h-64 overflow-hidden">
-                  <img
+                  <Image
                     src={service.image}
                     alt={service.title}
-                    className="w-full h-full object-cover transform sm:group-hover:scale-110 transition-transform duration-700"
+                    fill
+                    className="object-cover transform sm:group-hover:scale-110 transition-transform duration-700"
+                    sizes="(max-width: 1024px) 100vw, 50vw"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
                   <div className="absolute top-3 sm:top-4 md:top-6 left-3 sm:left-4 md:left-6 text-2xl sm:text-3xl md:text-4xl lg:text-5xl">{service.icon}</div>

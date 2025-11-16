@@ -92,26 +92,9 @@ const categories = [
 ];
 
 export default function ManualsPage() {
-   const [activePage, setActivePage] = React.useState<Page>('manuals');
-   const [cartItems, setCartItems] = React.useState<any[]>([]);
    const [searchTerm, setSearchTerm] = useState('');
    const [selectedCategory, setSelectedCategory] = useState('all');
    const [filteredManuals, setFilteredManuals] = useState(mockManuals);
-
-  React.useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedCart = localStorage.getItem('japanStrojCart');
-      if (savedCart) {
-        try {
-          setCartItems(JSON.parse(savedCart));
-        } catch (error) {
-          console.error('Error loading cart:', error);
-        }
-      }
-    }
-  }, []);
-
-  const cartItemCount = cartItems.reduce((total, item) => total + item.quantity, 0);
 
   // Filter manuals based on search and category
   React.useEffect(() => {
@@ -134,7 +117,7 @@ export default function ManualsPage() {
 
   return (
     <div className="bg-gradient-to-br from-[#0b0b0b] via-[#0a0a0a] to-[#080808] text-neutral-100 min-h-screen flex flex-col">
-      <Header activePage={activePage} setActivePage={setActivePage} cartItemCount={cartItemCount} />
+      <Header />
       <main className="flex-grow pb-20 lg:pb-0 relative">
         {/* Background Pattern */}
         <div className="absolute inset-0 opacity-5">
