@@ -1,13 +1,16 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Page } from '@/types';
 
+type CartCountItem = { quantity: number };
+
 export default function ServicesPage() {
   const [activePage, setActivePage] = React.useState<Page>('services');
-  const [cartItems, setCartItems] = React.useState<any[]>([]);
+  const [cartItems, setCartItems] = React.useState<CartCountItem[]>([]);
 
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -72,7 +75,7 @@ export default function ServicesPage() {
   return (
     <div className="bg-[#0b0b0b] text-neutral-100 min-h-screen flex flex-col">
       <Header activePage={activePage} setActivePage={setActivePage} cartItemCount={cartItemCount} />
-      <main className="flex-grow pb-20 lg:pb-0">
+      <main className="flex-grow safe-main-padding lg:pb-0">
         <div className="container mx-auto px-3 sm:px-4 py-8 sm:py-12 md:py-16">
           <div className="text-center mb-6 sm:mb-8 md:mb-12 lg:mb-16">
             <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 sm:px-4 py-1 text-[10px] sm:text-xs md:text-sm font-semibold uppercase tracking-[0.3em] sm:tracking-[0.4em] text-neutral-300 mb-3 sm:mb-4 md:mb-6">
@@ -91,9 +94,11 @@ export default function ServicesPage() {
             {services.map((service, index) => (
               <div key={index} className="bg-[#101010] border border-white/5 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl sm:hover:shadow-[0_25px_60px_-20px_rgba(255,107,0,0.4)] transition-all duration-500 group">
                 <div className="relative h-40 sm:h-48 md:h-56 lg:h-64 overflow-hidden">
-                  <img
+                  <Image
                     src={service.image}
                     alt={service.title}
+                    fill
+                    sizes="(max-width: 1024px) 100vw, 50vw"
                     className="w-full h-full object-cover transform sm:group-hover:scale-110 transition-transform duration-700"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
@@ -114,7 +119,7 @@ export default function ServicesPage() {
                     ))}
                   </div>
 
-                  <button className="w-full bg-gradient-to-r from-[#ff6b00] to-[#ff8c33] active:from-[#ff7f1a] active:to-[#ffa04d] text-white font-semibold py-2.5 sm:py-3 md:py-4 px-4 sm:px-6 rounded-full transition-all duration-300 active:scale-95 sm:hover:scale-105 sm:hover:shadow-[0_10px_30px_rgba(255,107,0,0.4)] text-xs sm:text-sm md:text-base touch-manipulation">
+                  <button className="w-full bg-gradient-to-r from-[#ff6b00] to-[#ff8c33] active:from-[#ff7f1a] active:to-[#ffa04d] text-black font-semibold py-2.5 sm:py-3 md:py-4 px-4 sm:px-6 rounded-full transition-all duration-300 active:scale-95 sm:hover:scale-105 sm:hover:shadow-[0_10px_30px_rgba(255,107,0,0.4)] text-xs sm:text-sm md:text-base touch-manipulation">
                     Zatraži ponudu
                   </button>
                 </div>

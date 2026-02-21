@@ -1,7 +1,49 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 
 type Category = { id: number; name: string };
+type SortDirection = 'asc' | 'desc';
+type SortField = 'id' | 'sku' | 'brand' | 'model' | 'title' | 'stock' | 'priceWithoutVAT' | 'priceWithVAT' | 'createdAt' | 'updatedAt';
+type Delivery = 'available' | '15_days' | 'on_request';
+
+interface PartRecord {
+  id: number;
+  sku: string;
+  title: string;
+  brand: string | null;
+  model: string | null;
+  catalogNumber: string | null;
+  application: string | null;
+  delivery: Delivery | null;
+  description: string | null;
+  price: string | null;
+  priceWithoutVAT: string | null;
+  priceWithVAT: string | null;
+  discount: string | null;
+  currency: string;
+  stock: number;
+  categoryId: number;
+  imageUrl: string | null;
+  thumbUrl: string | null;
+  spec1: string | null;
+  spec2: string | null;
+  spec3: string | null;
+  spec4: string | null;
+  spec5: string | null;
+  spec6: string | null;
+  spec7: string | null;
+  specJson: string | null;
+  isActive: boolean;
+  category?: string | null;
+  createdAt?: string | Date | null;
+  updatedAt?: string | Date | null;
+}
+
+interface PartsResponsePayload {
+  items?: PartRecord[];
+}
+
 type PartInput = {
   sku: string; 
   title: string; 
@@ -31,44 +73,81 @@ type PartInput = {
   isActive?: boolean;
 };
 
+const createInitialForm = (categoryId: number): PartInput => ({
+  sku: "",
+  title: "",
+  brand: "",
+  model: "",
+  catalogNumber: "",
+  application: "",
+  delivery: "available",
+  description: "",
+  price: 0,
+  priceWithoutVAT: 0,
+  priceWithVAT: 0,
+  discount: 0,
+  currency: "BAM",
+  stock: 0,
+  categoryId,
+  spec1: "",
+  spec2: "",
+  spec3: "",
+  spec4: "",
+  spec5: "",
+  spec6: "",
+  spec7: "",
+  isActive: true,
+});
+
+const parseNumberString = (value: string | null | undefined): number => {
+  if (!value) return 0;
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const getSortableValue = (part: PartRecord, field: SortField): string | number => {
+  switch (field) {
+    case 'id':
+    case 'stock':
+      return part[field] ?? 0;
+    case 'priceWithoutVAT':
+      return parseNumberString(part.priceWithoutVAT);
+    case 'priceWithVAT':
+      return parseNumberString(part.priceWithVAT);
+    case 'createdAt':
+    case 'updatedAt':
+      return part[field] ? new Date(part[field] as string | Date).getTime() : 0;
+    case 'sku':
+    case 'brand':
+    case 'model':
+    case 'title':
+      return (part[field] ?? '').toLowerCase();
+    default:
+      return 0;
+  }
+};
+
+const getErrorMessage = (error: unknown, fallback: string): string => {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+  return fallback;
+};
+
 export default function AdminParts() {
   const [cats, setCats] = useState<Category[]>([]);
-  const [parts, setParts] = useState<any[]>([]);
+  const [parts, setParts] = useState<PartRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [form, setForm] = useState<PartInput>({
-    sku: "",
-    title: "",
-    brand: "",
-    model: "",
-    catalogNumber: "",
-    application: "",
-    delivery: "available",
-    description: "",
-    price: 0,
-    priceWithoutVAT: 0,
-    priceWithVAT: 0,
-    discount: 0,
-    currency: "BAM",
-    stock: 0,
-    categoryId: 1,
-    spec1: "",
-    spec2: "",
-    spec3: "",
-    spec4: "",
-    spec5: "",
-    spec6: "",
-    spec7: "",
-    isActive: true,
-  } as any);
+  const [form, setForm] = useState<PartInput>(() => createInitialForm(1));
   const [q, setQ] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(50);
-  const [sortField, setSortField] = useState<string>('createdAt');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [sortField, setSortField] = useState<SortField>('createdAt');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [filterCategory, setFilterCategory] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [filterBrand, setFilterBrand] = useState<string>('');
@@ -77,6 +156,7 @@ export default function AdminParts() {
   const secondaryButtonClass = 'inline-flex items-center justify-center gap-2 rounded-full border border-white/15 px-6 py-3 text-sm font-semibold uppercase tracking-wide text-neutral-200 transition-all hover:border-[#ff6b00] hover:text-[#ff6b00] hover:scale-105';
   const inputClass = 'w-full rounded-2xl border border-white/10 bg-[#111111] px-4 py-3 text-sm text-neutral-100 placeholder:text-neutral-500 outline-none transition focus:border-[#ff6b00]/50 focus:ring-2 focus:ring-[#ff6b00]/60';
   const labelClass = 'block text-[0.7rem] font-semibold uppercase tracking-[0.35em] text-neutral-400 mb-2';
+  const validSortFields: SortField[] = ['id', 'sku', 'brand', 'model', 'title', 'stock', 'priceWithoutVAT', 'priceWithVAT', 'createdAt', 'updatedAt'];
 
   useEffect(() => {
     const loadInitialData = async () => {
@@ -88,7 +168,7 @@ export default function AdminParts() {
         try {
           const res = await fetch("/api/categories");
           if (res.ok) {
-            const categories = await res.json();
+            const categories = (await res.json()) as Category[];
             setCats(categories);
           } else {
             setCats([{ id: 1, name: "Default" }]);
@@ -99,7 +179,13 @@ export default function AdminParts() {
         }
 
         // Load parts
-        await refresh();
+        const partsRes = await fetch('/api/parts?sort=createdAt&order=desc');
+        if (!partsRes.ok) {
+          throw new Error(`HTTP ${partsRes.status}: ${partsRes.statusText}`);
+        }
+        const partsPayload = (await partsRes.json()) as PartsResponsePayload | PartRecord[];
+        const loadedParts = Array.isArray(partsPayload) ? partsPayload : partsPayload.items ?? [];
+        setParts(loadedParts);
       } catch (error) {
         console.error('Error loading initial data:', error);
         setError('Greška pri učitavanju podataka');
@@ -132,9 +218,10 @@ export default function AdminParts() {
         throw new Error(`HTTP ${res.status}: ${res.statusText}`);
       }
 
-      const data = await res.json();
+      const data = (await res.json()) as PartsResponsePayload | PartRecord[];
+      const nextParts = Array.isArray(data) ? data : data.items ?? [];
       console.log('Loaded parts data:', data); // Debug log
-      setParts(data);
+      setParts(nextParts);
     } catch (error) {
       console.error('Error refreshing parts:', error);
       setError('Greška pri učitavanju dijelova');
@@ -215,9 +302,9 @@ export default function AdminParts() {
       setError(null);
       alert(editingId ? "Dio je uspješno ažuriran!" : "Dio je uspješno dodan!");
 
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('Save error:', e);
-      setError(e.message || "Došlo je do greške prilikom spremanja");
+      setError(getErrorMessage(e, "Došlo je do greške prilikom spremanja"));
     } finally {
       setSaving(false);
     }
@@ -240,15 +327,15 @@ export default function AdminParts() {
       await refresh();
       alert("Dio je uspješno obrisan!");
 
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('Delete error:', e);
-      setError(e.message || "Greška pri brisanju dijela");
+      setError(getErrorMessage(e, "Greška pri brisanju dijela"));
     } finally {
       setLoading(false);
     }
   }
 
-  function editPart(p: any) {
+  function editPart(p: PartRecord) {
     setEditingId(p.id);
     setForm({
       sku: p.sku,
@@ -259,14 +346,14 @@ export default function AdminParts() {
       application: p.application || "",
       delivery: p.delivery || "available",
       description: p.description || "",
-      price: Number(p.price),
-      priceWithoutVAT: Number(p.priceWithoutVAT) || 0,
-      priceWithVAT: Number(p.priceWithVAT) || 0,
-      discount: Number(p.discount) || 0,
-      currency: p.currency,
+      price: parseNumberString(p.price),
+      priceWithoutVAT: parseNumberString(p.priceWithoutVAT),
+      priceWithVAT: parseNumberString(p.priceWithVAT),
+      discount: parseNumberString(p.discount),
+      currency: p.currency || "BAM",
       stock: p.stock,
       categoryId: p.categoryId || 1,
-      imageUrl: p.imageUrl,
+      imageUrl: p.imageUrl || undefined,
       spec1: p.spec1 || "",
       spec2: p.spec2 || "",
       spec3: p.spec3 || "",
@@ -281,31 +368,7 @@ export default function AdminParts() {
 
   function resetForm() {
     setEditingId(null);
-    setForm({ 
-      sku: "", 
-      title: "", 
-      brand: "",
-      model: "",
-      catalogNumber: "",
-      application: "",
-      delivery: "available",
-      description: "",
-      price: 0, 
-      priceWithoutVAT: 0,
-      priceWithVAT: 0,
-      discount: 0,
-      currency: "BAM",
-      stock: 0, 
-      categoryId: cats[0]?.id || 1,
-      spec1: "",
-      spec2: "",
-      spec3: "",
-      spec4: "",
-      spec5: "",
-      spec6: "",
-      spec7: "",
-      isActive: true 
-    } as any);
+    setForm(createInitialForm(cats[0]?.id || 1));
     setFile(null);
   }
 
@@ -315,27 +378,19 @@ export default function AdminParts() {
 
     // Apply filters
     if (filterCategory) {
-      filtered = filtered.filter(p => p.categoryId === parseInt(filterCategory));
+      filtered = filtered.filter((p) => p.categoryId === Number.parseInt(filterCategory, 10));
     }
     if (filterStatus) {
-      filtered = filtered.filter(p => filterStatus === 'active' ? p.isActive : !p.isActive);
+      filtered = filtered.filter((p) => (filterStatus === 'active' ? p.isActive : !p.isActive));
     }
     if (filterBrand) {
-      filtered = filtered.filter(p => p.brand?.toLowerCase().includes(filterBrand.toLowerCase()));
+      filtered = filtered.filter((p) => p.brand?.toLowerCase().includes(filterBrand.toLowerCase()));
     }
 
     // Apply sorting
     filtered.sort((a, b) => {
-      let aVal = a[sortField];
-      let bVal = b[sortField];
-
-      if (sortField === 'createdAt' || sortField === 'updatedAt') {
-        aVal = new Date(aVal).getTime();
-        bVal = new Date(bVal).getTime();
-      } else if (typeof aVal === 'string') {
-        aVal = aVal.toLowerCase();
-        bVal = bVal.toLowerCase();
-      }
+      const aVal = getSortableValue(a, sortField);
+      const bVal = getSortableValue(b, sortField);
 
       if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
       if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
@@ -352,7 +407,7 @@ export default function AdminParts() {
     currentPage * itemsPerPage
   );
 
-  const handleSort = (field: string) => {
+  const handleSort = (field: SortField) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
@@ -457,8 +512,10 @@ export default function AdminParts() {
                 value={`${sortField}-${sortDirection}`}
                 onChange={(e) => {
                   const [field, direction] = e.target.value.split('-');
-                  setSortField(field);
-                  setSortDirection(direction as 'asc' | 'desc');
+                  if (validSortFields.includes(field as SortField)) {
+                    setSortField(field as SortField);
+                  }
+                  setSortDirection(direction === 'asc' ? 'asc' : 'desc');
                 }}
                 className={inputClass}
               >
@@ -924,6 +981,11 @@ export default function AdminParts() {
                     'Ažurirano': p.updatedAt ? new Date(p.updatedAt).toLocaleDateString('bs-BA') : '',
                   }));
 
+                  if (csvData.length === 0) {
+                    alert('Nema podataka za izvoz.');
+                    return;
+                  }
+
                   const csvContent = [
                     Object.keys(csvData[0]).join(','),
                     ...csvData.map(row => Object.values(row).map(val => `"${val}"`).join(','))
@@ -976,12 +1038,19 @@ export default function AdminParts() {
                 </tr>
               </thead>
               <tbody>
-                {paginatedParts.map((p: any) => (
+                {paginatedParts.map((p) => (
                   <tr key={p.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                     <td className="px-4 py-3 text-neutral-100 font-mono text-xs">{p.id}</td>
                     <td className="px-4 py-3">
                       {p.imageUrl ? (
-                        <img src={p.imageUrl} alt={p.title} className="w-16 h-16 object-cover rounded-lg" />
+                        <Image
+                          src={p.imageUrl}
+                          alt={p.title}
+                          width={64}
+                          height={64}
+                          unoptimized
+                          className="w-16 h-16 object-cover rounded-lg"
+                        />
                       ) : (
                         <div className="w-16 h-16 bg-[#1a1a1a] rounded-lg flex items-center justify-center text-neutral-600 text-xs">
                           N/A

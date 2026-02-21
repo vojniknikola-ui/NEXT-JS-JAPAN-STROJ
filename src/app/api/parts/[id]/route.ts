@@ -22,7 +22,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const parsed = partUpdateSchema.safeParse(payload);
   if (!parsed.success) return Response.json(parsed.error.flatten(), { status: 400 });
 
-  const updateData: any = { updatedAt: new Date() };
+  const updateData: Partial<typeof parts.$inferInsert> & { updatedAt: Date } = { updatedAt: new Date() };
   if (parsed.data.price !== undefined) updateData.price = parsed.data.price.toString();
   if (parsed.data.priceWithoutVAT !== undefined) updateData.priceWithoutVAT = parsed.data.priceWithoutVAT.toString();
   if (parsed.data.priceWithVAT !== undefined) updateData.priceWithVAT = parsed.data.priceWithVAT.toString();

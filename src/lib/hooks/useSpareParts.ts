@@ -1,7 +1,34 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { SparePart } from '@/types';
+import { Availability, SparePart } from '@/types';
+
+interface PartApiItem {
+  id: number;
+  title: string;
+  brand?: string | null;
+  model?: string | null;
+  catalogNumber?: string | null;
+  application?: string | null;
+  delivery?: string | null;
+  price?: string | null;
+  priceWithoutVAT?: string | null;
+  priceWithVAT?: string | null;
+  discount?: string | null;
+  imageUrl?: string | null;
+  stock?: number | null;
+  spec1?: string | null;
+  spec2?: string | null;
+  spec3?: string | null;
+  spec4?: string | null;
+  spec5?: string | null;
+  spec6?: string | null;
+  spec7?: string | null;
+}
+
+interface PartsApiResponse {
+  items?: PartApiItem[];
+}
 
 export function useSpareParts() {
   const [spareParts, setSpareParts] = useState<SparePart[]>([]);
@@ -18,17 +45,22 @@ export function useSpareParts() {
       if (!response.ok) {
         throw new Error('Failed to fetch spare parts');
       }
-      const data = await response.json();
+      const data = (await response.json()) as PartsApiResponse | PartApiItem[];
       console.log('Fetched spare parts:', data);
-      
-      const transformedData = data.map((part: any) => ({
+
+      const parts = Array.isArray(data) ? data : data.items ?? [];
+      const transformedData = parts.map((part) => ({
         id: part.id,
         name: part.title,
         brand: part.brand || '',
         model: part.model || '',
         catalogNumber: part.catalogNumber || '',
         application: part.application || '',
-        delivery: part.delivery || 'available',
+        delivery: part.delivery === Availability.FifteenDays
+          ? Availability.FifteenDays
+          : part.delivery === Availability.OnRequest
+          ? Availability.OnRequest
+          : Availability.Available,
         priceWithoutVAT: parseFloat(part.priceWithoutVAT || part.price || '0'),
         priceWithVAT: parseFloat(part.priceWithVAT || part.price || '0'),
         discount: parseFloat(part.discount || '0'),
@@ -79,12 +111,12 @@ export function useSpareParts() {
 
   const updateSparePart = useCallback(async (id: number, updates: Partial<SparePart>) => {
     try {
-      const response = await fetch('/api/parts', {
-        method: 'PUT',
+      const response = await fetch(`/api/parts/${id}`, {
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ id, ...updates }),
+        body: JSON.stringify(updates),
       });
 
       if (!response.ok) {
@@ -131,7 +163,7 @@ export function useSpareParts() {
       .filter(product => product.id !== currentProduct.id)
       .map(product => {
         let score = 0;
-        let reasons: string[] = [];
+        const reasons: string[] = [];
 
         // Brand match (highest weight - 40 points)
         if (product.brand === currentProduct.brand) {

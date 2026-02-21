@@ -5,7 +5,6 @@ import Modal from '@/components/ui/Modal';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import { CartItem } from '@/types';
-import jsPDF from 'jspdf';
 
 interface CompanyDetails {
   companyName: string;
@@ -50,7 +49,6 @@ export default function ProformaInvoiceModal({
     setIsGenerating(true);
 
     try {
-      // Call the API to generate invoice and send email
       const response = await fetch('/api/generate-invoice', {
         method: 'POST',
         headers: {
@@ -63,17 +61,43 @@ export default function ProformaInvoiceModal({
         }),
       });
 
-      if (response.ok) {
-        const result = await response.json();
-        alert(`Predračun ${result.invoiceNumber} je generisan i poslan na email!`);
-        onClose();
-      } else {
-        const error = await response.json();
-        alert(error.error || 'Došlo je do greške prilikom generisanja predračuna');
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({} as { error?: string }));
+        throw new Error(error.error || 'Došlo je do greške prilikom generisanja predračuna');
       }
+
+      const invoiceNumber = response.headers.get('x-invoice-number') || 'predracun';
+      const emailSent = response.headers.get('x-email-sent') === 'true';
+      const pdfBlob = await response.blob();
+
+      const downloadUrl = URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = `predracun-${invoiceNumber}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(downloadUrl);
+
+      alert(
+        emailSent
+          ? `Predračun ${invoiceNumber} je generisan, preuzet i poslan na email.`
+          : `Predračun ${invoiceNumber} je generisan i preuzet. Email nije poslan (SMTP nije konfigurisan).`
+      );
+
+      setCompanyDetails({
+        companyName: '',
+        idNumber: '',
+        pdvNumber: '',
+        name: '',
+        address: '',
+      });
+      onClose();
     } catch (error) {
       console.error('Error generating invoice:', error);
-      alert('Došlo je do greške prilikom generisanja predračuna');
+      const message =
+        error instanceof Error ? error.message : 'Došlo je do greške prilikom generisanja predračuna';
+      alert(message);
     } finally {
       setIsGenerating(false);
     }
@@ -82,8 +106,11 @@ export default function ProformaInvoiceModal({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Generiši predračun">
       <div className="space-y-4">
+        <p className="text-sm text-neutral-300">
+          Nakon potvrde, PDF predračun će biti automatski preuzet.
+        </p>
         <div>
-          <label className="block text-sm font-medium text-white mb-1">
+          <label className="block text-sm font-semibold text-neutral-100 mb-1">
             Naziv firme *
           </label>
           <Input
@@ -96,7 +123,7 @@ export default function ProformaInvoiceModal({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-white mb-1">
+          <label className="block text-sm font-semibold text-neutral-100 mb-1">
             ID broj *
           </label>
           <Input
@@ -109,7 +136,7 @@ export default function ProformaInvoiceModal({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-white mb-1">
+          <label className="block text-sm font-semibold text-neutral-100 mb-1">
             PDV broj *
           </label>
           <Input
@@ -122,7 +149,7 @@ export default function ProformaInvoiceModal({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-white mb-1">
+          <label className="block text-sm font-semibold text-neutral-100 mb-1">
             Ime i prezime *
           </label>
           <Input
@@ -135,7 +162,7 @@ export default function ProformaInvoiceModal({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-white mb-1">
+          <label className="block text-sm font-semibold text-neutral-100 mb-1">
             Adresa firme *
           </label>
           <Input

@@ -24,3 +24,17 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@layer utilities {
+  .safe-nav-padding {
+    padding-bottom: calc(max(env(safe-area-inset-bottom), 0px) + 0.65rem);
+  }
+
+  .safe-main-padding {
+    padding-bottom: calc(max(env(safe-area-inset-bottom), 0px) + 6rem);
+  }
+
+  .safe-sticky-bottom {
+    bottom: calc(max(env(safe-area-inset-bottom), 0px) + 5.75rem);
+  }
+}

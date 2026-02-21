@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -60,9 +61,12 @@ const ProductCard: React.FC<{ part: PartData; onAddToCart: (part: PartData) => v
     <article className="group bg-[#101010] border border-white/5 rounded-xl sm:rounded-2xl overflow-hidden active:border-[#ff6b00]/30 transition-all duration-300 sm:hover:shadow-[0_10px_40px_-15px_rgba(255,107,0,0.3)] sm:hover:-translate-y-1">
       <div className="relative aspect-square bg-[#1a1a1a] overflow-hidden cursor-pointer touch-manipulation" onClick={() => router.push(`/product/${part.id}`)}>
         {part.imageUrl ? (
-          <img
+          <Image
             src={part.imageUrl}
             alt={part.title}
+            fill
+            unoptimized
+            sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 25vw"
             className="w-full h-full object-cover sm:group-hover:scale-105 transition-transform duration-300"
           />
         ) : (
@@ -129,7 +133,7 @@ const ProductCard: React.FC<{ part: PartData; onAddToCart: (part: PartData) => v
           className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-full font-semibold text-xs sm:text-sm uppercase tracking-wide transition-all duration-300 flex items-center justify-center gap-1.5 sm:gap-2 touch-manipulation ${
             isAdded
               ? 'bg-emerald-500 text-white shadow-emerald-500/70'
-              : 'bg-gradient-to-br from-[#ff6b00] to-[#ff8c33] text-white active:scale-95 sm:hover:scale-105 shadow-[0_8px_25px_rgba(255,107,0,0.6)] sm:hover:shadow-[0_12px_35px_rgba(255,107,0,0.8)]'
+              : 'bg-gradient-to-br from-[#ff6b00] to-[#ff8c33] text-black active:scale-95 sm:hover:scale-105 shadow-[0_8px_25px_rgba(255,107,0,0.6)] sm:hover:shadow-[0_12px_35px_rgba(255,107,0,0.8)]'
           }`}
         >
           {isAdded ? (
@@ -283,7 +287,7 @@ export default function CatalogPage() {
     }, 2000);
 
     const toast = document.createElement('div');
-    toast.className = 'fixed top-4 right-4 bg-[#ff6b00] text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-in slide-in-from-right-4';
+    toast.className = 'fixed top-4 right-4 bg-[#ff6b00] text-black px-6 py-3 rounded-lg shadow-lg z-50 animate-in slide-in-from-right-4';
     toast.innerHTML = `
       <div class="flex items-center gap-2">
         <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -345,7 +349,7 @@ export default function CatalogPage() {
     <div className="bg-[#0b0b0b] text-neutral-100 min-h-screen flex flex-col">
       <Header activePage={activePage} setActivePage={setActivePage} cartItemCount={cartItemCount} />
 
-      <main className="flex-grow pb-20 lg:pb-0">
+      <main className="flex-grow safe-main-padding lg:pb-0">
         <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 md:py-10 lg:py-12">
           <div className="max-w-7xl mx-auto">
             <div className="mb-6 sm:mb-8">
@@ -360,8 +364,8 @@ export default function CatalogPage() {
 
             <div className="flex gap-4 lg:gap-6">
               <aside className={`
-                fixed lg:sticky lg:top-24 left-0 top-0 h-full lg:h-auto w-full sm:w-80 bg-[#0b0b0b] lg:bg-transparent
-                border-r border-white/10 lg:border-0 p-4 sm:p-6 lg:p-0 z-40 overflow-y-auto
+                fixed lg:sticky lg:top-24 left-0 top-14 sm:top-16 h-[calc(100dvh-3.5rem)] sm:h-[calc(100dvh-4rem)] lg:h-auto w-full sm:w-80 bg-[#0b0b0b] lg:bg-transparent
+                border-r border-white/10 lg:border-0 p-4 sm:p-6 lg:p-0 z-[70] lg:z-auto overflow-y-auto pb-24 sm:pb-28 lg:pb-0
                 transition-transform duration-300 lg:translate-x-0
                 ${showMobileFilters ? 'translate-x-0' : '-translate-x-full'}
               `}>
@@ -510,7 +514,7 @@ export default function CatalogPage() {
 
               {showMobileFilters && (
                 <div
-                  className="fixed inset-0 bg-black/60 z-30 lg:hidden"
+                  className="fixed inset-0 bg-black/70 backdrop-blur-[2px] z-[60] lg:hidden"
                   onClick={() => setShowMobileFilters(false)}
                 />
               )}
@@ -525,7 +529,7 @@ export default function CatalogPage() {
                       <FilterIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                       <span>Filteri</span>
                     </button>
-                    <p className="text-neutral-400 text-xs sm:text-sm">
+                    <p className="text-neutral-300 text-xs sm:text-sm">
                       {loading ? 'Učitavanje...' : `${filteredParts.length} ${filteredParts.length === 1 ? 'rezultat' : filteredParts.length < 5 ? 'rezultata' : 'rezultata'}`}
                     </p>
                   </div>

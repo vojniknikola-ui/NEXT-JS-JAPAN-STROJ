@@ -1,36 +1,52 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Page, SparePart, CartItem } from '@/types';
 
+type PartApiResponse = {
+  items?: SparePart[];
+};
+
+const FALLBACK_PART_IMAGE = 'https://via.placeholder.com/800x800?text=JapanStroj';
+
 export default function Home() {
+  const router = useRouter();
   const [activePage, setActivePage] = useState<Page>('home');
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [cartItems] = useState<CartItem[]>(() => {
+    if (typeof window === 'undefined') {
+      return [];
+    }
+
+    const savedCart = localStorage.getItem('japanStrojCart');
+    if (!savedCart) {
+      return [];
+    }
+
+    try {
+      return JSON.parse(savedCart) as CartItem[];
+    } catch (error) {
+      console.error('Error loading cart:', error);
+      return [];
+    }
+  });
   const [spareParts, setSpareParts] = useState<SparePart[]>([]);
 
   useEffect(() => {
-    // Load cart from localStorage
-    const savedCart = localStorage?.getItem('japanStrojCart');
-    if (savedCart) {
-      try {
-        setCartItems(JSON.parse(savedCart));
-      } catch (error) {
-        console.error('Error loading cart:', error);
-      }
-    }
-
     // Load spare parts from API
     console.log('Loading spare parts from home page...');
-    fetch('/api/parts?active=true')
+    fetch('/api/parts?status=active')
       .then(res => {
         console.log('Home page parts response status:', res.status);
-        return res.json();
+        return res.json() as Promise<PartApiResponse | SparePart[]>;
       })
       .then(data => {
-        console.log('Home page loaded parts:', data);
-        setSpareParts(data);
+        const parsed = Array.isArray(data) ? data : data.items ?? [];
+        console.log('Home page loaded parts:', parsed);
+        setSpareParts(parsed);
       })
       .catch(error => console.error('Error loading spare parts:', error));
   }, []);
@@ -38,7 +54,7 @@ export default function Home() {
   const cartItemCount = cartItems.reduce((total, item) => total + item.quantity, 0);
 
   const handleSelectProduct = (part: SparePart) => {
-    window.location.href = `/product/${part.id}`;
+    router.push(`/product/${part.id}`);
   };
 
   return (
@@ -46,11 +62,14 @@ export default function Home() {
       <Header activePage={activePage} setActivePage={setActivePage} cartItemCount={cartItemCount} />
 
       {/* Hero Section */}
-      <section className="relative min-h-[85vh] sm:min-h-screen flex items-center justify-center overflow-hidden pb-20 lg:pb-0">
+      <section className="relative min-h-[85vh] sm:min-h-screen flex items-center justify-center overflow-hidden pb-24 lg:pb-0">
         <div className="absolute inset-0 bg-gradient-to-br from-black/90 via-black/70 to-black/50 z-10" />
-        <img
+        <Image
           src="/hero.jpg"
           alt="JapanStroj Hero"
+          fill
+          priority
+          sizes="100vw"
           className="absolute inset-0 w-full h-full object-cover object-center"
         />
         <div className="relative z-20 text-center px-3 sm:px-4 max-w-5xl mx-auto">
@@ -69,7 +88,7 @@ export default function Home() {
           <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 md:gap-4 justify-center items-stretch sm:items-center px-2">
             <button
               onClick={() => setActivePage('catalog')}
-              className="group bg-[#ff6b00] active:bg-[#ff7f1a] text-white px-5 sm:px-6 md:px-8 lg:px-10 py-3 sm:py-3.5 md:py-4 lg:py-5 rounded-full font-bold text-xs sm:text-sm md:text-base lg:text-lg transition-all duration-300 active:scale-95 sm:hover:scale-105 shadow-2xl sm:hover:shadow-[#ff6b00]/50 flex items-center justify-center gap-2 touch-manipulation w-full sm:w-auto"
+              className="group bg-[#ff6b00] active:bg-[#ff7f1a] text-black px-5 sm:px-6 md:px-8 lg:px-10 py-3 sm:py-3.5 md:py-4 lg:py-5 rounded-full font-bold text-xs sm:text-sm md:text-base lg:text-lg transition-all duration-300 active:scale-95 sm:hover:scale-105 shadow-2xl sm:hover:shadow-[#ff6b00]/50 flex items-center justify-center gap-2 touch-manipulation w-full sm:w-auto"
             >
               <svg className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 group-active:rotate-12 transition-transform flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -145,14 +164,17 @@ export default function Home() {
                   onClick={() => handleSelectProduct(part)}
                 >
                   <div className="relative overflow-hidden aspect-square sm:aspect-auto sm:h-40 md:h-48">
-                    <img
-                      src={part.imageUrl}
+                    <Image
+                      src={part.imageUrl || FALLBACK_PART_IMAGE}
                       alt={part.name}
+                      fill
+                      unoptimized
+                      sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 25vw"
                       className="w-full h-full object-cover sm:group-hover:scale-110 transition-transform duration-500"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300" />
                     <div className="absolute top-3 sm:top-4 right-3 sm:right-4 opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300">
-                      <div className="bg-[#ff6b00] text-white p-1.5 sm:p-2 rounded-full">
+                      <div className="bg-[#ff6b00] text-black p-1.5 sm:p-2 rounded-full">
                         <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
@@ -175,7 +197,7 @@ export default function Home() {
             <div className="text-center mt-8 sm:mt-10 md:mt-12 px-4">
               <button
                 onClick={() => setActivePage('catalog')}
-                className="inline-flex items-center justify-center gap-2 sm:gap-3 bg-transparent border-2 border-[#ff6b00] text-[#ff6b00] active:bg-[#ff6b00] active:text-white px-6 sm:px-8 py-3 sm:py-4 rounded-full font-bold text-sm sm:text-base md:text-lg transition-all duration-300 active:scale-95 sm:hover:scale-105 touch-manipulation w-full sm:w-auto"
+                className="inline-flex items-center justify-center gap-2 sm:gap-3 bg-transparent border-2 border-[#ff6b00] text-[#ff6b00] active:bg-[#ff6b00] active:text-black px-6 sm:px-8 py-3 sm:py-4 rounded-full font-bold text-sm sm:text-base md:text-lg transition-all duration-300 active:scale-95 sm:hover:scale-105 touch-manipulation w-full sm:w-auto"
               >
                 <span>Pogledajte sve proizvode</span>
                 <svg className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">

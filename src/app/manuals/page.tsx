@@ -4,7 +4,9 @@ import React, { useState } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Page } from '@/types';
-import { SearchIcon, FilterIcon, CogIcon } from '@/lib/icons';
+import { SearchIcon } from '@/lib/icons';
+
+type CartCountItem = { quantity: number };
 
 const mockManuals = [
   {
@@ -93,7 +95,7 @@ const categories = [
 
 export default function ManualsPage() {
    const [activePage, setActivePage] = React.useState<Page>('manuals');
-   const [cartItems, setCartItems] = React.useState<any[]>([]);
+   const [cartItems, setCartItems] = React.useState<CartCountItem[]>([]);
    const [searchTerm, setSearchTerm] = useState('');
    const [selectedCategory, setSelectedCategory] = useState('all');
    const [filteredManuals, setFilteredManuals] = useState(mockManuals);
@@ -135,7 +137,7 @@ export default function ManualsPage() {
   return (
     <div className="bg-gradient-to-br from-[#0b0b0b] via-[#0a0a0a] to-[#080808] text-neutral-100 min-h-screen flex flex-col">
       <Header activePage={activePage} setActivePage={setActivePage} cartItemCount={cartItemCount} />
-      <main className="flex-grow pb-20 lg:pb-0 relative">
+      <main className="flex-grow safe-main-padding lg:pb-0 relative">
         {/* Background Pattern */}
         <div className="absolute inset-0 opacity-5">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,_rgba(255,107,0,0.1)_0%,_transparent_50%)] animate-pulse"></div>

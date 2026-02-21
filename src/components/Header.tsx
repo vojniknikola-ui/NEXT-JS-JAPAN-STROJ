@@ -1,9 +1,7 @@
 import React from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Page } from '@/types';
-import { HomeIcon, CatalogIcon, CartIcon, ManualIcon, CogIcon, FacebookIcon, AdminIcon } from '@/lib/icons';
-import { useCart } from '@/lib/hooks/useCart';
+import { HomeIcon, CatalogIcon, CartIcon, ManualIcon, CogIcon, FacebookIcon } from '@/lib/icons';
 
 interface HeaderProps {
   activePage: Page;
@@ -13,14 +11,13 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ activePage, setActivePage, cartItemCount: propCartItemCount }) => {
   const router = useRouter();
-  const { cartItemCount } = useCart();
 
   const navItems = [
-    { id: 'home', label: 'Početna', icon: HomeIcon },
-    { id: 'catalog', label: 'Rezervni dijelovi', icon: CatalogIcon },
-    { id: 'services', label: 'Usluge', icon: CogIcon },
-    { id: 'cart', label: 'Košarica', icon: CartIcon },
-    { id: 'manuals', label: 'Priručnici', icon: ManualIcon },
+    { id: 'home', label: 'Početna', mobileLabel: 'Početna', icon: HomeIcon },
+    { id: 'catalog', label: 'Rezervni dijelovi', mobileLabel: 'Dijelovi', icon: CatalogIcon },
+    { id: 'services', label: 'Usluge', mobileLabel: 'Usluge', icon: CogIcon },
+    { id: 'cart', label: 'Košarica', mobileLabel: 'Košarica', icon: CartIcon },
+    { id: 'manuals', label: 'Priručnici', mobileLabel: 'Priruč.', icon: ManualIcon },
   ];
 
   const handleNavClick = (page: Page) => {
@@ -46,13 +43,13 @@ const Header: React.FC<HeaderProps> = ({ activePage, setActivePage, cartItemCoun
                   className={`relative px-3 xl:px-4 py-2 rounded-full text-sm xl:text-base font-semibold uppercase tracking-wide transition-all duration-200 ${
                     activePage === item.id
                       ? 'bg-[#ff6b00] text-black shadow-[0_8px_24px_-12px_rgba(255,107,0,0.9)]'
-                      : 'text-neutral-200 hover:text-[#ff6b00] hover:bg-white/10'
+                      : 'text-neutral-100 hover:text-[#ff6b00] hover:bg-white/10'
                   }`}
                 >
                   {item.label}
-                  {item.id === 'cart' && cartItemCount > 0 && (
+                  {item.id === 'cart' && propCartItemCount > 0 && (
                     <span className="absolute -top-2 -right-2 bg-[#ff3b3b] text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                      {cartItemCount}
+                      {propCartItemCount}
                     </span>
                   )}
                 </button>
@@ -78,15 +75,15 @@ const Header: React.FC<HeaderProps> = ({ activePage, setActivePage, cartItemCoun
           </div>
         </div>
       </div>
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-gradient-to-t from-[#050505] via-[#050505]/98 to-[#050505]/95 border-t border-white/10 flex justify-around items-center py-2.5 sm:py-3 px-2 z-50 backdrop-blur-sm shadow-[0_0_40px_rgba(0,0,0,0.8)] safe-area-inset-bottom">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-gradient-to-t from-[#050505] via-[#050505]/98 to-[#080808]/95 border-t border-white/15 flex justify-around items-center py-2 sm:py-2.5 px-2 z-[55] backdrop-blur-md shadow-[0_0_40px_rgba(0,0,0,0.8)] safe-nav-padding">
         {navItems.map((item) => (
             <button
               key={item.id}
               onClick={() => handleNavClick(item.id as Page)}
-              className={`relative flex flex-col items-center justify-center flex-1 py-2 sm:py-2.5 px-1 sm:px-2 rounded-xl sm:rounded-2xl transition-all duration-300 min-w-0 group active:scale-95 touch-manipulation ${
+              className={`relative flex flex-col items-center justify-center flex-1 py-2 sm:py-2.5 px-1 sm:px-1.5 rounded-xl sm:rounded-2xl transition-all duration-300 min-w-0 group active:scale-95 touch-manipulation ${
                 activePage === item.id
                   ? 'bg-[#ff6b00] text-black shadow-[0_8px_25px_-8px_rgba(255,107,0,0.6)]'
-                  : 'text-neutral-300 active:text-[#ff6b00] active:bg-white/8'
+                  : 'text-neutral-200 active:text-[#ff6b00] active:bg-white/8'
               }`}
             >
               <div className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl transition-all duration-300 ${
@@ -94,12 +91,12 @@ const Header: React.FC<HeaderProps> = ({ activePage, setActivePage, cartItemCoun
               }`}>
                 <item.icon className="h-5 w-5 sm:h-6 sm:w-6" />
               </div>
-              <span className="text-[9px] sm:text-[10px] mt-1 text-center font-bold leading-tight truncate max-w-full uppercase tracking-wide">
-                {item.label.length > 12 ? item.label.substring(0, 9) + '...' : item.label}
+              <span className="text-[10px] sm:text-[11px] mt-1 text-center font-semibold leading-tight max-w-full">
+                {item.mobileLabel}
               </span>
-              {item.id === 'cart' && cartItemCount > 0 && (
+              {item.id === 'cart' && propCartItemCount > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 bg-[#ff3b3b] text-white text-[9px] sm:text-[10px] rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center font-bold shadow-lg border-2 border-[#050505]">
-                  {cartItemCount > 9 ? '9+' : cartItemCount}
+                  {propCartItemCount > 9 ? '9+' : propCartItemCount}
                 </span>
               )}
             </button>

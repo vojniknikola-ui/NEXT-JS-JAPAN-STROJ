@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -55,7 +56,7 @@ export default function CartPage() {
     <div className="bg-gradient-to-br from-[#0b0b0b] via-[#0a0a0a] to-[#080808] text-neutral-100 min-h-screen flex flex-col">
       <Header activePage={activePage} setActivePage={setActivePage} cartItemCount={cartItemCount} />
 
-      <main className="flex-grow pb-20 lg:pb-0 relative">
+      <main className="flex-grow safe-main-padding lg:pb-0 relative">
         {/* Background Pattern */}
         <div className="absolute inset-0 opacity-5">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,_rgba(255,107,0,0.1)_0%,_transparent_50%)] animate-pulse"></div>
@@ -128,9 +129,13 @@ export default function CartPage() {
                         {/* Product Image */}
                         <div className="flex-shrink-0 self-start relative">
                           {item.part.imageUrl ? (
-                            <img
+                            <Image
                               src={item.part.imageUrl}
                               alt={item.part.name}
+                              width={96}
+                              height={96}
+                              unoptimized
+                              sizes="(max-width: 640px) 80px, 96px"
                               className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-lg shadow-md"
                             />
                           ) : (
@@ -171,14 +176,14 @@ export default function CartPage() {
                               <button
                                 onClick={() => updateQuantity(item.part.id, item.quantity - 1)}
                                 disabled={item.quantity <= 1}
-                                className="w-8 h-8 sm:w-9 sm:h-9 bg-[#1a1a1a] hover:bg-[#ff6b00] disabled:bg-[#0f0f0f] disabled:text-neutral-600 text-white rounded-full flex items-center justify-center transition-all active:scale-95 touch-manipulation disabled:cursor-not-allowed"
+                                className="w-8 h-8 sm:w-9 sm:h-9 bg-[#1a1a1a] hover:bg-[#ff6b00] hover:text-black disabled:bg-[#0f0f0f] disabled:text-neutral-600 text-white rounded-full flex items-center justify-center transition-all active:scale-95 touch-manipulation disabled:cursor-not-allowed"
                               >
                                 <MinusIcon className="w-3 h-3 sm:w-4 sm:h-4" />
                               </button>
                               <span className="w-10 sm:w-12 text-center font-semibold text-white text-base sm:text-lg min-w-[2.5rem]">{item.quantity}</span>
                               <button
                                 onClick={() => updateQuantity(item.part.id, item.quantity + 1)}
-                                className="w-8 h-8 sm:w-9 sm:h-9 bg-[#1a1a1a] hover:bg-[#ff6b00] text-white rounded-full flex items-center justify-center transition-all active:scale-95 touch-manipulation"
+                                className="w-8 h-8 sm:w-9 sm:h-9 bg-[#1a1a1a] hover:bg-[#ff6b00] hover:text-black text-white rounded-full flex items-center justify-center transition-all active:scale-95 touch-manipulation"
                               >
                                 <PlusIcon className="w-3 h-3 sm:w-4 sm:h-4" />
                               </button>
@@ -203,7 +208,7 @@ export default function CartPage() {
                 </div>
 
                 {/* Cart Summary */}
-                <div className="bg-gradient-to-r from-[#101010] to-[#0f0f0f] border border-[#ff6b00]/20 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 sticky bottom-20 lg:relative lg:bottom-auto backdrop-blur-sm shadow-2xl shadow-[#ff6b00]/10">
+                <div className="bg-gradient-to-r from-[#101010] to-[#0f0f0f] border border-[#ff6b00]/20 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 sticky safe-sticky-bottom lg:relative lg:bottom-auto backdrop-blur-sm shadow-2xl shadow-[#ff6b00]/10">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-6">
                     <div>
                       <h3 className="text-xl sm:text-2xl font-bold text-white mb-1 sm:mb-2">Ukupno</h3>

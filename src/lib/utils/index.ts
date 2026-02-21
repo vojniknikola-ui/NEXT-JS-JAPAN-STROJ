@@ -25,7 +25,23 @@ export function calculateBulkDiscount(total: number): { percent: number; amount:
   return { percent, amount };
 }
 
-export function generateOrderMessage(items: any[], pricing: any): string {
+interface OrderMessageItem {
+  name: string;
+  catalogNumber: string;
+  quantity: number;
+  priceWithVAT: number;
+}
+
+interface OrderPricing {
+  subtotal: number;
+  vatAmount: number;
+  totalBeforeDiscount: number;
+  bulkDiscountPercent: number;
+  bulkDiscountAmount: number;
+  finalTotal: number;
+}
+
+export function generateOrderMessage(items: OrderMessageItem[], pricing: OrderPricing): string {
   const itemsText = items.map(item =>
     `${item.name} (${item.catalogNumber}) - ${item.quantity} kom x ${item.priceWithVAT.toFixed(2)} BAM = ${(item.priceWithVAT * item.quantity).toFixed(2)} BAM`
   ).join('\n');
@@ -35,27 +51,29 @@ export function generateOrderMessage(items: any[], pricing: any): string {
   );
 }
 
-export function debounce<T extends (...args: any[]) => any>(
-  func: T,
+export function debounce<TArgs extends unknown[]>(
+  func: (...args: TArgs) => void,
   wait: number
-): (...args: Parameters<T>) => void {
+): (...args: TArgs) => void {
   let timeout: NodeJS.Timeout;
-  return (...args: Parameters<T>) => {
+  return (...args: TArgs) => {
     clearTimeout(timeout);
     timeout = setTimeout(() => func(...args), wait);
   };
 }
 
-export function throttle<T extends (...args: any[]) => any>(
-  func: T,
+export function throttle<TArgs extends unknown[]>(
+  func: (...args: TArgs) => void,
   limit: number
-): (...args: Parameters<T>) => void {
-  let inThrottle: boolean;
-  return (...args: Parameters<T>) => {
+): (...args: TArgs) => void {
+  let inThrottle = false;
+  return (...args: TArgs) => {
     if (!inThrottle) {
       func(...args);
       inThrottle = true;
-      setTimeout(() => inThrottle = false, limit);
+      setTimeout(() => {
+        inThrottle = false;
+      }, limit);
     }
   };
 }

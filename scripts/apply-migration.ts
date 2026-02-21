@@ -1,6 +1,5 @@
 import { config } from "dotenv";
 import { neon } from "@neondatabase/serverless";
-import fs from "fs";
 
 config({ path: ".env.local" });
 
@@ -41,8 +40,9 @@ async function migrate() {
     console.log("✅ Parts tabela kreirana ili već postoji");
 
     console.log("🎉 Sve migracije primjenjene!");
-  } catch (err: any) {
-    console.error("❌ Greška pri migraciji:", err.message);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Nepoznata greška";
+    console.error("❌ Greška pri migraciji:", message);
     process.exit(1);
   }
 }

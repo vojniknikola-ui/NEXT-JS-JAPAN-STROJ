@@ -1,7 +1,7 @@
 import { db } from "@/db";
 import { categories } from "@/db/schema";
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 export async function GET() {
   const data = await db.select().from(categories).orderBy(categories.name);

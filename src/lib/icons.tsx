@@ -1,16 +1,24 @@
 import React from 'react';
 
-const createIcon = (path: React.ReactNode, viewBox = "0 0 24 24") => (props: React.SVGProps<SVGSVGElement>) => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox={viewBox} {...props}>
-    {path}
-  </svg>
-);
+const createIcon = (path: React.ReactNode, viewBox = "0 0 24 24") => {
+  const IconComponent = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox={viewBox} {...props}>
+      {path}
+    </svg>
+  );
+  IconComponent.displayName = 'IconComponent';
+  return IconComponent;
+};
 
-const createStrokeIcon = (path: React.ReactNode) => (props: React.SVGProps<SVGSVGElement>) => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
-    {path}
-  </svg>
-);
+const createStrokeIcon = (path: React.ReactNode) => {
+  const StrokeIconComponent = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+      {path}
+    </svg>
+  );
+  StrokeIconComponent.displayName = 'StrokeIconComponent';
+  return StrokeIconComponent;
+};
 
 export const ShareIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">

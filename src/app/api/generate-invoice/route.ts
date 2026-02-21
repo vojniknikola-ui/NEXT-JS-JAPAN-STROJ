@@ -19,17 +19,35 @@ export async function POST(request: NextRequest) {
       companyDetails: CompanyDetails
     } = await request.json();
 
-    // Generate sequential invoice number
     const { db, withRetry } = await import('@/db');
     const { invoices } = await import('@/db/schema');
     const { count } = await import('drizzle-orm');
 
-    const result = await withRetry(async () =>
-      db.select({ count: count() }).from(invoices)
-    );
+    // Generate invoice number. If DB isn't ready, use a timestamp fallback
+    // so PDF generation still works for the user.
+    let invoiceNumber = `PR-${Date.now().toString().slice(-8)}`;
+    let dbAvailable = false;
 
-    const nextInvoiceNumber = (result[0]?.count || 0) + 1;
-    const invoiceNumber = `PR-${String(nextInvoiceNumber).padStart(4, '0')}`;
+    try {
+      const result = await withRetry(async () =>
+        db.select({ count: count() }).from(invoices)
+      );
+
+      const rawCount = result[0]?.count;
+      const countValue =
+        typeof rawCount === 'bigint' ? Number(rawCount) : Number(rawCount ?? 0);
+      const nextInvoiceNumber = Number.isFinite(countValue) ? countValue + 1 : NaN;
+
+      if (Number.isFinite(nextInvoiceNumber)) {
+        invoiceNumber = `PR-${String(nextInvoiceNumber).padStart(4, '0')}`;
+      }
+
+      dbAvailable = true;
+    } catch (dbCountError) {
+      const dbErrorMessage =
+        dbCountError instanceof Error ? dbCountError.message : String(dbCountError);
+      console.warn(`Invoice table is not available yet, using fallback invoice number: ${dbErrorMessage}`);
+    }
 
     // Generate PDF
     const doc = new jsPDF();
@@ -192,80 +210,99 @@ export async function POST(request: NextRequest) {
     // Convert PDF to buffer
     const pdfBuffer = doc.output('arraybuffer');
 
-    // Save invoice to database
-    await withRetry(async () =>
-      db.insert(invoices).values({
-        invoiceNumber,
-        customerName: companyDetails.companyName,
-        customerId: companyDetails.idNumber,
-        customerPdv: companyDetails.pdvNumber,
-        customerContact: companyDetails.name,
-        customerAddress: companyDetails.address,
-        cartData: JSON.stringify(cartItems),
-        totalAmount: cartTotal.toString(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      })
-    );
-
-    // Send email with PDF attachment
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: parseInt(process.env.SMTP_PORT || '587'),
-      secure: false,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
-
-    const mailOptions = {
-      from: process.env.SMTP_USER,
-      to: 'nikolaandric@gmail.com',
-      subject: `Predračun ${invoiceNumber} - ${companyDetails.companyName}`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #ff6b00;">Japan Stroj d.o.o.</h2>
-          <p>Poštovani,</p>
-          <p>U prilogu vam šaljemo predračun broj <strong>${invoiceNumber}</strong> za narudžbu rezervnih dijelova.</p>
-
-          <div style="background-color: #f8f8f8; padding: 15px; margin: 20px 0; border-radius: 5px;">
-            <h3 style="margin-top: 0; color: #333;">Podaci o kupcu:</h3>
-            <p><strong>Naziv firme:</strong> ${companyDetails.companyName}</p>
-            <p><strong>ID broj:</strong> ${companyDetails.idNumber}</p>
-            <p><strong>PDV broj:</strong> ${companyDetails.pdvNumber}</p>
-            <p><strong>Kontakt osoba:</strong> ${companyDetails.name}</p>
-            <p><strong>Adresa:</strong> ${companyDetails.address}</p>
-          </div>
-
-          <p><strong>Ukupan iznos:</strong> ${cartTotal.toFixed(2)} BAM</p>
-          <p><strong>Rok važenja:</strong> 7 dana od datuma izdavanja</p>
-
-          <p>Za sva pitanja stojimo vam na raspolaganju.</p>
-          <p>Srdačan pozdrav,<br>Japan Stroj d.o.o.</p>
-        </div>
-      `,
-      attachments: [
-        {
-          filename: `predracun-${invoiceNumber}.pdf`,
-          content: Buffer.from(pdfBuffer),
-          contentType: 'application/pdf',
-        },
-      ],
-    };
-
-    try {
-      await transporter.sendMail(mailOptions);
-      console.log('Email sent successfully');
-    } catch (emailError) {
-      console.error('Error sending email:', emailError);
-      // Continue with response even if email fails
+    let invoiceSaved = false;
+    if (dbAvailable) {
+      try {
+        await withRetry(async () =>
+          db.insert(invoices).values({
+            invoiceNumber,
+            customerName: companyDetails.companyName,
+            customerId: companyDetails.idNumber,
+            customerPdv: companyDetails.pdvNumber,
+            customerContact: companyDetails.name,
+            customerAddress: companyDetails.address,
+            cartData: JSON.stringify(cartItems),
+            totalAmount: cartTotal.toString(),
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          })
+        );
+        invoiceSaved = true;
+      } catch (saveError) {
+        console.error('Error saving invoice:', saveError);
+      }
     }
 
-    return NextResponse.json({
-      success: true,
-      invoiceNumber,
-      message: 'Predračun je generisan i poslan na email'
+    let emailSent = false;
+    const smtpUser = process.env.SMTP_USER;
+    const smtpPass = process.env.SMTP_PASS;
+
+    if (smtpUser && smtpPass) {
+      const transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST || 'smtp.gmail.com',
+        port: parseInt(process.env.SMTP_PORT || '587', 10),
+        secure: false,
+        auth: {
+          user: smtpUser,
+          pass: smtpPass,
+        },
+      });
+
+      const mailOptions = {
+        from: smtpUser,
+        to: process.env.INVOICE_RECIPIENT_EMAIL || smtpUser,
+        subject: `Predračun ${invoiceNumber} - ${companyDetails.companyName}`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #ff6b00;">Japan Stroj d.o.o.</h2>
+            <p>Poštovani,</p>
+            <p>U prilogu vam šaljemo predračun broj <strong>${invoiceNumber}</strong> za narudžbu rezervnih dijelova.</p>
+
+            <div style="background-color: #f8f8f8; padding: 15px; margin: 20px 0; border-radius: 5px;">
+              <h3 style="margin-top: 0; color: #333;">Podaci o kupcu:</h3>
+              <p><strong>Naziv firme:</strong> ${companyDetails.companyName}</p>
+              <p><strong>ID broj:</strong> ${companyDetails.idNumber}</p>
+              <p><strong>PDV broj:</strong> ${companyDetails.pdvNumber}</p>
+              <p><strong>Kontakt osoba:</strong> ${companyDetails.name}</p>
+              <p><strong>Adresa:</strong> ${companyDetails.address}</p>
+            </div>
+
+            <p><strong>Ukupan iznos:</strong> ${cartTotal.toFixed(2)} BAM</p>
+            <p><strong>Rok važenja:</strong> 7 dana od datuma izdavanja</p>
+
+            <p>Za sva pitanja stojimo vam na raspolaganju.</p>
+            <p>Srdačan pozdrav,<br>Japan Stroj d.o.o.</p>
+          </div>
+        `,
+        attachments: [
+          {
+            filename: `predracun-${invoiceNumber}.pdf`,
+            content: Buffer.from(pdfBuffer),
+            contentType: 'application/pdf',
+          },
+        ],
+      };
+
+      try {
+        await transporter.sendMail(mailOptions);
+        emailSent = true;
+        console.log('Email sent successfully');
+      } catch (emailError) {
+        console.error('Error sending email:', emailError);
+      }
+    } else {
+      console.warn('SMTP credentials are missing. Skipping email send.');
+    }
+
+    return new NextResponse(Buffer.from(pdfBuffer), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="predracun-${invoiceNumber}.pdf"`,
+        'X-Invoice-Number': invoiceNumber,
+        'X-Email-Sent': emailSent ? 'true' : 'false',
+        'X-DB-Saved': invoiceSaved ? 'true' : 'false',
+      },
     });
 
   } catch (error) {

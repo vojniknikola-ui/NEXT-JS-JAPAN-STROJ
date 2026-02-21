@@ -4,7 +4,7 @@ import { and, eq, ilike, desc, gt } from "drizzle-orm";
 import { partCreateSchema } from "@/lib/validation";
 import { revalidatePath } from "next/cache";
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);

@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Page, SparePart, Availability } from '@/types';
-import { ShareIcon, FacebookIcon, CopyIcon, CheckIcon, CartIcon, WhatsAppIcon, ViberIcon } from '@/lib/icons';
+import { ShareIcon, FacebookIcon, CopyIcon, CheckIcon, CartIcon, WhatsAppIcon } from '@/lib/icons';
 import { useCart } from '@/lib/hooks/useCart';
 import { useSpareParts } from '@/lib/hooks/useSpareParts';
 
@@ -22,6 +23,8 @@ const AvailabilityBadge: React.FC<{ availability: Availability }> = ({ availabil
       return null;
   }
 };
+
+const FALLBACK_PRODUCT_IMAGE = 'https://via.placeholder.com/1200x900?text=JapanStroj';
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -82,7 +85,7 @@ export default function ProductDetailPage() {
           setProduct(null);
         });
     }
-  }, [productId]);
+  }, [productId, getRecommendations]);
 
   const handleAddToCart = () => {
     if (!product) return;
@@ -97,7 +100,7 @@ export default function ProductDetailPage() {
 
     // Show toast notification
     const toast = document.createElement('div');
-    toast.className = 'fixed top-4 right-4 bg-[#ff6b00] text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-in slide-in-from-right-4';
+    toast.className = 'fixed top-4 right-4 bg-[#ff6b00] text-black px-6 py-3 rounded-lg shadow-lg z-50 animate-in slide-in-from-right-4';
     toast.innerHTML = `
       <div class="flex items-center gap-2">
         <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -143,7 +146,7 @@ export default function ProductDetailPage() {
             <h1 className="text-2xl font-bold text-white mb-4">Proizvod nije pronađen</h1>
             <button
               onClick={() => setActivePage('catalog')}
-              className="bg-[#ff6b00] hover:bg-[#ff7f1a] text-white px-6 py-3 rounded-full font-semibold transition-all duration-300 hover:scale-105"
+              className="bg-[#ff6b00] hover:bg-[#ff7f1a] text-black px-6 py-3 rounded-full font-semibold transition-all duration-300 hover:scale-105"
             >
               Povratak na katalog
             </button>
@@ -157,16 +160,19 @@ export default function ProductDetailPage() {
   return (
     <div className="bg-[#0b0b0b] text-neutral-100 min-h-screen flex flex-col">
       <Header activePage={activePage} setActivePage={setActivePage} cartItemCount={cartItemCount} />
-      <main className="flex-grow pb-20 lg:pb-0">
+      <main className="flex-grow safe-main-padding lg:pb-0">
         <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 md:py-10 lg:py-12">
           <div className="max-w-6xl mx-auto">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 md:gap-10 lg:gap-12">
               {/* Product Image */}
-              <div className="relative">
-                <img
-                  src={product.imageUrl}
+              <div className="relative h-64 sm:h-80 md:h-96">
+                <Image
+                  src={product.imageUrl || FALLBACK_PRODUCT_IMAGE}
                   alt={product.name}
-                  className="w-full h-64 sm:h-80 md:h-96 object-cover rounded-xl sm:rounded-2xl shadow-2xl"
+                  fill
+                  unoptimized
+                  sizes="(max-width: 1024px) 100vw, 50vw"
+                  className="w-full h-full object-cover rounded-xl sm:rounded-2xl shadow-2xl"
                 />
                 <div className="absolute top-3 sm:top-4 right-3 sm:right-4">
                   <button
@@ -248,7 +254,7 @@ export default function ProductDetailPage() {
                     className={`w-full px-8 py-4 rounded-full font-black text-lg uppercase tracking-wide transition-all duration-300 flex items-center justify-center gap-3 ${
                       isAdded
                         ? 'bg-emerald-500 text-white shadow-emerald-500/70'
-                        : 'bg-gradient-to-br from-[#ff6b00] to-[#ff8c33] text-white hover:from-[#ff7f1a] hover:to-[#ffa04d] hover:scale-105 shadow-[0_10px_40px_rgba(255,107,0,0.7)] hover:shadow-[0_15px_50px_rgba(255,107,0,0.9)]'
+                        : 'bg-gradient-to-br from-[#ff6b00] to-[#ff8c33] text-black hover:from-[#ff7f1a] hover:to-[#ffa04d] hover:scale-105 shadow-[0_10px_40px_rgba(255,107,0,0.7)] hover:shadow-[0_15px_50px_rgba(255,107,0,0.9)]'
                     }`}
                   >
                     {isAdded ? (
@@ -295,11 +301,14 @@ export default function ProductDetailPage() {
                       className="bg-[#101010] border border-white/5 rounded-xl p-4 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_10px_30px_-15px_rgba(255,107,0,0.5)] group"
                       onClick={() => window.location.href = `/product/${recommendedProduct.id}`}
                     >
-                      <div className="relative overflow-hidden rounded-lg mb-3">
-                        <img
-                          src={recommendedProduct.imageUrl}
+                      <div className="relative h-32 overflow-hidden rounded-lg mb-3">
+                        <Image
+                          src={recommendedProduct.imageUrl || FALLBACK_PRODUCT_IMAGE}
                           alt={recommendedProduct.name}
-                          className="w-full h-32 object-cover transform group-hover:scale-105 transition-transform duration-300"
+                          fill
+                          unoptimized
+                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                          className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-300"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                       </div>

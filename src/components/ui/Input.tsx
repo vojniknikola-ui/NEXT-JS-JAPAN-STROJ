@@ -11,12 +11,12 @@ const Input: React.FC<InputProps> = ({
   className = '',
   ...props
 }) => {
-  const baseClasses = 'w-full rounded-2xl border border-white/10 bg-[#111111] px-4 py-3 text-sm text-neutral-100 placeholder:text-neutral-500 outline-none transition focus:border-[#ff6b00]/50 focus:ring-2 focus:ring-[#ff6b00]/60';
+  const baseClasses = 'w-full rounded-2xl border border-white/20 bg-[#121212] px-4 py-3 text-sm text-neutral-50 placeholder:text-neutral-400 outline-none transition focus:border-[#ff6b00]/60 focus:ring-2 focus:ring-[#ff6b00]/50';
 
   return (
     <div className="space-y-2">
       {label && (
-        <label className="block text-[0.7rem] font-semibold uppercase tracking-[0.35em] text-neutral-400">
+        <label className="block text-[0.7rem] font-semibold uppercase tracking-[0.35em] text-neutral-300">
           {label}
         </label>
       )}
