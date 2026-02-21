@@ -46,7 +46,7 @@ export default function Home() {
         setLoading(true);
         setError(null);
 
-        const res = await fetch('/api/parts?status=active', {
+        const res = await fetch('/api/parts?status=active&limit=8', {
           signal: controller.signal,
         });
 

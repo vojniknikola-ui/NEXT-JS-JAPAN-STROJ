@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef, useDeferredValue } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
@@ -8,6 +8,7 @@ import Footer from '@/components/Footer';
 import { Page, SparePart, Availability } from '@/types';
 import { useCart } from '@/lib/hooks/useCart';
 import { SearchIcon, FilterIcon, CartIcon, CheckIcon, XIcon } from '@/lib/icons';
+import { useToast } from '@/components/ui/ToastProvider';
 
 interface PartData {
   id: number;
@@ -51,15 +52,26 @@ const AvailabilityBadge: React.FC<{ availability: string }> = ({ availability })
   }
 };
 
-const ProductCard: React.FC<{ part: PartData; onAddToCart: (part: PartData) => void; isAdded: boolean }> = ({ part, onAddToCart, isAdded }) => {
-  const router = useRouter();
+interface ProductCardProps {
+  part: PartData;
+  onAddToCart: (part: PartData) => void;
+  onOpenProduct: (id: number) => void;
+  isAdded: boolean;
+}
+
+const ProductCard = React.memo(function ProductCard({
+  part,
+  onAddToCart,
+  onOpenProduct,
+  isAdded,
+}: ProductCardProps) {
   const priceAfterDiscount = part.priceWithVAT && part.discount
     ? parseFloat(part.priceWithVAT) * (1 - parseFloat(part.discount) / 100)
     : parseFloat(part.priceWithVAT || part.price);
 
   return (
     <article className="group bg-[#101010] border border-white/5 rounded-xl sm:rounded-2xl overflow-hidden active:border-[#ff6b00]/30 transition-all duration-300 sm:hover:shadow-[0_10px_40px_-15px_rgba(255,107,0,0.3)] sm:hover:-translate-y-1">
-      <div className="relative aspect-square bg-[#1a1a1a] overflow-hidden cursor-pointer touch-manipulation" onClick={() => router.push(`/product/${part.id}`)}>
+      <div className="relative aspect-square bg-[#1a1a1a] overflow-hidden cursor-pointer touch-manipulation" onClick={() => onOpenProduct(part.id)}>
         {part.imageUrl ? (
           <Image
             src={part.imageUrl}
@@ -94,7 +106,7 @@ const ProductCard: React.FC<{ part: PartData; onAddToCart: (part: PartData) => v
       <div className="p-4 sm:p-5 md:p-6">
         <div className="mb-2 sm:mb-3">
           <div className="text-[10px] sm:text-xs text-neutral-500 mb-1 font-mono truncate">{part.sku}</div>
-          <h3 className="text-sm sm:text-base font-semibold text-white mb-1 line-clamp-2 sm:group-hover:text-[#ff6b00] transition-colors cursor-pointer" onClick={() => router.push(`/product/${part.id}`)}>
+          <h3 className="text-sm sm:text-base font-semibold text-white mb-1 line-clamp-2 sm:group-hover:text-[#ff6b00] transition-colors cursor-pointer" onClick={() => onOpenProduct(part.id)}>
             {part.title}
           </h3>
           {(part.brand || part.model) && (
@@ -151,9 +163,11 @@ const ProductCard: React.FC<{ part: PartData; onAddToCart: (part: PartData) => v
       </div>
     </article>
   );
-};
+});
 
 export default function CatalogPage() {
+  const toast = useToast();
+  const router = useRouter();
   const [activePage, setActivePage] = useState<Page>('catalog');
   const { cartItemCount, addToCart } = useCart();
   const [partsData, setPartsData] = useState<PartData[]>([]);
@@ -171,6 +185,12 @@ export default function CatalogPage() {
   const [displayLimit, setDisplayLimit] = useState(12);
   const [loadingMore, setLoadingMore] = useState(false);
   const observerTarget = useRef<HTMLDivElement>(null);
+  const deferredSearchQuery = useDeferredValue(searchQuery);
+
+  const maxCatalogPrice = useMemo(() => {
+    if (!partsData.length) return 10000;
+    return Math.max(...partsData.map((p) => parseFloat(p.priceWithVAT || p.price)), 10000);
+  }, [partsData]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -179,7 +199,7 @@ export default function CatalogPage() {
         setError(null);
 
         const [partsRes, categoriesRes] = await Promise.all([
-          fetch('/api/parts?active=true'),
+          fetch('/api/parts?status=active'),
           fetch('/api/categories')
         ]);
 
@@ -197,13 +217,13 @@ export default function CatalogPage() {
         ]);
 
         const parts = Array.isArray(partsResponse) ? partsResponse : (partsResponse.items || []);
-        const activeParts = parts.filter((part: PartData) => part.isActive);
-
-        setPartsData(activeParts);
+        setPartsData(parts);
         setCategories(cats);
 
-        const maxPrice = Math.max(...activeParts.map((p: PartData) => parseFloat(p.priceWithVAT || p.price)));
-        setPriceRange([0, Math.ceil(maxPrice / 100) * 100]);
+        const maxPrice = parts.length
+          ? Math.max(...parts.map((p: PartData) => parseFloat(p.priceWithVAT || p.price)))
+          : 100;
+        setPriceRange([0, Math.max(100, Math.ceil(maxPrice / 100) * 100)]);
       } catch (error) {
         console.error('Error fetching data:', error);
         setError(error instanceof Error ? error.message : 'Došlo je do greške pri učitavanju podataka');
@@ -223,16 +243,17 @@ export default function CatalogPage() {
     return Array.from(brands).sort();
   }, [partsData]);
 
+  const normalizedQuery = deferredSearchQuery.toLowerCase().trim();
+
   const filteredParts = useMemo(() => {
     return partsData.filter(part => {
-      const query = searchQuery.toLowerCase().trim();
-      const matchesSearch = !query ||
-        part.title.toLowerCase().includes(query) ||
-        part.brand?.toLowerCase().includes(query) ||
-        part.model?.toLowerCase().includes(query) ||
-        part.catalogNumber?.toLowerCase().includes(query) ||
-        part.sku.toLowerCase().includes(query) ||
-        part.application?.toLowerCase().includes(query);
+      const matchesSearch = !normalizedQuery ||
+        part.title.toLowerCase().includes(normalizedQuery) ||
+        part.brand?.toLowerCase().includes(normalizedQuery) ||
+        part.model?.toLowerCase().includes(normalizedQuery) ||
+        part.catalogNumber?.toLowerCase().includes(normalizedQuery) ||
+        part.sku.toLowerCase().includes(normalizedQuery) ||
+        part.application?.toLowerCase().includes(normalizedQuery);
 
       const matchesCategory = !selectedCategory || part.categoryId === selectedCategory;
 
@@ -247,7 +268,7 @@ export default function CatalogPage() {
 
       return matchesSearch && matchesCategory && matchesBrand && matchesAvailability && matchesPrice && matchesDiscount;
     });
-  }, [partsData, searchQuery, selectedCategory, selectedBrands, selectedAvailability, priceRange, showOnlyDiscount]);
+  }, [partsData, normalizedQuery, selectedCategory, selectedBrands, selectedAvailability, priceRange, showOnlyDiscount]);
 
   const handleAddToCart = useCallback((part: PartData) => {
     const sparePart: SparePart = {
@@ -285,20 +306,8 @@ export default function CatalogPage() {
         return newSet;
       });
     }, 2000);
-
-    const toast = document.createElement('div');
-    toast.className = 'fixed top-4 right-4 bg-[#ff6b00] text-black px-6 py-3 rounded-lg shadow-lg z-50 animate-in slide-in-from-right-4';
-    toast.innerHTML = `
-      <div class="flex items-center gap-2">
-        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-        </svg>
-        <span class="font-semibold">${part.title} dodan u košaricu!</span>
-      </div>
-    `;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
-  }, [addToCart]);
+    toast.success('Dodano u košaricu', `${part.title} je dodan.`);
+  }, [addToCart, toast]);
 
   const clearFilters = () => {
     setSearchQuery('');
@@ -306,22 +315,32 @@ export default function CatalogPage() {
     setSelectedBrands([]);
     setSelectedAvailability([]);
     setShowOnlyDiscount(false);
-    const maxPrice = Math.max(...partsData.map(p => parseFloat(p.priceWithVAT || p.price)));
-    setPriceRange([0, Math.ceil(maxPrice / 100) * 100]);
+    setPriceRange([0, Math.max(100, Math.ceil(maxCatalogPrice / 100) * 100)]);
     setDisplayLimit(12);
   };
 
   const hasActiveFilters = searchQuery || selectedCategory || selectedBrands.length > 0 || 
     selectedAvailability.length > 0 || showOnlyDiscount;
 
-  const loadMore = useCallback(async () => {
+  const loadMore = useCallback(() => {
     if (loadingMore || displayLimit >= filteredParts.length) return;
-    
+
     setLoadingMore(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
     setDisplayLimit(prev => Math.min(prev + 12, filteredParts.length));
-    setLoadingMore(false);
+    window.requestAnimationFrame(() => setLoadingMore(false));
   }, [loadingMore, displayLimit, filteredParts.length]);
+
+  const visibleParts = useMemo(
+    () => filteredParts.slice(0, displayLimit),
+    [filteredParts, displayLimit]
+  );
+
+  const handleOpenProduct = useCallback(
+    (id: number) => {
+      router.push(`/product/${id}`);
+    },
+    [router]
+  );
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -429,11 +448,11 @@ export default function CatalogPage() {
                             type="checkbox"
                             checked={selectedBrands.includes(brand)}
                             onChange={(e) => {
-                              if (e.target.checked) {
-                                setSelectedBrands([...selectedBrands, brand]);
-                              } else {
-                                setSelectedBrands(selectedBrands.filter(b => b !== brand));
-                              }
+                              setSelectedBrands((prev) =>
+                                e.target.checked
+                                  ? [...prev, brand]
+                                  : prev.filter((b) => b !== brand)
+                              );
                             }}
                             className="w-4 h-4 sm:w-5 sm:h-5 rounded border-white/20 bg-[#1a1a1a] text-[#ff6b00] focus:ring-[#ff6b00]/50 focus:ring-2"
                           />
@@ -456,11 +475,11 @@ export default function CatalogPage() {
                             type="checkbox"
                             checked={selectedAvailability.includes(value)}
                             onChange={(e) => {
-                              if (e.target.checked) {
-                                setSelectedAvailability([...selectedAvailability, value]);
-                              } else {
-                                setSelectedAvailability(selectedAvailability.filter(a => a !== value));
-                              }
+                              setSelectedAvailability((prev) =>
+                                e.target.checked
+                                  ? [...prev, value]
+                                  : prev.filter((a) => a !== value)
+                              );
                             }}
                             className="w-4 h-4 sm:w-5 sm:h-5 rounded border-white/20 bg-[#1a1a1a] text-[#ff6b00] focus:ring-[#ff6b00]/50 focus:ring-2"
                           />
@@ -480,7 +499,7 @@ export default function CatalogPage() {
                       <input
                         type="range"
                         min="0"
-                        max={Math.max(...partsData.map(p => parseFloat(p.priceWithVAT || p.price)), 10000)}
+                        max={maxCatalogPrice}
                         step="50"
                         value={priceRange[1]}
                         onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
@@ -579,11 +598,12 @@ export default function CatalogPage() {
                 ) : (
                   <>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-5 lg:gap-6">
-                      {filteredParts.slice(0, displayLimit).map((part) => (
+                      {visibleParts.map((part) => (
                         <ProductCard
                           key={part.id}
                           part={part}
                           onAddToCart={handleAddToCart}
+                          onOpenProduct={handleOpenProduct}
                           isAdded={addedToCart.has(part.id)}
                         />
                       ))}

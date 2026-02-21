@@ -9,6 +9,7 @@ import { Page, SparePart, Availability } from '@/types';
 import { ShareIcon, FacebookIcon, CopyIcon, CheckIcon, CartIcon, WhatsAppIcon } from '@/lib/icons';
 import { useCart } from '@/lib/hooks/useCart';
 import { useSpareParts } from '@/lib/hooks/useSpareParts';
+import { useToast } from '@/components/ui/ToastProvider';
 
 const AvailabilityBadge: React.FC<{ availability: Availability }> = ({ availability }) => {
   const baseClasses = 'px-2 sm:px-3 py-1 text-[10px] sm:text-xs font-semibold rounded-full uppercase tracking-wide text-white';
@@ -29,6 +30,7 @@ const FALLBACK_PRODUCT_IMAGE = 'https://via.placeholder.com/1200x900?text=JapanS
 export default function ProductDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const toast = useToast();
   const productId = parseInt(params.id as string);
 
   const [activePage, setActivePage] = useState<Page>('productDetail');
@@ -96,23 +98,7 @@ export default function ProductDetailPage() {
     setTimeout(() => {
       setIsAdded(false);
     }, 2000);
-
-    // Show toast notification
-    const toast = document.createElement('div');
-    toast.className = 'fixed top-4 right-4 bg-[#ff6b00] text-black px-6 py-3 rounded-lg shadow-lg z-50 animate-in slide-in-from-right-4';
-    toast.innerHTML = `
-      <div class="flex items-center gap-2">
-        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-        </svg>
-        <span class="font-semibold">${product.name} dodan u košaricu!</span>
-      </div>
-    `;
-    document.body.appendChild(toast);
-
-    setTimeout(() => {
-      toast.remove();
-    }, 3000);
+    toast.success('Dodano u košaricu', `${product.name} je dodan.`);
   };
 
   const handleShareToggle = () => {
@@ -301,7 +287,7 @@ export default function ProductDetailPage() {
                     <div
                       key={recommendedProduct.id}
                       className="bg-[#101010] border border-white/5 rounded-xl p-4 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_10px_30px_-15px_rgba(255,107,0,0.5)] group"
-                      onClick={() => window.location.href = `/product/${recommendedProduct.id}`}
+                      onClick={() => router.push(`/product/${recommendedProduct.id}`)}
                     >
                       <div className="relative h-32 overflow-hidden rounded-lg mb-3">
                         <Image
