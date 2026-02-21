@@ -7,28 +7,47 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Page, SparePart, Availability } from '@/types';
 import { useCart } from '@/lib/hooks/useCart';
-import { SearchIcon, FilterIcon } from '@/lib/icons';
-import ProductCard from '@/components/catalog/ProductCard';
-import FilterPanel from '@/components/catalog/FilterPanel';
-import { PartData, transformPartDataToSparePart } from '@/utils/dataTransform';
+import { SearchIcon, FilterIcon, CartIcon, CheckIcon, XIcon } from '@/lib/icons';
 
+interface PartData {
+  id: number;
+  sku: string;
+  title: string;
+  brand: string | null;
+  model: string | null;
+  catalogNumber: string | null;
+  application: string | null;
+  delivery: string | null;
+  price: string;
+  priceWithoutVAT: string | null;
+  priceWithVAT: string | null;
+  discount: string | null;
+  currency: string;
+  stock: number;
+  categoryId: number;
+  imageUrl: string | null;
+  isActive: boolean;
+  category: string;
+  spec1?: string | null;
+  spec2?: string | null;
+  spec3?: string | null;
+  spec4?: string | null;
+  spec5?: string | null;
+  spec6?: string | null;
+  spec7?: string | null;
+}
 
-
-const computeRoundedMaxPrice = (parts: PartData[]) => {
-  if (!parts.length) return 0;
-  try {
-    const prices = parts
-      .map(part => {
-        const price = parseFloat(part.priceWithVAT || part.price);
-        return isNaN(price) ? 0 : price;
-      })
-      .filter(price => price > 0);
-    if (!prices.length) return 10000; // fallback
-    const maxValue = Math.max(...prices);
-    return Math.ceil(maxValue / 100) * 100;
-  } catch (error) {
-    console.error('Error computing max price:', error);
-    return 10000; // fallback
+const AvailabilityBadge: React.FC<{ availability: string }> = ({ availability }) => {
+  const baseClasses = 'px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-semibold rounded-full uppercase tracking-wide';
+  switch (availability) {
+    case 'available':
+      return <div className={`${baseClasses} bg-emerald-500/90 text-white`}>Dostupno</div>;
+    case '15_days':
+      return <div className={`${baseClasses} bg-[#ff6b00] text-black`}>15 dana</div>;
+    case 'on_request':
+      return <div className={`${baseClasses} bg-red-500/90 text-white`}>Po dogovoru</div>;
+    default:
+      return null;
   }
 };
 
@@ -135,7 +154,8 @@ const ProductCard: React.FC<{ part: PartData; onAddToCart: (part: PartData) => v
 };
 
 export default function CatalogPage() {
-  const { addToCart } = useCart();
+  const [activePage, setActivePage] = useState<Page>('catalog');
+  const { cartItemCount, addToCart } = useCart();
   const [partsData, setPartsData] = useState<PartData[]>([]);
   const [categories, setCategories] = useState<{ id: number; name: string; slug: string }[]>([]);
   const [loading, setLoading] = useState(true);
@@ -150,11 +170,7 @@ export default function CatalogPage() {
   const [addedToCart, setAddedToCart] = useState<Set<number>>(new Set());
   const [displayLimit, setDisplayLimit] = useState(12);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const observerTarget = useRef<HTMLDivElement>(null);
-
-  const roundedMaxPrice = useMemo(() => computeRoundedMaxPrice(partsData), [partsData]);
-  const priceSliderMax = roundedMaxPrice > 0 ? Math.max(roundedMaxPrice, 10000) : 10000;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -162,7 +178,6 @@ export default function CatalogPage() {
         setLoading(true);
         setError(null);
 
-        console.time('Catalog data fetch');
         const [partsRes, categoriesRes] = await Promise.all([
           fetch('/api/parts?active=true'),
           fetch('/api/categories')
@@ -182,21 +197,14 @@ export default function CatalogPage() {
         ]);
 
         const parts = Array.isArray(partsResponse) ? partsResponse : (partsResponse.items || []);
-        if (!parts || parts.length === 0) {
-          throw new Error('Nema dostupnih dijelova za prikaz.');
-        }
         const activeParts = parts.filter((part: PartData) => part.isActive);
-
-        console.timeEnd('Catalog data fetch');
-        console.log('Catalog loaded parts:', activeParts.length, 'items');
 
         setPartsData(activeParts);
         setCategories(cats);
 
-        const roundedMax = computeRoundedMaxPrice(activeParts);
-        setPriceRange([0, roundedMax]);
+        const maxPrice = Math.max(...activeParts.map((p: PartData) => parseFloat(p.priceWithVAT || p.price)));
+        setPriceRange([0, Math.ceil(maxPrice / 100) * 100]);
       } catch (error) {
-        console.timeEnd('Catalog data fetch');
         console.error('Error fetching data:', error);
         setError(error instanceof Error ? error.message : 'Došlo je do greške pri učitavanju podataka');
       } finally {
@@ -233,7 +241,7 @@ export default function CatalogPage() {
       const matchesAvailability = selectedAvailability.length === 0 || (part.delivery && selectedAvailability.includes(part.delivery));
 
       const partPrice = parseFloat(part.priceWithVAT || part.price);
-      const matchesPrice = !isNaN(partPrice) && partPrice >= priceRange[0] && partPrice <= priceRange[1];
+      const matchesPrice = partPrice >= priceRange[0] && partPrice <= priceRange[1];
 
       const matchesDiscount = !showOnlyDiscount || (part.discount && parseFloat(part.discount) > 0);
 
@@ -242,7 +250,31 @@ export default function CatalogPage() {
   }, [partsData, searchQuery, selectedCategory, selectedBrands, selectedAvailability, priceRange, showOnlyDiscount]);
 
   const handleAddToCart = useCallback((part: PartData) => {
-    const sparePart = transformPartDataToSparePart(part);
+    const sparePart: SparePart = {
+      id: part.id,
+      name: part.title,
+      brand: part.brand || '',
+      model: part.model || '',
+      catalogNumber: part.catalogNumber || '',
+      application: part.application || '',
+      delivery: part.delivery === 'available' ? Availability.Available :
+               part.delivery === '15_days' ? Availability.FifteenDays :
+               Availability.OnRequest,
+      priceWithoutVAT: parseFloat(part.priceWithoutVAT || part.price),
+      priceWithVAT: parseFloat(part.priceWithVAT || part.price),
+      discount: parseFloat(part.discount || '0'),
+      imageUrl: part.imageUrl || '',
+      technicalSpecs: {
+        spec1: part.spec1 || '',
+        spec2: part.spec2 || '',
+        spec3: part.spec3 || '',
+        spec4: part.spec4 || '',
+        spec5: part.spec5 || '',
+        spec6: part.spec6 || '',
+        spec7: part.spec7 || '',
+      },
+      stock: part.stock,
+    };
 
     addToCart(sparePart);
     setAddedToCart(prev => new Set(prev).add(part.id));
@@ -274,8 +306,8 @@ export default function CatalogPage() {
     setSelectedBrands([]);
     setSelectedAvailability([]);
     setShowOnlyDiscount(false);
-    const resetMax = roundedMaxPrice || priceSliderMax;
-    setPriceRange([0, resetMax]);
+    const maxPrice = Math.max(...partsData.map(p => parseFloat(p.priceWithVAT || p.price)));
+    setPriceRange([0, Math.ceil(maxPrice / 100) * 100]);
     setDisplayLimit(12);
   };
 
@@ -314,14 +346,14 @@ export default function CatalogPage() {
   }, [loadMore, loadingMore, displayLimit, filteredParts.length]);
 
   return (
-    <div className="bg-secondary-950 text-neutral-100 min-h-screen flex flex-col">
-      <Header />
+    <div className="bg-[#0b0b0b] text-neutral-100 min-h-screen flex flex-col">
+      <Header activePage={activePage} setActivePage={setActivePage} cartItemCount={cartItemCount} />
 
       <main className="flex-grow safe-main-padding lg:pb-0">
         <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 md:py-10 lg:py-12">
           <div className="max-w-7xl mx-auto">
-            <div className="mb-6 sm:mb-8 animate-fade-in">
-              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-3 sm:mb-4 bg-gradient-to-r from-white to-neutral-300 bg-clip-text text-transparent">
+            <div className="mb-6 sm:mb-8">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-3 sm:mb-4">
                 Katalog rezervnih dijelova
               </h1>
               <p className="text-sm sm:text-base md:text-lg text-neutral-400 max-w-2xl">
@@ -492,14 +524,10 @@ export default function CatalogPage() {
                   <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
                     <button
                       onClick={() => setShowMobileFilters(true)}
-                      className="lg:hidden flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-secondary-800/50 backdrop-blur-sm border border-white/10 rounded-lg sm:rounded-xl text-neutral-200 hover:bg-secondary-700/50 active:border-primary-500/50 transition-all active:scale-95 touch-manipulation text-sm sm:text-base focus-ring shadow-lg"
-                      aria-label="Open filters"
+                      className="lg:hidden flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-[#101010] border border-white/10 rounded-lg sm:rounded-xl text-neutral-200 active:border-[#ff6b00]/50 transition-all active:scale-95 touch-manipulation text-sm sm:text-base"
                     >
                       <FilterIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                       <span>Filteri</span>
-                      {hasActiveFilters && (
-                        <div className="w-2 h-2 bg-primary-500 rounded-full animate-pulse"></div>
-                      )}
                     </button>
                     <p className="text-neutral-300 text-xs sm:text-sm">
                       {loading ? 'Učitavanje...' : `${filteredParts.length} ${filteredParts.length === 1 ? 'rezultat' : filteredParts.length < 5 ? 'rezultata' : 'rezultata'}`}
@@ -518,7 +546,7 @@ export default function CatalogPage() {
                     <p className="text-neutral-400 mb-6">{error}</p>
                     <button
                       onClick={() => window.location.reload()}
-                      className="bg-[#ff6b00] hover:bg-[#ff7f1a] text-white px-6 py-3 rounded-full font-semibold transition-all hover:scale-105"
+                      className="bg-[#ff6b00] hover:bg-[#ff7f1a] text-black px-6 py-3 rounded-full font-semibold transition-all hover:scale-105"
                     >
                       Pokušaj ponovo
                     </button>
@@ -543,7 +571,7 @@ export default function CatalogPage() {
                     </p>
                     <button
                       onClick={clearFilters}
-                      className="bg-[#ff6b00] hover:bg-[#ff7f1a] text-white px-6 py-3 rounded-full font-semibold transition-all hover:scale-105"
+                      className="bg-[#ff6b00] hover:bg-[#ff7f1a] text-black px-6 py-3 rounded-full font-semibold transition-all hover:scale-105"
                     >
                       Prikaži sve dijelove
                     </button>
@@ -576,17 +604,6 @@ export default function CatalogPage() {
           </div>
         </div>
       </main>
-
-      {toastMessage && (
-        <div className="fixed top-4 right-4 bg-[#ff6b00] text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-in slide-in-from-right-4">
-          <div className="flex items-center gap-2">
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-            </svg>
-            <span className="font-semibold">{toastMessage}</span>
-          </div>
-        </div>
-      )}
 
       <Footer />
     </div>

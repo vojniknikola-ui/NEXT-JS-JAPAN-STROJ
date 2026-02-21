@@ -1,4 +1,4 @@
-import React, { useMemo, memo, useState, useEffect } from 'react';
+import React, { useMemo, memo, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { CartIcon, CheckIcon } from '@/lib/icons';
@@ -48,11 +48,7 @@ const AvailabilityBadge: React.FC<{ availability: string }> = memo(({ availabili
 AvailabilityBadge.displayName = 'AvailabilityBadge';
 
 const ProductCard = memo<{ part: PartData; onAddToCart: (part: PartData) => void; isAdded: boolean }>(({ part, onAddToCart, isAdded }) => {
-  const [imageError, setImageError] = useState(false);
-
-  useEffect(() => {
-    setImageError(false);
-  }, [part.id]);
+  const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null);
 
   const priceAfterDiscount = useMemo(() => {
     if (part.priceWithVAT && part.discount) {
@@ -69,14 +65,14 @@ const ProductCard = memo<{ part: PartData; onAddToCart: (part: PartData) => void
         href={productHref}
         className="relative block aspect-square bg-[#1a1a1a] overflow-hidden touch-manipulation"
       >
-        {part.imageUrl && !imageError ? (
+        {part.imageUrl && failedImageUrl !== part.imageUrl ? (
           <Image
             src={part.imageUrl}
             alt={part.title}
             fill
             className="object-cover sm:group-hover:scale-105 transition-transform duration-300"
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-            onError={() => setImageError(true)}
+            onError={() => setFailedImageUrl(part.imageUrl)}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-neutral-600">

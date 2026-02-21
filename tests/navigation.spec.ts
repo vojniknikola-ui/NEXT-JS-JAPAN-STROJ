@@ -78,7 +78,6 @@ test.describe('Navigation Tests', () => {
     // Wait for products and click first one
     await page.waitForSelector('[data-testid="product-card"]', { timeout: 10000 });
     const firstProduct = page.locator('[data-testid="product-card"]').first();
-    const productLink = await firstProduct.getAttribute('href');
     await firstProduct.click();
 
     // On product page, click back to catalog

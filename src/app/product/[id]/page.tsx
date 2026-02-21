@@ -3,14 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
-import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Page, SparePart, Availability } from '@/types';
 import { ShareIcon, FacebookIcon, CopyIcon, CheckIcon, CartIcon, WhatsAppIcon } from '@/lib/icons';
 import { useCart } from '@/lib/hooks/useCart';
 import { useSpareParts } from '@/lib/hooks/useSpareParts';
-import { transformPartDataToSparePart } from '@/utils/dataTransform';
 
 const AvailabilityBadge: React.FC<{ availability: Availability }> = ({ availability }) => {
   const baseClasses = 'px-2 sm:px-3 py-1 text-[10px] sm:text-xs font-semibold rounded-full uppercase tracking-wide text-white';
@@ -30,10 +28,10 @@ const FALLBACK_PRODUCT_IMAGE = 'https://via.placeholder.com/1200x900?text=JapanS
 
 export default function ProductDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const productId = parseInt(params.id as string);
 
-  const { addToCart } = useCart();
+  const [activePage, setActivePage] = useState<Page>('productDetail');
+  const { cartItemCount, addToCart } = useCart();
   const { getRecommendations } = useSpareParts();
   const [product, setProduct] = useState<SparePart | null>(null);
   const [recommendations, setRecommendations] = useState<SparePart[]>([]);
@@ -47,7 +45,33 @@ export default function ProductDetailPage() {
       fetch(`/api/parts/${productId}`)
         .then(res => res.json())
         .then(data => {
-          const sparePart = transformPartDataToSparePart(data);
+          // Convert PartData to SparePart format
+          const sparePart: SparePart = {
+            id: data.id,
+            name: data.title,
+            brand: data.brand || '',
+            model: data.model || '',
+            catalogNumber: data.catalogNumber || '',
+            application: data.application || '',
+            delivery: data.delivery === 'available' ? Availability.Available :
+                     data.delivery === '15_days' ? Availability.FifteenDays :
+                     Availability.OnRequest,
+            priceWithoutVAT: parseFloat(data.priceWithoutVAT || data.price),
+            priceWithVAT: parseFloat(data.priceWithVAT || data.price),
+            discount: parseFloat(data.discount || '0'),
+            imageUrl: data.imageUrl || '',
+            technicalSpecs: {
+              spec1: data.spec1 || '',
+              spec2: data.spec2 || '',
+              spec3: data.spec3 || '',
+              spec4: data.spec4 || '',
+              spec5: data.spec5 || '',
+              spec6: data.spec6 || '',
+              spec7: data.spec7 || '',
+            },
+            stock: data.stock,
+          };
+
           setProduct(sparePart);
 
           // Generate recommendations after product is loaded
@@ -116,7 +140,7 @@ export default function ProductDetailPage() {
   if (!product) {
     return (
       <div className="bg-[#0b0b0b] text-neutral-100 min-h-screen flex flex-col">
-        <Header />
+        <Header activePage={activePage} setActivePage={setActivePage} cartItemCount={cartItemCount} />
         <main className="flex-grow flex items-center justify-center">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-white mb-4">Proizvod nije pronađen</h1>

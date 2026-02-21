@@ -100,6 +100,21 @@ export default function ManualsPage() {
    const [selectedCategory, setSelectedCategory] = useState('all');
    const [filteredManuals, setFilteredManuals] = useState(mockManuals);
 
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedCart = localStorage.getItem('japanStrojCart');
+      if (savedCart) {
+        try {
+          setCartItems(JSON.parse(savedCart));
+        } catch (error) {
+          console.error('Error loading cart:', error);
+        }
+      }
+    }
+  }, []);
+
+  const cartItemCount = cartItems.reduce((total, item) => total + item.quantity, 0);
+
   // Filter manuals based on search and category
   React.useEffect(() => {
     let filtered = mockManuals;

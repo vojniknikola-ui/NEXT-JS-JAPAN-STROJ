@@ -20,21 +20,9 @@ const Header: React.FC<HeaderProps> = ({ activePage, setActivePage, cartItemCoun
     { id: 'manuals', label: 'Priručnici', mobileLabel: 'Priruč.', icon: ManualIcon },
   ];
 
-  const handleNavClick = (page: string) => {
-    setIsMobileMenuOpen(false);
-  };
-
-  const toggleMobileMenu = () => {
-    setIsMobileMenuOpen(!isMobileMenuOpen);
-  };
-
-  const getCurrentPage = () => {
-    if (pathname === '/') return 'home';
-    if (pathname === '/catalog') return 'catalog';
-    if (pathname === '/services') return 'services';
-    if (pathname === '/cart') return 'cart';
-    if (pathname === '/manuals') return 'manuals';
-    return 'home';
+  const handleNavClick = (page: Page) => {
+    setActivePage(page);
+    router.push(page === 'home' ? '/' : `/${page}`);
   };
 
   return (
@@ -42,9 +30,9 @@ const Header: React.FC<HeaderProps> = ({ activePage, setActivePage, cartItemCoun
       <div className="container mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
         <div className="flex items-center justify-between h-14 sm:h-16 md:h-18 lg:h-20">
           <div className="flex-shrink-0 min-w-0">
-            <Link href="/" className="text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-semibold tracking-tight text-[#ff6b00] truncate hover:text-[#ff8533] transition-colors">
+            <h1 className="text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-semibold tracking-tight cursor-pointer text-[#ff6b00] truncate" onClick={() => handleNavClick('home')}>
               Japan<span className="text-white">Stroj</span>
-            </Link>
+            </h1>
           </div>
           <div className="flex items-center gap-1 sm:gap-2">
             <nav className="hidden lg:flex items-center space-x-2 xl:space-x-3">
@@ -77,16 +65,7 @@ const Header: React.FC<HeaderProps> = ({ activePage, setActivePage, cartItemCoun
                  </a>
             </div>
           </div>
-
-          {/* Mobile Menu Button */}
           <div className="lg:hidden flex items-center gap-1.5">
-            <button
-              onClick={toggleMobileMenu}
-              className="p-2.5 rounded-full bg-white/5 hover:bg-[#ff6b00] hover:text-black transition-all duration-300 active:scale-95 border border-white/10 hover:border-[#ff6b00] touch-manipulation"
-              aria-label="Toggle mobile menu"
-            >
-              {isMobileMenuOpen ? <XIcon className="h-5 w-5" /> : <MenuIcon className="h-5 w-5" />}
-            </button>
             <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="p-2.5 rounded-full bg-white/5 hover:bg-[#ff6b00] hover:text-black transition-all duration-300 active:scale-95 border border-white/10 hover:border-[#ff6b00] touch-manipulation">
               <FacebookIcon className="h-4 w-4 sm:h-5 sm:w-5" />
             </a>

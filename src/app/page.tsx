@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { Page, SparePart } from '@/types';
+import { Page, SparePart, CartItem } from '@/types';
 
 type PartApiResponse = {
   items?: SparePart[];
@@ -36,6 +36,7 @@ export default function Home() {
   const [spareParts, setSpareParts] = useState<SparePart[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const cartItemCount = cartItems.reduce((total, item) => total + item.quantity, 0);
 
   useEffect(() => {
     // Load spare parts from API
@@ -64,7 +65,7 @@ export default function Home() {
 
   return (
     <div className="bg-[#0b0b0b] text-neutral-100 min-h-screen flex flex-col">
-      <Header />
+      <Header activePage={activePage} setActivePage={setActivePage} cartItemCount={cartItemCount} />
 
       {/* Hero Section */}
       <section className="relative min-h-[85vh] sm:min-h-screen flex items-center justify-center overflow-hidden pb-24 lg:pb-0">
