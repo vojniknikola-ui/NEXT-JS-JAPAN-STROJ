@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { CartItem } from '@/types';
 import jsPDF from 'jspdf';
-import nodemailer from 'nodemailer';
 
 interface CompanyDetails {
   companyName: string;
@@ -233,74 +232,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    let emailSent = false;
-    const smtpUser = process.env.SMTP_USER;
-    const smtpPass = process.env.SMTP_PASS;
-
-    if (smtpUser && smtpPass) {
-      const transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST || 'smtp.gmail.com',
-        port: parseInt(process.env.SMTP_PORT || '587', 10),
-        secure: false,
-        auth: {
-          user: smtpUser,
-          pass: smtpPass,
-        },
-      });
-
-      const mailOptions = {
-        from: smtpUser,
-        to: process.env.INVOICE_RECIPIENT_EMAIL || smtpUser,
-        subject: `Predračun ${invoiceNumber} - ${companyDetails.companyName}`,
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #ff6b00;">Japan Stroj d.o.o.</h2>
-            <p>Poštovani,</p>
-            <p>U prilogu vam šaljemo predračun broj <strong>${invoiceNumber}</strong> za narudžbu rezervnih dijelova.</p>
-
-            <div style="background-color: #f8f8f8; padding: 15px; margin: 20px 0; border-radius: 5px;">
-              <h3 style="margin-top: 0; color: #333;">Podaci o kupcu:</h3>
-              <p><strong>Naziv firme:</strong> ${companyDetails.companyName}</p>
-              <p><strong>ID broj:</strong> ${companyDetails.idNumber}</p>
-              <p><strong>PDV broj:</strong> ${companyDetails.pdvNumber}</p>
-              <p><strong>Kontakt osoba:</strong> ${companyDetails.name}</p>
-              <p><strong>Adresa:</strong> ${companyDetails.address}</p>
-            </div>
-
-            <p><strong>Ukupan iznos:</strong> ${cartTotal.toFixed(2)} BAM</p>
-            <p><strong>Rok važenja:</strong> 7 dana od datuma izdavanja</p>
-
-            <p>Za sva pitanja stojimo vam na raspolaganju.</p>
-            <p>Srdačan pozdrav,<br>Japan Stroj d.o.o.</p>
-          </div>
-        `,
-        attachments: [
-          {
-            filename: `predracun-${invoiceNumber}.pdf`,
-            content: Buffer.from(pdfBuffer),
-            contentType: 'application/pdf',
-          },
-        ],
-      };
-
-      try {
-        await transporter.sendMail(mailOptions);
-        emailSent = true;
-        console.log('Email sent successfully');
-      } catch (emailError) {
-        console.error('Error sending email:', emailError);
-      }
-    } else {
-      console.warn('SMTP credentials are missing. Skipping email send.');
-    }
-
     return new NextResponse(Buffer.from(pdfBuffer), {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="predracun-${invoiceNumber}.pdf"`,
         'X-Invoice-Number': invoiceNumber,
-        'X-Email-Sent': emailSent ? 'true' : 'false',
         'X-DB-Saved': invoiceSaved ? 'true' : 'false',
       },
     });

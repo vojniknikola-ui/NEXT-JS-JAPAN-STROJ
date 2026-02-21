@@ -67,7 +67,6 @@ export default function ProformaInvoiceModal({
       }
 
       const invoiceNumber = response.headers.get('x-invoice-number') || 'predracun';
-      const emailSent = response.headers.get('x-email-sent') === 'true';
       const pdfBlob = await response.blob();
 
       const downloadUrl = URL.createObjectURL(pdfBlob);
@@ -79,11 +78,7 @@ export default function ProformaInvoiceModal({
       link.remove();
       URL.revokeObjectURL(downloadUrl);
 
-      alert(
-        emailSent
-          ? `Predračun ${invoiceNumber} je generisan, preuzet i poslan na email.`
-          : `Predračun ${invoiceNumber} je generisan i preuzet. Email nije poslan (SMTP nije konfigurisan).`
-      );
+      alert(`Predračun ${invoiceNumber} je generisan i preuzet na računar.`);
 
       setCompanyDetails({
         companyName: '',
