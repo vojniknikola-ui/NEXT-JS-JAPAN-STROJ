@@ -1,45 +1,63 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { SparePart, CartItem } from '@/types';
 
 export function useCart() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
+  const lastSyncedCartRef = useRef<string>(JSON.stringify([]));
 
   // Load cart from API on mount
   useEffect(() => {
+    let isActive = true;
+    const controller = new AbortController();
+
     const loadCart = async () => {
-      try {
-        console.log('Loading cart from API...');
-        const response = await fetch('/api/cart');
-        if (response.ok) {
-          const data = await response.json();
-          console.log('Cart loaded from API:', data);
-          setCartItems(data);
-        } else {
-          console.warn('API returned non-ok status:', response.status);
-        }
-      } catch (error) {
-        console.error('Error loading cart from API:', error);
-        // Fallback to localStorage if API fails
-        if (typeof window !== 'undefined') {
-          const savedCart = localStorage.getItem('japanStrojCart');
-          if (savedCart) {
-            try {
-              console.log('Loading cart from localStorage:', savedCart);
-              setCartItems(JSON.parse(savedCart));
-            } catch (localError) {
-              console.error('Error loading cart from localStorage:', localError);
+      if (typeof window !== 'undefined') {
+        const savedCart = localStorage.getItem('japanStrojCart');
+        if (savedCart) {
+          try {
+            const parsed = JSON.parse(savedCart) as CartItem[];
+            if (Array.isArray(parsed) && isActive) {
+              setCartItems(parsed);
+              lastSyncedCartRef.current = savedCart;
             }
+          } catch (error) {
+            console.error('Error parsing cart from localStorage:', error);
           }
         }
+      }
+
+      try {
+        const response = await fetch('/api/cart', { signal: controller.signal });
+        if (!response.ok) {
+          throw new Error(`API returned status ${response.status}`);
+        }
+
+        const data = await response.json();
+        if (isActive) {
+          setCartItems(data);
+          lastSyncedCartRef.current = JSON.stringify(data);
+        }
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          return;
+        }
+        console.error('Error loading cart from API:', error);
       } finally {
-        setIsLoaded(true);
+        if (isActive) {
+          setIsLoaded(true);
+        }
       }
     };
 
     loadCart();
+
+    return () => {
+      isActive = false;
+      controller.abort();
+    };
   }, []);
 
   // Save cart to API whenever it changes (but only after initial load)
@@ -48,35 +66,51 @@ export function useCart() {
       return;
     }
 
+    const serialized = JSON.stringify(cartItems);
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('japanStrojCart', serialized);
+    }
+
+    if (lastSyncedCartRef.current === serialized) {
+      return;
+    }
+
+    const controller = new AbortController();
+    let hasStarted = false;
+
     const saveCart = async () => {
+      hasStarted = true;
       try {
-        console.log('Saving cart to API:', cartItems);
         const response = await fetch('/api/cart', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(cartItems),
+          body: serialized,
+          signal: controller.signal,
         });
         if (response.ok) {
-          console.log('Cart saved successfully to API');
+          lastSyncedCartRef.current = serialized;
         } else {
           console.warn('Cart save failed with status:', response.status);
         }
       } catch (error) {
-        console.error('Error saving cart to API:', error);
-        if (typeof window !== 'undefined') {
-          console.log('Saving cart to localStorage as fallback');
-          localStorage.setItem('japanStrojCart', JSON.stringify(cartItems));
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          return;
         }
+        console.error('Error saving cart to API:', error);
       }
     };
 
-    const timeoutId = setTimeout(() => {
-      saveCart();
-    }, 100);
+    const timeoutId = window.setTimeout(saveCart, 150);
 
-    return () => clearTimeout(timeoutId);
+    return () => {
+      clearTimeout(timeoutId);
+      if (hasStarted) {
+        controller.abort();
+      }
+    };
   }, [cartItems, isLoaded]);
 
   const addToCart = useCallback((sparePart: SparePart) => {
@@ -116,7 +150,6 @@ export function useCart() {
   }, [removeFromCart]);
 
   const clearCart = useCallback(async () => {
-    console.log('Clearing cart');
     setCartItems([]);
     try {
       await fetch('/api/cart', { method: 'DELETE' });
@@ -125,8 +158,14 @@ export function useCart() {
     }
   }, []);
 
-  const cartItemCount = cartItems.reduce((total, item) => total + item.quantity, 0);
-  const cartTotal = cartItems.reduce((total, item) => total + (item.part.priceWithVAT * item.quantity), 0);
+  const cartItemCount = useMemo(
+    () => cartItems.reduce((total, item) => total + item.quantity, 0),
+    [cartItems]
+  );
+  const cartTotal = useMemo(
+    () => cartItems.reduce((total, item) => total + (item.part.priceWithVAT * item.quantity), 0),
+    [cartItems]
+  );
 
   return {
     cartItems,
