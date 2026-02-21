@@ -39,14 +39,12 @@ export function useSpareParts() {
     try {
       setLoading(true);
       setError(null);
-      console.log('Fetching spare parts from /api/parts...');
       const response = await fetch('/api/parts?status=active');
-      console.log('Spare parts response status:', response.status);
       if (!response.ok) {
-        throw new Error('Failed to fetch spare parts');
+        const errorData = await response.json().catch(() => ({} as { error?: string }));
+        throw new Error(errorData.error || 'Failed to fetch spare parts');
       }
       const data = (await response.json()) as PartsApiResponse | PartApiItem[];
-      console.log('Fetched spare parts:', data);
 
       const parts = Array.isArray(data) ? data : data.items ?? [];
       const transformedData = parts.map((part) => ({
@@ -97,7 +95,8 @@ export function useSpareParts() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create spare part');
+        const errorData = await response.json().catch(() => ({} as { error?: string }));
+        throw new Error(errorData.error || 'Failed to create spare part');
       }
 
       const newSparePart = await response.json();
@@ -120,7 +119,8 @@ export function useSpareParts() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to update spare part');
+        const errorData = await response.json().catch(() => ({} as { error?: string }));
+        throw new Error(errorData.error || 'Failed to update spare part');
       }
 
       const updatedSparePart = await response.json();
@@ -141,7 +141,8 @@ export function useSpareParts() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to delete spare part');
+        const errorData = await response.json().catch(() => ({} as { error?: string }));
+        throw new Error(errorData.error || 'Failed to delete spare part');
       }
 
       setSpareParts(prev => prev.filter(part => part.id !== id));

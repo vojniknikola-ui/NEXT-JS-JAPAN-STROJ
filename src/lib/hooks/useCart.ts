@@ -114,7 +114,6 @@ export function useCart() {
   }, [cartItems, isLoaded]);
 
   const addToCart = useCallback((sparePart: SparePart) => {
-    console.log('Adding to cart:', sparePart);
     setCartItems(prevItems => {
       const existingItem = prevItems.find(item => item.part.id === sparePart.id);
       if (existingItem) {
@@ -132,12 +131,10 @@ export function useCart() {
   }, []);
 
   const removeFromCart = useCallback((partId: number) => {
-    console.log('Removing from cart:', partId);
     setCartItems(prevItems => prevItems.filter(item => item.part.id !== partId));
   }, []);
 
   const updateQuantity = useCallback((partId: number, quantity: number) => {
-    console.log('Updating quantity:', partId, quantity);
     if (quantity <= 0) {
       removeFromCart(partId);
       return;

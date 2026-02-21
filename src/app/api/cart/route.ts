@@ -15,8 +15,6 @@ function getCartId(request: NextRequest): string {
 export async function GET(request: NextRequest) {
   try {
     const cartId = getCartId(request);
-    console.log('[GET] Cart ID:', cartId);
-    console.log('[GET] Cookies:', request.cookies.getAll());
 
     try {
       const { db, withRetry } = await import('@/db');
@@ -27,13 +25,9 @@ export async function GET(request: NextRequest) {
         db.select().from(carts).where(eq(carts.id, cartId)).limit(1)
       );
       
-      console.log('[GET] Database query result:', result);
       if (result.length > 0) {
         const cartData = JSON.parse(result[0].data);
-        console.log('[GET] Returning cart from database:', cartData);
         return NextResponse.json(cartData);
-      } else {
-        console.log('[GET] No cart found in database for ID:', cartId);
       }
     } catch (dbError) {
       console.error('Database failed for cart retrieval:', dbError);
@@ -50,9 +44,6 @@ export async function POST(request: NextRequest) {
   try {
     const cartItems: CartItem[] = await request.json();
     const cartId = getCartId(request);
-    console.log('[POST] Cart ID:', cartId);
-    console.log('[POST] Cookies:', request.cookies.getAll());
-    console.log('[POST] Cart items count:', cartItems.length);
 
     try {
       const { db, withRetry } = await import('@/db');
@@ -74,8 +65,6 @@ export async function POST(request: NextRequest) {
         })
       );
 
-      console.log('[POST] Saved to database, cart ID:', cartId);
-
       const response = NextResponse.json({ success: true });
       response.cookies.set('japanStrojCartId', cartId, {
         httpOnly: true,
@@ -83,8 +72,6 @@ export async function POST(request: NextRequest) {
         sameSite: 'lax',
         maxAge: 60 * 60 * 24 * 30,
       });
-
-      console.log('[POST] Cookie set for cart ID:', cartId);
 
       return response;
     } catch (dbError) {

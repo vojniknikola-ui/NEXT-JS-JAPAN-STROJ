@@ -39,24 +39,35 @@ export default function Home() {
   const cartItemCount = cartItems.reduce((total, item) => total + item.quantity, 0);
 
   useEffect(() => {
-    // Load spare parts from API
-    console.log('Loading spare parts from home page...');
-    fetch('/api/parts?status=active')
-      .then(res => {
-        console.log('Home page parts response status:', res.status);
-        return res.json() as Promise<PartApiResponse | SparePart[]>;
-      })
-      .then(data => {
+    const controller = new AbortController();
+
+    const loadSpareParts = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const res = await fetch('/api/parts?status=active', {
+          signal: controller.signal,
+        });
+
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        }
+
+        const data = (await res.json()) as PartApiResponse | SparePart[];
         const parsed = Array.isArray(data) ? data : data.items ?? [];
-        console.log('Home page loaded parts:', parsed);
         setSpareParts(parsed);
-      })
-      .catch(error => {
-        console.timeEnd('Home page data fetch');
+      } catch (error) {
+        if ((error as Error)?.name === 'AbortError') return;
         console.error('Error loading spare parts:', error);
         setError(error instanceof Error ? error.message : 'Došlo je do greške pri učitavanju podataka');
+      } finally {
         setLoading(false);
-      });
+      }
+    };
+
+    void loadSpareParts();
+    return () => controller.abort();
   }, []);
 
   const handleSelectProduct = (part: SparePart) => {
@@ -93,7 +104,10 @@ export default function Home() {
           </p>
           <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 md:gap-4 justify-center items-stretch sm:items-center px-2 animate-slide-in-up" style={{ animationDelay: '0.6s' }}>
             <button
-              onClick={() => setActivePage('catalog')}
+              onClick={() => {
+                setActivePage('catalog');
+                router.push('/catalog');
+              }}
               className="group bg-[#ff6b00] active:bg-[#ff7f1a] text-black px-5 sm:px-6 md:px-8 lg:px-10 py-3 sm:py-3.5 md:py-4 lg:py-5 rounded-full font-bold text-xs sm:text-sm md:text-base lg:text-lg transition-all duration-300 active:scale-95 sm:hover:scale-105 shadow-2xl sm:hover:shadow-[#ff6b00]/50 flex items-center justify-center gap-2 touch-manipulation w-full sm:w-auto"
             >
               <svg className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 group-active:rotate-12 transition-transform flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -102,7 +116,10 @@ export default function Home() {
               <span>Pregledajte katalog</span>
             </button>
             <button
-              onClick={() => router.push('/services')}
+              onClick={() => {
+                setActivePage('services');
+                router.push('/services');
+              }}
               className="group border-2 border-white/80 text-white hover:bg-white hover:text-secondary-900 active:bg-white active:text-secondary-900 px-5 sm:px-6 md:px-8 lg:px-10 py-3 sm:py-3.5 md:py-4 lg:py-5 rounded-full font-bold text-xs sm:text-sm md:text-base lg:text-lg transition-all duration-300 active:scale-95 sm:hover:scale-105 backdrop-blur-sm bg-white/5 hover:bg-white flex items-center justify-center gap-2 touch-manipulation w-full sm:w-auto focus-ring"
               aria-label="View our services"
             >
@@ -233,7 +250,10 @@ export default function Home() {
 
             <div className="text-center mt-8 sm:mt-10 md:mt-12 px-4 animate-slide-in-up" style={{ animationDelay: '0.5s' }}>
               <button
-                onClick={() => setActivePage('catalog')}
+                onClick={() => {
+                  setActivePage('catalog');
+                  router.push('/catalog');
+                }}
                 className="inline-flex items-center justify-center gap-2 sm:gap-3 bg-transparent border-2 border-[#ff6b00] text-[#ff6b00] active:bg-[#ff6b00] active:text-black px-6 sm:px-8 py-3 sm:py-4 rounded-full font-bold text-sm sm:text-base md:text-lg transition-all duration-300 active:scale-95 sm:hover:scale-105 touch-manipulation w-full sm:w-auto"
               >
                 <span>Pogledajte sve proizvode</span>

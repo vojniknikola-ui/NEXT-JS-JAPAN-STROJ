@@ -281,7 +281,6 @@ export default function AdminParts() {
       if (sortDirection) params.append('order', sortDirection);
 
       const url = `/api/parts?${params.toString()}`;
-      console.log('Fetching parts from:', url); // Debug log
       const res = await fetch(url);
 
       if (!res.ok) {
@@ -290,7 +289,6 @@ export default function AdminParts() {
 
       const data = (await res.json()) as PartsResponsePayload | PartRecord[];
       const nextParts = Array.isArray(data) ? data : data.items ?? [];
-      console.log('Loaded parts data:', data); // Debug log
       setParts(nextParts);
     } catch (error) {
       console.error('Error refreshing parts:', error);
@@ -385,8 +383,7 @@ export default function AdminParts() {
         throw new Error(parsed.message);
       }
 
-      const result = await res.json();
-      console.log(editingId ? 'Updated part:' : 'Created part:', result);
+      await res.json();
 
       resetForm();
       await refresh();

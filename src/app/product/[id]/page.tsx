@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Page, SparePart, Availability } from '@/types';
@@ -28,6 +28,7 @@ const FALLBACK_PRODUCT_IMAGE = 'https://via.placeholder.com/1200x900?text=JapanS
 
 export default function ProductDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const productId = parseInt(params.id as string);
 
   const [activePage, setActivePage] = useState<Page>('productDetail');
@@ -90,8 +91,6 @@ export default function ProductDetailPage() {
   const handleAddToCart = () => {
     if (!product) return;
 
-    console.log('Adding product to cart from detail page:', product); // Debug log
-
     addToCart(product);
     setIsAdded(true);
     setTimeout(() => {
@@ -145,7 +144,10 @@ export default function ProductDetailPage() {
           <div className="text-center">
             <h1 className="text-2xl font-bold text-white mb-4">Proizvod nije pronađen</h1>
             <button
-              onClick={() => setActivePage('catalog')}
+              onClick={() => {
+                setActivePage('catalog');
+                router.push('/catalog');
+              }}
               className="bg-[#ff6b00] hover:bg-[#ff7f1a] text-black px-6 py-3 rounded-full font-semibold transition-all duration-300 hover:scale-105"
             >
               Povratak na katalog
