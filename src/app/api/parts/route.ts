@@ -6,6 +6,67 @@ import { revalidatePath } from "next/cache";
 
 export const runtime = 'nodejs';
 
+function createDbErrorResponse(error: unknown): Response {
+  const errorWithCause = error as Error & { cause?: unknown };
+  const rootCause =
+    typeof errorWithCause?.cause === "object" && errorWithCause.cause !== null
+      ? (errorWithCause.cause as {
+          code?: unknown;
+          message?: unknown;
+          detail?: unknown;
+          constraint?: unknown;
+        })
+      : null;
+
+  const messageParts: string[] = [];
+  messageParts.push(error instanceof Error ? error.message : String(error));
+  if (typeof rootCause?.message === "string") messageParts.push(rootCause.message);
+  if (typeof rootCause?.detail === "string") messageParts.push(rootCause.detail);
+  if (typeof rootCause?.constraint === "string") messageParts.push(rootCause.constraint);
+  const message = messageParts.join(" ");
+
+  const code =
+    typeof rootCause?.code === "string"
+      ? rootCause.code
+      : typeof error === "object" &&
+          error !== null &&
+          "code" in error &&
+          typeof (error as { code?: unknown }).code === "string"
+        ? (error as { code: string }).code
+      : "";
+
+  if (code === "23505" || /parts_sku_idx|duplicate key|already exists|unique/i.test(message)) {
+    return Response.json(
+      {
+        error: "SKU već postoji. Unesite jedinstven SKU.",
+        fieldErrors: { sku: ["SKU već postoji."] },
+        formErrors: [],
+      },
+      { status: 409 }
+    );
+  }
+
+  if (
+    code === "23503" ||
+    /foreign key|category_id_fkey|is not present in table "categories"|violates foreign key constraint/i.test(message)
+  ) {
+    return Response.json(
+      {
+        error: "Odabrana kategorija ne postoji.",
+        fieldErrors: { categoryId: ["Odabrana kategorija ne postoji."] },
+        formErrors: [],
+      },
+      { status: 400 }
+    );
+  }
+
+  console.error("Error creating part:", error);
+  return Response.json(
+    { error: "Greška pri spremanju dijela. Pokušajte ponovo." },
+    { status: 500 }
+  );
+}
+
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const q = searchParams.get("q");
@@ -123,16 +184,21 @@ export async function POST(req: Request) {
     );
   }
 
-  const [inserted] = await db.insert(parts).values({
-    ...parsed.data,
-    price: parsed.data.price.toString(),
-    priceWithoutVAT: parsed.data.priceWithoutVAT ? parsed.data.priceWithoutVAT.toString() : undefined,
-    priceWithVAT: parsed.data.priceWithVAT ? parsed.data.priceWithVAT.toString() : undefined,
-    discount: parsed.data.discount ? parsed.data.discount.toString() : undefined,
-    updatedAt: new Date(),
-  }).returning({ id: parts.id });
+  let inserted: { id: number } | undefined;
+  try {
+    [inserted] = await db.insert(parts).values({
+      ...parsed.data,
+      price: parsed.data.price.toString(),
+      priceWithoutVAT: parsed.data.priceWithoutVAT ? parsed.data.priceWithoutVAT.toString() : undefined,
+      priceWithVAT: parsed.data.priceWithVAT ? parsed.data.priceWithVAT.toString() : undefined,
+      discount: parsed.data.discount ? parsed.data.discount.toString() : undefined,
+      updatedAt: new Date(),
+    }).returning({ id: parts.id });
+  } catch (error) {
+    return createDbErrorResponse(error);
+  }
 
   revalidatePath('/catalog');
 
-  return Response.json({ id: inserted.id }, { status: 201 });
+  return Response.json({ id: inserted?.id }, { status: 201 });
 }

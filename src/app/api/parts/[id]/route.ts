@@ -4,6 +4,67 @@ import { eq } from "drizzle-orm";
 import { partUpdateSchema } from "@/lib/validation";
 import { revalidatePath } from "next/cache";
 
+function createDbErrorResponse(error: unknown): Response {
+  const errorWithCause = error as Error & { cause?: unknown };
+  const rootCause =
+    typeof errorWithCause?.cause === "object" && errorWithCause.cause !== null
+      ? (errorWithCause.cause as {
+          code?: unknown;
+          message?: unknown;
+          detail?: unknown;
+          constraint?: unknown;
+        })
+      : null;
+
+  const messageParts: string[] = [];
+  messageParts.push(error instanceof Error ? error.message : String(error));
+  if (typeof rootCause?.message === "string") messageParts.push(rootCause.message);
+  if (typeof rootCause?.detail === "string") messageParts.push(rootCause.detail);
+  if (typeof rootCause?.constraint === "string") messageParts.push(rootCause.constraint);
+  const message = messageParts.join(" ");
+
+  const code =
+    typeof rootCause?.code === "string"
+      ? rootCause.code
+      : typeof error === "object" &&
+          error !== null &&
+          "code" in error &&
+          typeof (error as { code?: unknown }).code === "string"
+        ? (error as { code: string }).code
+      : "";
+
+  if (code === "23505" || /parts_sku_idx|duplicate key|already exists|unique/i.test(message)) {
+    return Response.json(
+      {
+        error: "SKU već postoji. Unesite jedinstven SKU.",
+        fieldErrors: { sku: ["SKU već postoji."] },
+        formErrors: [],
+      },
+      { status: 409 }
+    );
+  }
+
+  if (
+    code === "23503" ||
+    /foreign key|category_id_fkey|is not present in table "categories"|violates foreign key constraint/i.test(message)
+  ) {
+    return Response.json(
+      {
+        error: "Odabrana kategorija ne postoji.",
+        fieldErrors: { categoryId: ["Odabrana kategorija ne postoji."] },
+        formErrors: [],
+      },
+      { status: 400 }
+    );
+  }
+
+  console.error("Part DB error:", error);
+  return Response.json(
+    { error: "Greška pri spremanju izmjena. Pokušajte ponovo." },
+    { status: 500 }
+  );
+}
+
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const [row] = await db.select().from(parts).where(eq(parts.id, Number(id)));
@@ -63,7 +124,20 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (parsed.data.specJson !== undefined) updateData.specJson = parsed.data.specJson;
   if (parsed.data.isActive !== undefined) updateData.isActive = parsed.data.isActive;
 
-  await db.update(parts).set(updateData).where(eq(parts.id, Number(id)));
+  let updated: { id: number } | undefined;
+  try {
+    [updated] = await db
+      .update(parts)
+      .set(updateData)
+      .where(eq(parts.id, Number(id)))
+      .returning({ id: parts.id });
+  } catch (error) {
+    return createDbErrorResponse(error);
+  }
+
+  if (!updated) {
+    return Response.json({ error: "Dio nije pronađen." }, { status: 404 });
+  }
   
   revalidatePath('/catalog');
   
@@ -72,7 +146,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
 export async function DELETE(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  await db.delete(parts).where(eq(parts.id, Number(id)));
+  try {
+    await db.delete(parts).where(eq(parts.id, Number(id)));
+  } catch (error) {
+    return createDbErrorResponse(error);
+  }
   
   revalidatePath('/catalog');
   

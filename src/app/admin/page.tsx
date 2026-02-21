@@ -137,23 +137,56 @@ const getErrorMessage = (error: unknown, fallback: string): string => {
 const normalizeSku = (value: string): string =>
   value.trim().replace(/\s+/g, "-").toUpperCase();
 
-const getApiErrorMessage = (errorData: unknown, fallback: string): string => {
-  if (!errorData || typeof errorData !== "object") return fallback;
+type ApiErrorPayload = {
+  error?: string;
+  formErrors?: string[];
+  fieldErrors?: Record<string, string[] | undefined>;
+};
 
-  const typed = errorData as {
-    error?: string;
-    formErrors?: string[];
-    fieldErrors?: Record<string, string[] | undefined>;
+const fieldLabelMap: Record<string, string> = {
+  sku: "SKU",
+  title: "Naziv",
+  price: "Cijena",
+  priceWithoutVAT: "Cijena bez PDV-a",
+  priceWithVAT: "Cijena sa PDV-om",
+  discount: "Popust",
+  currency: "Valuta",
+  stock: "Zaliha",
+  categoryId: "Kategorija",
+  imageUrl: "URL slike",
+  thumbUrl: "Thumbnail URL",
+  delivery: "Dostupnost",
+};
+
+const parseApiError = (
+  errorData: unknown,
+  fallbackMessage: string
+): { message: string; fieldErrors: Record<string, string> } => {
+  if (!errorData || typeof errorData !== "object") {
+    return { message: fallbackMessage, fieldErrors: {} };
+  }
+
+  const typed = errorData as ApiErrorPayload;
+  const flattenedFieldErrors: Record<string, string> = {};
+
+  if (typed.fieldErrors) {
+    for (const [field, messages] of Object.entries(typed.fieldErrors)) {
+      const firstMessage = messages?.find(Boolean);
+      if (firstMessage) {
+        flattenedFieldErrors[field] = firstMessage;
+      }
+    }
+  }
+
+  const firstFormError = typed.formErrors?.find(Boolean);
+  const firstFieldError = Object.values(flattenedFieldErrors).find(Boolean);
+  const message =
+    typed.error || firstFormError || firstFieldError || fallbackMessage;
+
+  return {
+    message,
+    fieldErrors: flattenedFieldErrors,
   };
-
-  if (typed.error) return typed.error;
-  if (typed.formErrors?.[0]) return typed.formErrors[0];
-
-  const fieldMessage = typed.fieldErrors
-    ? Object.values(typed.fieldErrors).flat().find(Boolean)
-    : undefined;
-
-  return fieldMessage || fallback;
 };
 
 export default function AdminParts() {
@@ -161,6 +194,9 @@ export default function AdminParts() {
   const [parts, setParts] = useState<PartRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [formSuccess, setFormSuccess] = useState<string | null>(null);
+  const [formFieldErrors, setFormFieldErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -179,6 +215,18 @@ export default function AdminParts() {
   const inputClass = 'w-full rounded-2xl border border-white/10 bg-[#111111] px-4 py-3 text-sm text-neutral-100 placeholder:text-neutral-500 outline-none transition focus:border-[#ff6b00]/50 focus:ring-2 focus:ring-[#ff6b00]/60';
   const labelClass = 'block text-[0.7rem] font-semibold uppercase tracking-[0.35em] text-neutral-400 mb-2';
   const validSortFields: SortField[] = ['id', 'sku', 'brand', 'model', 'title', 'stock', 'priceWithoutVAT', 'priceWithVAT', 'createdAt', 'updatedAt'];
+
+  const clearFieldError = (field: string) => {
+    setFormFieldErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
+
+  const getInputClassName = (field: string) =>
+    `${inputClass} ${formFieldErrors[field] ? 'border-red-500/60 focus:border-red-500 focus:ring-red-500/40' : ''}`;
 
   useEffect(() => {
     const loadInitialData = async () => {
@@ -258,7 +306,11 @@ export default function AdminParts() {
     const fd = new FormData();
     fd.append("file", file);
     const resp = await fetch("/api/upload", { method: "POST", body: fd });
-    if (!resp.ok) { alert("Upload nije uspio"); return; }
+    if (!resp.ok) {
+      const errorData = await resp.json().catch(() => ({}));
+      const parsed = parseApiError(errorData, "Upload slike nije uspio");
+      throw new Error(parsed.message);
+    }
     const { url } = await resp.json();
     return url as string;
   }
@@ -267,20 +319,30 @@ export default function AdminParts() {
     e.preventDefault();
     setSaving(true);
     setError(null);
+    setFormError(null);
+    setFormSuccess(null);
+    setFormFieldErrors({});
 
     try {
-      // Validation
-      if (!form.sku?.trim()) {
-        throw new Error("SKU je obavezan!");
-      }
-      if (!form.title?.trim()) {
-        throw new Error("Naziv dijela je obavezan!");
-      }
+      const validationErrors: Record<string, string> = {};
+      if (!form.sku?.trim()) validationErrors.sku = "SKU je obavezan.";
+      if (!form.title?.trim()) validationErrors.title = "Naziv dijela je obavezan.";
+      if (!form.currency?.trim()) validationErrors.currency = "Valuta je obavezna.";
+      if (Number(form.price) < 0) validationErrors.price = "Cijena ne može biti negativna.";
+      if (Number(form.stock) < 0) validationErrors.stock = "Zaliha ne može biti negativna.";
       if (form.priceWithoutVAT && form.priceWithoutVAT < 0) {
-        throw new Error("Cijena bez PDV-a ne može biti negativna!");
+        validationErrors.priceWithoutVAT = "Cijena bez PDV-a ne može biti negativna.";
+      }
+      if (form.priceWithVAT && form.priceWithVAT < 0) {
+        validationErrors.priceWithVAT = "Cijena sa PDV-om ne može biti negativna.";
       }
       if (form.discount && (form.discount < 0 || form.discount > 100)) {
-        throw new Error("Popust mora biti između 0 i 100%!");
+        validationErrors.discount = "Popust mora biti između 0 i 100%.";
+      }
+
+      if (Object.keys(validationErrors).length) {
+        setFormFieldErrors(validationErrors);
+        throw new Error("Provjerite obavezna i neispravna polja.");
       }
 
       const imageUrl = file ? await uploadImage() : form.imageUrl;
@@ -313,9 +375,14 @@ export default function AdminParts() {
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        throw new Error(
-          getApiErrorMessage(errorData, `HTTP ${res.status}: ${res.statusText}`)
+        const parsed = parseApiError(
+          errorData,
+          `HTTP ${res.status}: ${res.statusText}`
         );
+        if (Object.keys(parsed.fieldErrors).length) {
+          setFormFieldErrors(parsed.fieldErrors);
+        }
+        throw new Error(parsed.message);
       }
 
       const result = await res.json();
@@ -324,13 +391,11 @@ export default function AdminParts() {
       resetForm();
       await refresh();
 
-      // Success message
-      setError(null);
-      alert(editingId ? "Dio je uspješno ažuriran!" : "Dio je uspješno dodan!");
+      setFormSuccess(editingId ? "Dio je uspješno ažuriran." : "Dio je uspješno dodan.");
 
     } catch (e: unknown) {
       console.error('Save error:', e);
-      setError(getErrorMessage(e, "Došlo je do greške prilikom spremanja"));
+      setFormError(getErrorMessage(e, "Došlo je do greške prilikom spremanja"));
     } finally {
       setSaving(false);
     }
@@ -341,27 +406,37 @@ export default function AdminParts() {
 
     setLoading(true);
     setError(null);
+    setFormError(null);
+    setFormSuccess(null);
+    setFormFieldErrors({});
 
     try {
       const res = await fetch(`/api/parts/${id}`, { method: "DELETE" });
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP ${res.status}: ${res.statusText}`);
+        const parsed = parseApiError(
+          errorData,
+          `HTTP ${res.status}: ${res.statusText}`
+        );
+        throw new Error(parsed.message);
       }
 
       await refresh();
-      alert("Dio je uspješno obrisan!");
+      setFormSuccess("Dio je uspješno obrisan.");
 
     } catch (e: unknown) {
       console.error('Delete error:', e);
-      setError(getErrorMessage(e, "Greška pri brisanju dijela"));
+      setFormError(getErrorMessage(e, "Greška pri brisanju dijela"));
     } finally {
       setLoading(false);
     }
   }
 
   function editPart(p: PartRecord) {
+    setFormError(null);
+    setFormSuccess(null);
+    setFormFieldErrors({});
     setEditingId(p.id);
     setForm({
       sku: p.sku,
@@ -396,6 +471,9 @@ export default function AdminParts() {
     setEditingId(null);
     setForm(createInitialForm(cats[0]?.id || 1));
     setFile(null);
+    setFormError(null);
+    setFormSuccess(null);
+    setFormFieldErrors({});
   }
 
   // Filter and sort parts
@@ -571,6 +649,33 @@ export default function AdminParts() {
           </div>
 
           <form onSubmit={savePart} className="mt-8 space-y-8">
+            {formError && (
+              <div className="rounded-2xl border border-red-500/40 bg-red-950/30 px-4 py-3">
+                <p className="text-sm font-semibold text-red-300">Greška pri spremanju</p>
+                <p className="mt-1 text-sm text-red-200">{formError}</p>
+              </div>
+            )}
+
+            {formSuccess && (
+              <div className="rounded-2xl border border-emerald-500/40 bg-emerald-950/30 px-4 py-3">
+                <p className="text-sm font-semibold text-emerald-300">Uspješno</p>
+                <p className="mt-1 text-sm text-emerald-200">{formSuccess}</p>
+              </div>
+            )}
+
+            {Object.keys(formFieldErrors).length > 0 && (
+              <div className="rounded-2xl border border-amber-500/40 bg-amber-950/30 px-4 py-3">
+                <p className="text-sm font-semibold text-amber-300">Provjerite polja</p>
+                <ul className="mt-2 space-y-1 text-sm text-amber-200">
+                  {Object.entries(formFieldErrors).map(([field, message]) => (
+                    <li key={field}>
+                      <span className="font-semibold">{fieldLabelMap[field] || field}:</span> {message}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             <div>
               <h3 className="text-lg font-bold text-white mb-4 pb-2 border-b border-white/10">Osnovni podaci</h3>
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -618,8 +723,11 @@ export default function AdminParts() {
                     type="text"
                     placeholder="SKU broj"
                     value={form.sku}
-                    onChange={e => setForm({ ...form, sku: normalizeSku(e.target.value) })}
-                    className={inputClass}
+                    onChange={e => {
+                      clearFieldError('sku');
+                      setForm({ ...form, sku: normalizeSku(e.target.value) });
+                    }}
+                    className={getInputClassName('sku')}
                     required
                   />
                 </div>
@@ -631,8 +739,11 @@ export default function AdminParts() {
                     type="text"
                     placeholder="Naziv dijela"
                     value={form.title}
-                    onChange={e => setForm({ ...form, title: e.target.value })}
-                    className={inputClass}
+                    onChange={e => {
+                      clearFieldError('title');
+                      setForm({ ...form, title: e.target.value });
+                    }}
+                    className={getInputClassName('title')}
                     required
                   />
                 </div>
@@ -680,16 +791,22 @@ export default function AdminParts() {
                     type="number"
                     placeholder="0"
                     value={form.stock}
-                    onChange={e => setForm({ ...form, stock: Number(e.target.value) })}
-                    className={inputClass}
+                    onChange={e => {
+                      clearFieldError('stock');
+                      setForm({ ...form, stock: Number(e.target.value) });
+                    }}
+                    className={getInputClassName('stock')}
                   />
                 </div>
                 <div>
                   <label className={labelClass}>Kategorija</label>
                   <select
                     value={form.categoryId}
-                    onChange={e => setForm({ ...form, categoryId: Number(e.target.value) })}
-                    className={inputClass}
+                    onChange={e => {
+                      clearFieldError('categoryId');
+                      setForm({ ...form, categoryId: Number(e.target.value) });
+                    }}
+                    className={getInputClassName('categoryId')}
                   >
                     {cats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
@@ -701,8 +818,11 @@ export default function AdminParts() {
                     step="0.01"
                     placeholder="0.00"
                     value={form.priceWithoutVAT || ""}
-                    onChange={e => setForm({ ...form, priceWithoutVAT: Number(e.target.value) })}
-                    className={inputClass}
+                    onChange={e => {
+                      clearFieldError('priceWithoutVAT');
+                      setForm({ ...form, priceWithoutVAT: Number(e.target.value) });
+                    }}
+                    className={getInputClassName('priceWithoutVAT')}
                   />
                 </div>
                 <div>
@@ -712,8 +832,11 @@ export default function AdminParts() {
                     step="0.01"
                     placeholder="0.00"
                     value={form.priceWithVAT || ""}
-                    onChange={e => setForm({ ...form, priceWithVAT: Number(e.target.value) })}
-                    className={inputClass}
+                    onChange={e => {
+                      clearFieldError('priceWithVAT');
+                      setForm({ ...form, priceWithVAT: Number(e.target.value) });
+                    }}
+                    className={getInputClassName('priceWithVAT')}
                   />
                 </div>
                 <div>
@@ -725,8 +848,11 @@ export default function AdminParts() {
                     max="100"
                     placeholder="0"
                     value={form.discount || ""}
-                    onChange={e => setForm({ ...form, discount: Number(e.target.value) })}
-                    className={inputClass}
+                    onChange={e => {
+                      clearFieldError('discount');
+                      setForm({ ...form, discount: Number(e.target.value) });
+                    }}
+                    className={getInputClassName('discount')}
                   />
                 </div>
                 <div>
@@ -736,8 +862,11 @@ export default function AdminParts() {
                     step="0.01"
                     placeholder="0.00"
                     value={form.price}
-                    onChange={e => setForm({ ...form, price: Number(e.target.value) })}
-                    className={inputClass}
+                    onChange={e => {
+                      clearFieldError('price');
+                      setForm({ ...form, price: Number(e.target.value) });
+                    }}
+                    className={getInputClassName('price')}
                     required
                   />
                 </div>
@@ -747,8 +876,11 @@ export default function AdminParts() {
                     type="text"
                     placeholder="EUR"
                     value={form.currency}
-                    onChange={e => setForm({ ...form, currency: e.target.value.toUpperCase() })}
-                    className={inputClass}
+                    onChange={e => {
+                      clearFieldError('currency');
+                      setForm({ ...form, currency: e.target.value.toUpperCase() });
+                    }}
+                    className={getInputClassName('currency')}
                     maxLength={3}
                   />
                 </div>
