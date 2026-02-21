@@ -85,7 +85,7 @@ export default function Home() {
             </span>
           </div>
           <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-black text-white mb-3 sm:mb-4 md:mb-6 tracking-tight leading-tight animate-slide-in-up" style={{ animationDelay: '0.2s' }}>
-            Japan<span className="text-primary-500 bg-gradient-to-r from-primary-400 to-primary-600 bg-clip-text text-transparent">Stroj</span>
+            Japan<span className="text-[#ff6b00]">Stroj</span>
           </h1>
           <p className="text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl text-neutral-200 mb-6 sm:mb-8 max-w-3xl mx-auto leading-relaxed px-4 animate-slide-in-up" style={{ animationDelay: '0.4s' }}>
             Vaš pouzdan partner za rezervne dijelove građevinskih strojeva.
@@ -121,67 +121,6 @@ export default function Home() {
             <span className="text-white/60 text-xs font-medium uppercase tracking-wider">Scroll</span>
             <div className="w-6 h-10 border-2 border-white/40 rounded-full flex justify-center">
               <div className="w-1 h-3 bg-white/60 rounded-full mt-2 animate-pulse"></div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Stats Section */}
-      <section className="py-10 sm:py-12 md:py-16 lg:py-20 bg-secondary-900 relative overflow-hidden">
-        {/* Background pattern */}
-        <div className="absolute inset-0 opacity-5">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,_rgba(255,107,0,0.1)_0%,_transparent_50%)]"></div>
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,_rgba(6,182,212,0.1)_0%,_transparent_50%)]"></div>
-        </div>
-
-        <div className="container mx-auto px-3 sm:px-4 relative z-10">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 md:gap-8 text-center">
-            <div className="group p-3 sm:p-4 glass rounded-2xl hover:bg-white/10 transition-all duration-300 animate-slide-in-up">
-              <div className="flex items-center justify-center mb-2 sm:mb-3">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-primary-500/20 rounded-full flex items-center justify-center mr-2 sm:mr-3 group-hover:bg-primary-500/30 transition-colors">
-                  <svg className="w-4 h-4 sm:w-5 sm:h-5 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                  </svg>
-                </div>
-              </div>
-              <div className="text-2xl sm:text-3xl md:text-4xl font-black text-primary-400 mb-1 sm:mb-2 group-hover:text-primary-300 transition-colors animate-pulse-glow">500+</div>
-              <div className="text-neutral-400 uppercase tracking-wide text-xs sm:text-sm leading-tight font-medium">Proizvoda</div>
-            </div>
-
-            <div className="group p-3 sm:p-4 glass rounded-2xl hover:bg-white/10 transition-all duration-300 animate-slide-in-up" style={{ animationDelay: '0.1s' }}>
-              <div className="flex items-center justify-center mb-2 sm:mb-3">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-accent-500/20 rounded-full flex items-center justify-center mr-2 sm:mr-3 group-hover:bg-accent-500/30 transition-colors">
-                  <svg className="w-4 h-4 sm:w-5 sm:h-5 text-accent-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                  </svg>
-                </div>
-              </div>
-              <div className="text-2xl sm:text-3xl md:text-4xl font-black text-accent-400 mb-1 sm:mb-2 group-hover:text-accent-300 transition-colors">50+</div>
-              <div className="text-neutral-400 uppercase tracking-wide text-xs sm:text-sm leading-tight font-medium">Brendova</div>
-            </div>
-
-            <div className="group p-3 sm:p-4 glass rounded-2xl hover:bg-white/10 transition-all duration-300 animate-slide-in-up" style={{ animationDelay: '0.2s' }}>
-              <div className="flex items-center justify-center mb-2 sm:mb-3">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-secondary-600/50 rounded-full flex items-center justify-center mr-2 sm:mr-3 group-hover:bg-secondary-500/50 transition-colors">
-                  <svg className="w-4 h-4 sm:w-5 sm:h-5 text-secondary-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-              </div>
-              <div className="text-2xl sm:text-3xl md:text-4xl font-black text-secondary-300 mb-1 sm:mb-2 group-hover:text-secondary-200 transition-colors">10+</div>
-              <div className="text-neutral-400 uppercase tracking-wide text-xs sm:text-sm leading-tight font-medium">Godina iskustva</div>
-            </div>
-
-            <div className="group p-3 sm:p-4 glass rounded-2xl hover:bg-white/10 transition-all duration-300 animate-slide-in-up" style={{ animationDelay: '0.3s' }}>
-              <div className="flex items-center justify-center mb-2 sm:mb-3">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-success/20 rounded-full flex items-center justify-center mr-2 sm:mr-3 group-hover:bg-success/30 transition-colors">
-                  <svg className="w-4 h-4 sm:w-5 sm:h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192L5.636 18.364M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-              </div>
-              <div className="text-2xl sm:text-3xl md:text-4xl font-black text-success mb-1 sm:mb-2 group-hover:text-green-300 transition-colors">24/7</div>
-              <div className="text-neutral-400 uppercase tracking-wide text-xs sm:text-sm leading-tight font-medium">Podrška</div>
             </div>
           </div>
         </div>
