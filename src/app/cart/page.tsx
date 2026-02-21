@@ -6,12 +6,15 @@ import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import ProformaInvoiceModal from '@/components/ProformaInvoiceModal';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import { useToast } from '@/components/ui/ToastProvider';
 import { Page } from '@/types';
 import { useCart } from '@/lib/hooks/useCart';
 import { MinusIcon, PlusIcon, TrashIcon, ShoppingBagIcon, ArrowLeftIcon } from '@/lib/icons';
 
 export default function CartPage() {
    const router = useRouter();
+   const toast = useToast();
    const [activePage, setActivePage] = useState<Page>('cart');
    const { cartItems, cartItemCount, cartTotal, updateQuantity, removeFromCart, clearCart } = useCart();
    const [isOrdering, setIsOrdering] = useState(false);
@@ -50,6 +53,12 @@ export default function CartPage() {
     }, 2000);
 
     setIsOrdering(false);
+  };
+
+  const confirmClearCart = () => {
+    clearCart();
+    setShowClearConfirm(false);
+    toast.info('Košarica je ispražnjena.');
   };
 
   return (
@@ -122,6 +131,7 @@ export default function CartPage() {
                   {cartItems.map((item, index) => (
                     <div
                       key={item.part.id}
+                      data-testid="cart-item"
                       className="bg-[#101010] border border-white/5 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 hover:border-[#ff6b00]/30 transition-all duration-300 hover:shadow-lg hover:shadow-[#ff6b00]/5"
                       style={{ animationDelay: `${index * 100}ms` }}
                     >
@@ -176,13 +186,15 @@ export default function CartPage() {
                               <button
                                 onClick={() => updateQuantity(item.part.id, item.quantity - 1)}
                                 disabled={item.quantity <= 1}
+                                data-testid={`cart-decrease-${item.part.id}`}
                                 className="w-8 h-8 sm:w-9 sm:h-9 bg-[#1a1a1a] hover:bg-[#ff6b00] hover:text-black disabled:bg-[#0f0f0f] disabled:text-neutral-600 text-white rounded-full flex items-center justify-center transition-all active:scale-95 touch-manipulation disabled:cursor-not-allowed"
                               >
                                 <MinusIcon className="w-3 h-3 sm:w-4 sm:h-4" />
                               </button>
-                              <span className="w-10 sm:w-12 text-center font-semibold text-white text-base sm:text-lg min-w-[2.5rem]">{item.quantity}</span>
+                              <span data-testid={`cart-qty-${item.part.id}`} className="w-10 sm:w-12 text-center font-semibold text-white text-base sm:text-lg min-w-[2.5rem]">{item.quantity}</span>
                               <button
                                 onClick={() => updateQuantity(item.part.id, item.quantity + 1)}
+                                data-testid={`cart-increase-${item.part.id}`}
                                 className="w-8 h-8 sm:w-9 sm:h-9 bg-[#1a1a1a] hover:bg-[#ff6b00] hover:text-black text-white rounded-full flex items-center justify-center transition-all active:scale-95 touch-manipulation"
                               >
                                 <PlusIcon className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -208,7 +220,7 @@ export default function CartPage() {
                 </div>
 
                 {/* Cart Summary */}
-                <div className="bg-gradient-to-r from-[#101010] to-[#0f0f0f] border border-[#ff6b00]/20 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 sticky safe-sticky-bottom lg:relative lg:bottom-auto backdrop-blur-sm shadow-2xl shadow-[#ff6b00]/10">
+                <div className="bg-gradient-to-r from-[#101010] to-[#0f0f0f] border border-[#ff6b00]/20 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 md:sticky md:safe-sticky-bottom lg:relative lg:bottom-auto backdrop-blur-sm shadow-2xl shadow-[#ff6b00]/10">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-6">
                     <div>
                       <h3 className="text-xl sm:text-2xl font-bold text-white mb-1 sm:mb-2">Ukupno</h3>
@@ -244,6 +256,7 @@ export default function CartPage() {
                     </button>
                     <button
                       onClick={() => setShowProformaModal(true)}
+                      data-testid="open-proforma-modal"
                       className="flex-1 bg-gradient-to-r from-[#1a1a1a] to-[#0f0f0f] border border-[#ff6b00]/50 text-[#ff6b00] hover:bg-[#ff6b00]/10 active:bg-[#ff6b00]/20 px-4 sm:px-6 py-3 sm:py-4 rounded-full font-semibold text-sm sm:text-base transition-all active:scale-95 sm:hover:scale-105 touch-manipulation flex items-center justify-center gap-2"
                     >
                       <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -300,46 +313,22 @@ export default function CartPage() {
                   </div>
                 </div>
 
-                {/* Clear Cart Confirmation Modal */}
-                {showClearConfirm && (
-                  <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-[#101010] border border-white/10 rounded-2xl p-6 max-w-sm w-full mx-auto">
-                      <div className="text-center">
-                        <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <TrashIcon className="w-8 h-8 text-red-400" />
-                        </div>
-                        <h3 className="text-xl font-bold text-white mb-2">Isprazniti košaricu?</h3>
-                        <p className="text-neutral-400 text-sm mb-6">
-                          Ova akcija će ukloniti sve artikle iz vaše košarice. Ova akcija se ne može poništiti.
-                        </p>
-                        <div className="flex gap-3">
-                          <button
-                            onClick={() => setShowClearConfirm(false)}
-                            className="flex-1 px-4 py-3 border border-white/20 text-white rounded-full font-semibold transition-all active:scale-95 touch-manipulation"
-                          >
-                            Odustani
-                          </button>
-                          <button
-                            onClick={() => {
-                              clearCart();
-                              setShowClearConfirm(false);
-                            }}
-                            className="flex-1 px-4 py-3 bg-red-500 text-white rounded-full font-semibold transition-all active:scale-95 touch-manipulation"
-                          >
-                            Isprazni
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
                 {/* Proforma Invoice Modal */}
                 <ProformaInvoiceModal
                   isOpen={showProformaModal}
                   onClose={() => setShowProformaModal(false)}
                   cartItems={cartItems}
                   cartTotal={cartTotal}
+                />
+                <ConfirmDialog
+                  isOpen={showClearConfirm}
+                  title="Isprazniti košaricu?"
+                  description="Ova akcija će ukloniti sve artikle iz košarice."
+                  confirmLabel="Isprazni"
+                  cancelLabel="Odustani"
+                  onConfirm={confirmClearCart}
+                  onCancel={() => setShowClearConfirm(false)}
+                  variant="danger"
                 />
               </div>
             )}

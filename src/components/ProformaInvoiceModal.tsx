@@ -5,6 +5,7 @@ import Modal from '@/components/ui/Modal';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import { CartItem } from '@/types';
+import { useToast } from '@/components/ui/ToastProvider';
 
 interface CompanyDetails {
   companyName: string;
@@ -27,6 +28,7 @@ export default function ProformaInvoiceModal({
   cartItems,
   cartTotal,
 }: ProformaInvoiceModalProps) {
+  const toast = useToast();
   const [companyDetails, setCompanyDetails] = useState<CompanyDetails>({
     companyName: '',
     idNumber: '',
@@ -35,18 +37,38 @@ export default function ProformaInvoiceModal({
     address: '',
   });
   const [isGenerating, setIsGenerating] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof CompanyDetails, string>>>({});
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const handleInputChange = (field: keyof CompanyDetails, value: string) => {
+    setSubmitError(null);
+    setFieldErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
     setCompanyDetails(prev => ({ ...prev, [field]: value }));
   };
 
   const generatePDF = async () => {
-    if (!companyDetails.companyName || !companyDetails.idNumber || !companyDetails.pdvNumber || !companyDetails.name || !companyDetails.address) {
-      alert('Molimo popunite sva polja');
+    const nextFieldErrors: Partial<Record<keyof CompanyDetails, string>> = {};
+    if (!companyDetails.companyName.trim()) nextFieldErrors.companyName = 'Naziv firme je obavezan.';
+    if (!companyDetails.idNumber.trim()) nextFieldErrors.idNumber = 'ID broj je obavezan.';
+    if (!companyDetails.pdvNumber.trim()) nextFieldErrors.pdvNumber = 'PDV broj je obavezan.';
+    if (!companyDetails.name.trim()) nextFieldErrors.name = 'Ime i prezime su obavezni.';
+    if (!companyDetails.address.trim()) nextFieldErrors.address = 'Adresa je obavezna.';
+
+    if (Object.keys(nextFieldErrors).length > 0) {
+      setFieldErrors(nextFieldErrors);
+      setSubmitError('Popunite sva obavezna polja prije generisanja predračuna.');
+      toast.warning('Nedostaju podaci', 'Popunite sva obavezna polja.');
       return;
     }
 
     setIsGenerating(true);
+    setSubmitError(null);
+    setFieldErrors({});
 
     try {
       const response = await fetch('/api/generate-invoice', {
@@ -78,7 +100,7 @@ export default function ProformaInvoiceModal({
       link.remove();
       URL.revokeObjectURL(downloadUrl);
 
-      alert(`Predračun ${invoiceNumber} je generisan i preuzet na računar.`);
+      toast.success('Predračun je spreman', `Predračun ${invoiceNumber} je preuzet na računar.`);
 
       setCompanyDetails({
         companyName: '',
@@ -87,12 +109,15 @@ export default function ProformaInvoiceModal({
         name: '',
         address: '',
       });
+      setSubmitError(null);
+      setFieldErrors({});
       onClose();
     } catch (error) {
       console.error('Error generating invoice:', error);
       const message =
         error instanceof Error ? error.message : 'Došlo je do greške prilikom generisanja predračuna';
-      alert(message);
+      setSubmitError(message);
+      toast.error('Generisanje nije uspjelo', message);
     } finally {
       setIsGenerating(false);
     }
@@ -104,68 +129,83 @@ export default function ProformaInvoiceModal({
         <p className="text-sm text-neutral-300">
           Nakon potvrde, PDF predračun će biti automatski preuzet.
         </p>
+        {submitError && (
+          <div className="rounded-xl border border-red-500/40 bg-red-950/35 px-3 py-2 text-sm text-red-200">
+            {submitError}
+          </div>
+        )}
         <div>
-          <label className="block text-sm font-semibold text-neutral-100 mb-1">
+          <label htmlFor="invoice-company-name" className="block text-sm font-semibold text-neutral-100 mb-1">
             Naziv firme *
           </label>
           <Input
+            id="invoice-company-name"
             type="text"
             value={companyDetails.companyName}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('companyName', e.target.value)}
             placeholder="Unesite naziv firme"
             className="w-full"
+            error={fieldErrors.companyName}
           />
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-neutral-100 mb-1">
+          <label htmlFor="invoice-id-number" className="block text-sm font-semibold text-neutral-100 mb-1">
             ID broj *
           </label>
           <Input
+            id="invoice-id-number"
             type="text"
             value={companyDetails.idNumber}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('idNumber', e.target.value)}
             placeholder="Unesite ID broj"
             className="w-full"
+            error={fieldErrors.idNumber}
           />
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-neutral-100 mb-1">
+          <label htmlFor="invoice-pdv-number" className="block text-sm font-semibold text-neutral-100 mb-1">
             PDV broj *
           </label>
           <Input
+            id="invoice-pdv-number"
             type="text"
             value={companyDetails.pdvNumber}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('pdvNumber', e.target.value)}
             placeholder="Unesite PDV broj"
             className="w-full"
+            error={fieldErrors.pdvNumber}
           />
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-neutral-100 mb-1">
+          <label htmlFor="invoice-contact-name" className="block text-sm font-semibold text-neutral-100 mb-1">
             Ime i prezime *
           </label>
           <Input
+            id="invoice-contact-name"
             type="text"
             value={companyDetails.name}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('name', e.target.value)}
             placeholder="Unesite ime i prezime"
             className="w-full"
+            error={fieldErrors.name}
           />
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-neutral-100 mb-1">
+          <label htmlFor="invoice-company-address" className="block text-sm font-semibold text-neutral-100 mb-1">
             Adresa firme *
           </label>
           <Input
+            id="invoice-company-address"
             type="text"
             value={companyDetails.address}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('address', e.target.value)}
             placeholder="Unesite adresu firme"
             className="w-full"
+            error={fieldErrors.address}
           />
         </div>
 
@@ -181,6 +221,7 @@ export default function ProformaInvoiceModal({
             onClick={generatePDF}
             disabled={isGenerating}
             className="flex-1"
+            data-testid="generate-proforma-button"
           >
             {isGenerating ? 'Generisanje...' : 'Generiši PDF'}
           </Button>

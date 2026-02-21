@@ -1,5 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const E2E_BASE_URL = 'http://localhost:3200';
+
 export default defineConfig({
   testDir: './tests',
   fullyParallel: true,
@@ -8,7 +10,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL: E2E_BASE_URL,
     trace: 'on-first-retry',
   },
   projects: [
@@ -26,8 +28,9 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:3000',
-    reuseExistingServer: !process.env.CI,
+    command: 'npm run dev -- --webpack --port 3200',
+    url: E2E_BASE_URL,
+    timeout: 180 * 1000,
+    reuseExistingServer: true,
   },
 });

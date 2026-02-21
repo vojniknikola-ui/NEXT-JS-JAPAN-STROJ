@@ -167,10 +167,16 @@ body {
   }
 
   .safe-main-padding {
-    padding-bottom: calc(max(env(safe-area-inset-bottom), 0px) + 6rem);
+    padding-bottom: calc(max(env(safe-area-inset-bottom), 0px) + 6.75rem);
   }
 
   .safe-sticky-bottom {
-    bottom: calc(max(env(safe-area-inset-bottom), 0px) + 5.75rem);
+    bottom: calc(max(env(safe-area-inset-bottom), 0px) + 6.25rem);
+  }
+}
+
+@media (max-height: 700px) {
+  .safe-sticky-bottom {
+    bottom: 0.75rem;
   }
 }

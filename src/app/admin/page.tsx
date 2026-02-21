@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import { useToast } from '@/components/ui/ToastProvider';
 
 type Category = { id: number; name: string };
 type SortDirection = 'asc' | 'desc';
@@ -190,16 +192,18 @@ const parseApiError = (
 };
 
 export default function AdminParts() {
+  const toast = useToast();
   const [cats, setCats] = useState<Category[]>([]);
   const [parts, setParts] = useState<PartRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
-  const [formSuccess, setFormSuccess] = useState<string | null>(null);
   const [formFieldErrors, setFormFieldErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const [form, setForm] = useState<PartInput>(() => createInitialForm(1));
   const [q, setQ] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -318,7 +322,6 @@ export default function AdminParts() {
     setSaving(true);
     setError(null);
     setFormError(null);
-    setFormSuccess(null);
     setFormFieldErrors({});
 
     try {
@@ -388,23 +391,21 @@ export default function AdminParts() {
       resetForm();
       await refresh();
 
-      setFormSuccess(editingId ? "Dio je uspješno ažuriran." : "Dio je uspješno dodan.");
+      toast.success(editingId ? 'Dio je uspješno ažuriran.' : 'Dio je uspješno dodan.');
 
     } catch (e: unknown) {
       console.error('Save error:', e);
       setFormError(getErrorMessage(e, "Došlo je do greške prilikom spremanja"));
+      toast.error('Spremanje nije uspjelo', getErrorMessage(e, 'Provjerite unesene podatke i pokušajte ponovo.'));
     } finally {
       setSaving(false);
     }
   }
 
   async function deletePart(id: number) {
-    if (!confirm("Jeste li sigurni da želite obrisati ovaj dio? Ova akcija se ne može poništiti.")) return;
-
     setLoading(true);
     setError(null);
     setFormError(null);
-    setFormSuccess(null);
     setFormFieldErrors({});
 
     try {
@@ -420,19 +421,30 @@ export default function AdminParts() {
       }
 
       await refresh();
-      setFormSuccess("Dio je uspješno obrisan.");
+      toast.success('Dio je uspješno obrisan.');
 
     } catch (e: unknown) {
       console.error('Delete error:', e);
       setFormError(getErrorMessage(e, "Greška pri brisanju dijela"));
+      toast.error('Brisanje nije uspjelo', getErrorMessage(e, 'Pokušajte ponovo.'));
     } finally {
       setLoading(false);
     }
   }
 
+  const requestDeletePart = (id: number) => {
+    setPendingDeleteId(id);
+  };
+
+  const confirmDeletePart = async () => {
+    if (pendingDeleteId === null) return;
+    const id = pendingDeleteId;
+    setPendingDeleteId(null);
+    await deletePart(id);
+  };
+
   function editPart(p: PartRecord) {
     setFormError(null);
-    setFormSuccess(null);
     setFormFieldErrors({});
     setEditingId(p.id);
     setForm({
@@ -469,9 +481,18 @@ export default function AdminParts() {
     setForm(createInitialForm(cats[0]?.id || 1));
     setFile(null);
     setFormError(null);
-    setFormSuccess(null);
     setFormFieldErrors({});
   }
+
+  const requestResetForm = () => {
+    setIsResetDialogOpen(true);
+  };
+
+  const confirmResetForm = () => {
+    setIsResetDialogOpen(false);
+    resetForm();
+    toast.info('Forma je resetovana.');
+  };
 
   // Filter and sort parts
   const filteredAndSorted = useMemo(() => {
@@ -526,7 +547,7 @@ export default function AdminParts() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#050505] via-[#0b0b0b] to-[#111111] py-16 px-6">
+    <div className="min-h-screen bg-gradient-to-b from-[#050505] via-[#0b0b0b] to-[#111111] px-3 py-8 sm:px-4 sm:py-10 md:px-6 md:py-14 lg:py-16">
       <div className="mx-auto w-full max-w-7xl space-y-14">
         <div className="flex flex-col gap-3">
           <span className="inline-flex w-max items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.4em] text-neutral-300">
@@ -650,13 +671,6 @@ export default function AdminParts() {
               <div className="rounded-2xl border border-red-500/40 bg-red-950/30 px-4 py-3">
                 <p className="text-sm font-semibold text-red-300">Greška pri spremanju</p>
                 <p className="mt-1 text-sm text-red-200">{formError}</p>
-              </div>
-            )}
-
-            {formSuccess && (
-              <div className="rounded-2xl border border-emerald-500/40 bg-emerald-950/30 px-4 py-3">
-                <p className="text-sm font-semibold text-emerald-300">Uspješno</p>
-                <p className="mt-1 text-sm text-emerald-200">{formSuccess}</p>
               </div>
             )}
 
@@ -788,6 +802,7 @@ export default function AdminParts() {
                     type="number"
                     placeholder="0"
                     value={form.stock}
+                    id="part-stock"
                     onChange={e => {
                       clearFieldError('stock');
                       setForm({ ...form, stock: Number(e.target.value) });
@@ -799,6 +814,7 @@ export default function AdminParts() {
                   <label className={labelClass}>Kategorija</label>
                   <select
                     value={form.categoryId}
+                    id="part-category"
                     onChange={e => {
                       clearFieldError('categoryId');
                       setForm({ ...form, categoryId: Number(e.target.value) });
@@ -859,6 +875,7 @@ export default function AdminParts() {
                     step="0.01"
                     placeholder="0.00"
                     value={form.price}
+                    id="part-price"
                     onChange={e => {
                       clearFieldError('price');
                       setForm({ ...form, price: Number(e.target.value) });
@@ -873,6 +890,7 @@ export default function AdminParts() {
                     type="text"
                     placeholder="EUR"
                     value={form.currency}
+                    id="part-currency"
                     onChange={e => {
                       clearFieldError('currency');
                       setForm({ ...form, currency: e.target.value.toUpperCase() });
@@ -997,6 +1015,7 @@ export default function AdminParts() {
                 type="submit"
                 disabled={saving || loading}
                 className={primaryButtonClass}
+                data-testid="admin-save-button"
               >
                 {saving ? (
                   <div className="flex items-center gap-2">
@@ -1007,12 +1026,7 @@ export default function AdminParts() {
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  const confirmed = confirm('Jeste li sigurni da želite resetovati formu? Sve unesene podatke ćete izgubiti.');
-                  if (confirmed) {
-                    resetForm();
-                  }
-                }}
+                onClick={requestResetForm}
                 disabled={saving || loading}
                 className={secondaryButtonClass}
               >
@@ -1137,7 +1151,7 @@ export default function AdminParts() {
                   }));
 
                   if (csvData.length === 0) {
-                    alert('Nema podataka za izvoz.');
+                    toast.info('Nema podataka za izvoz.');
                     return;
                   }
 
@@ -1159,12 +1173,12 @@ export default function AdminParts() {
               </button>
             </div>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-[#1a1a1a] border-b border-white/10">
+          <div className="overflow-x-auto rounded-2xl border border-white/10">
+            <table className="w-full min-w-[2400px] text-xs sm:text-sm">
+              <thead className="border-b border-white/10 bg-[#1a1a1a]">
                 <tr>
-                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold cursor-pointer hover:text-white" onClick={() => handleSort('id')}>ID {sortField === 'id' && (sortDirection === 'asc' ? '↑' : '↓')}</th>
-                  <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Slika</th>
+                  <th className="sticky left-0 z-40 cursor-pointer bg-[#1a1a1a] px-4 py-3 text-left font-semibold text-neutral-200 hover:text-white" onClick={() => handleSort('id')}>ID {sortField === 'id' && (sortDirection === 'asc' ? '↑' : '↓')}</th>
+                  <th className="sticky z-40 bg-[#1a1a1a] px-4 py-3 text-left font-semibold text-neutral-200" style={{ left: 72 }}>Slika</th>
                   <th className="px-4 py-3 text-left text-neutral-200 font-semibold cursor-pointer hover:text-white" onClick={() => handleSort('sku')}>SKU {sortField === 'sku' && (sortDirection === 'asc' ? '↑' : '↓')}</th>
                   <th className="px-4 py-3 text-left text-neutral-200 font-semibold cursor-pointer hover:text-white" onClick={() => handleSort('brand')}>Marka {sortField === 'brand' && (sortDirection === 'asc' ? '↑' : '↓')}</th>
                   <th className="px-4 py-3 text-left text-neutral-200 font-semibold cursor-pointer hover:text-white" onClick={() => handleSort('model')}>Model {sortField === 'model' && (sortDirection === 'asc' ? '↑' : '↓')}</th>
@@ -1189,14 +1203,14 @@ export default function AdminParts() {
                   <th className="px-4 py-3 text-left text-neutral-200 font-semibold">Status</th>
                   <th className="px-4 py-3 text-left text-neutral-200 font-semibold cursor-pointer hover:text-white" onClick={() => handleSort('createdAt')}>Kreirano {sortField === 'createdAt' && (sortDirection === 'asc' ? '↑' : '↓')}</th>
                   <th className="px-4 py-3 text-left text-neutral-200 font-semibold cursor-pointer hover:text-white" onClick={() => handleSort('updatedAt')}>Ažurirano {sortField === 'updatedAt' && (sortDirection === 'asc' ? '↑' : '↓')}</th>
-                  <th className="px-4 py-3 text-center text-neutral-200 font-semibold">Akcije</th>
+                  <th className="sticky right-0 z-40 bg-[#1a1a1a] px-4 py-3 text-center font-semibold text-neutral-200">Akcije</th>
                 </tr>
               </thead>
               <tbody>
                 {paginatedParts.map((p) => (
-                  <tr key={p.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                    <td className="px-4 py-3 text-neutral-100 font-mono text-xs">{p.id}</td>
-                    <td className="px-4 py-3">
+                  <tr key={p.id} className="border-b border-white/5 transition-colors odd:bg-[#121212]/45 hover:bg-white/5">
+                    <td className="sticky left-0 z-30 bg-[#141414] px-4 py-3 font-mono text-xs text-neutral-100">{p.id}</td>
+                    <td className="sticky z-30 bg-[#141414] px-4 py-3" style={{ left: 72 }}>
                       {p.imageUrl ? (
                         <Image
                           src={p.imageUrl}
@@ -1212,24 +1226,24 @@ export default function AdminParts() {
                         </div>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-neutral-100 font-mono text-xs">{p.sku}</td>
+                    <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-neutral-100">{p.sku}</td>
                     <td className="px-4 py-3 text-neutral-100">{p.brand || '-'}</td>
                     <td className="px-4 py-3 text-neutral-100">{p.model || '-'}</td>
-                    <td className="px-4 py-3 text-neutral-100 font-mono text-xs">{p.catalogNumber || '-'}</td>
-                    <td className="px-4 py-3 text-neutral-100 font-medium max-w-[200px] truncate">{p.title}</td>
-                    <td className="px-4 py-3 text-neutral-100 max-w-[150px] truncate">{p.application || '-'}</td>
-                    <td className="px-4 py-3 text-neutral-100 max-w-[200px] truncate">{p.description || '-'}</td>
-                    <td className="px-4 py-3 text-neutral-100 text-xs">
+                    <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-neutral-100">{p.catalogNumber || '-'}</td>
+                    <td className="max-w-[240px] whitespace-normal break-words px-4 py-3 font-medium leading-tight text-neutral-100">{p.title}</td>
+                    <td className="max-w-[220px] whitespace-normal break-words px-4 py-3 leading-tight text-neutral-100">{p.application || '-'}</td>
+                    <td className="max-w-[260px] whitespace-normal break-words px-4 py-3 leading-tight text-neutral-100">{p.description || '-'}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-xs text-neutral-100">
                       {p.delivery === 'available' && 'Odmah'}
                       {p.delivery === '15_days' && '15 dana'}
                       {p.delivery === 'on_request' && 'Dogovor'}
                       {!p.delivery && '-'}
                     </td>
-                    <td className="px-4 py-3 text-neutral-100 text-center">{p.stock || 0}</td>
-                    <td className="px-4 py-3 text-neutral-100">{p.priceWithoutVAT ? `${p.priceWithoutVAT} ${p.currency}` : '-'}</td>
-                    <td className="px-4 py-3 text-neutral-100">{p.priceWithVAT ? `${p.priceWithVAT} ${p.currency}` : '-'}</td>
-                    <td className="px-4 py-3 text-neutral-100">{p.discount ? `${p.discount}%` : '-'}</td>
-                    <td className="px-4 py-3 text-neutral-100 font-mono text-xs">{p.currency}</td>
+                    <td className="px-4 py-3 text-center text-neutral-100">{p.stock || 0}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-neutral-100">{p.priceWithoutVAT ? `${p.priceWithoutVAT} ${p.currency}` : '-'}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-neutral-100">{p.priceWithVAT ? `${p.priceWithVAT} ${p.currency}` : '-'}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-neutral-100">{p.discount ? `${p.discount}%` : '-'}</td>
+                    <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-neutral-100">{p.currency}</td>
                     <td className="px-4 py-3 text-neutral-100 max-w-[120px] truncate">{p.spec1 || '-'}</td>
                     <td className="px-4 py-3 text-neutral-100 max-w-[120px] truncate">{p.spec2 || '-'}</td>
                     <td className="px-4 py-3 text-neutral-100 max-w-[120px] truncate">{p.spec3 || '-'}</td>
@@ -1245,10 +1259,10 @@ export default function AdminParts() {
                         <span className="px-3 py-1 rounded-full text-xs font-bold bg-red-600 text-white">Neaktivan</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-neutral-100 text-xs">{p.createdAt ? new Date(p.createdAt).toLocaleDateString('bs-BA') : '-'}</td>
-                    <td className="px-4 py-3 text-neutral-100 text-xs">{p.updatedAt ? new Date(p.updatedAt).toLocaleDateString('bs-BA') : '-'}</td>
-                    <td className="px-4 py-3 text-center">
-                      <div className="flex gap-2 justify-center">
+                    <td className="whitespace-nowrap px-4 py-3 text-xs text-neutral-100">{p.createdAt ? new Date(p.createdAt).toLocaleDateString('bs-BA') : '-'}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-xs text-neutral-100">{p.updatedAt ? new Date(p.updatedAt).toLocaleDateString('bs-BA') : '-'}</td>
+                    <td className="sticky right-0 z-30 bg-[#141414] px-4 py-3 text-center">
+                      <div className="flex flex-col justify-center gap-2 sm:flex-row">
                         <button
                           onClick={() => editPart(p)}
                           disabled={loading}
@@ -1257,7 +1271,7 @@ export default function AdminParts() {
                           Uredi
                         </button>
                         <button
-                          onClick={() => deletePart(p.id)}
+                          onClick={() => requestDeletePart(p.id)}
                           disabled={loading}
                           className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-full font-semibold transition-all hover:scale-105 disabled:opacity-50 text-xs"
                         >
@@ -1335,6 +1349,27 @@ export default function AdminParts() {
           )}
         </div>
       </div>
+      <ConfirmDialog
+        isOpen={pendingDeleteId !== null}
+        title="Obrisati dio?"
+        description="Ova akcija će trajno obrisati izabrani dio."
+        confirmLabel="Obriši"
+        cancelLabel="Odustani"
+        onConfirm={confirmDeletePart}
+        onCancel={() => setPendingDeleteId(null)}
+        variant="danger"
+        isLoading={loading}
+      />
+      <ConfirmDialog
+        isOpen={isResetDialogOpen}
+        title="Resetovati formu?"
+        description="Svi trenutno uneseni podaci će biti uklonjeni."
+        confirmLabel="Resetuj"
+        cancelLabel="Odustani"
+        onConfirm={confirmResetForm}
+        onCancel={() => setIsResetDialogOpen(false)}
+        variant="default"
+      />
     </div>
   );
 }

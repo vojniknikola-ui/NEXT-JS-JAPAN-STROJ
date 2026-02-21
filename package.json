@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test:e2e": "CI=1 playwright test",
+    "test:e2e:smoke": "CI=1 playwright test tests/smoke-flows.spec.ts --project=chromium",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
