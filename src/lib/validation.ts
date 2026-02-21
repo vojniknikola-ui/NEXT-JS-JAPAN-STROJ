@@ -2,9 +2,9 @@ import { z } from "zod";
 
 export const partCreateSchema = z.object({
   sku: z.string()
+    .trim()
     .min(1, "SKU je obavezan")
-    .max(64, "SKU ne može biti duži od 64 karaktera")
-    .regex(/^[A-Z0-9-_]+$/, "SKU može sadržavati samo velika slova, brojeve, crtice i donje crte"),
+    .max(64, "SKU ne može biti duži od 64 karaktera"),
   title: z.string()
     .min(1, "Naziv je obavezan")
     .max(200, "Naziv ne može biti duži od 200 karaktera")
@@ -36,8 +36,10 @@ export const partCreateSchema = z.object({
     .max(100, "Popust ne može biti veći od 100%")
     .default(0),
   currency: z.string()
+    .trim()
     .length(3, "Valuta mora imati tačno 3 karaktera")
-    .regex(/^[A-Z]{3}$/, "Valuta mora biti u formatu XXX (npr. BAM, EUR)")
+    .regex(/^[A-Za-z]{3}$/, "Valuta mora biti u formatu XXX (npr. BAM, EUR)")
+    .transform((value) => value.toUpperCase())
     .default("BAM"),
   stock: z.coerce.number().int("Zaliha mora biti cijeli broj")
     .nonnegative("Zaliha ne može biti negativna")
@@ -61,19 +63,6 @@ export const partCreateSchema = z.object({
   spec7: z.string().max(255, "Specifikacija 7 ne može biti duža od 255 karaktera").optional(),
   specJson: z.string().optional(),
   isActive: z.coerce.boolean().default(true),
-}).refine((data) => {
-  // Custom validation: if priceWithoutVAT and priceWithVAT are both provided, ensure VAT calculation makes sense
-  if (data.priceWithoutVAT && data.priceWithVAT) {
-    const calculatedVAT = data.priceWithoutVAT * 1.17;
-    const tolerance = 0.01; // Allow for small rounding differences
-    if (Math.abs(calculatedVAT - data.priceWithVAT) > tolerance) {
-      return false;
-    }
-  }
-  return true;
-}, {
-  message: "Cijena sa PDV-om mora biti cijena bez PDV-a pomnožena sa 1.17 (17% PDV)",
-  path: ["priceWithVAT"]
 });
 
 export const partUpdateSchema = partCreateSchema.partial();

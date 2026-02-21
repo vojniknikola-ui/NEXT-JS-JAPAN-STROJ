@@ -134,6 +134,28 @@ const getErrorMessage = (error: unknown, fallback: string): string => {
   return fallback;
 };
 
+const normalizeSku = (value: string): string =>
+  value.trim().replace(/\s+/g, "-").toUpperCase();
+
+const getApiErrorMessage = (errorData: unknown, fallback: string): string => {
+  if (!errorData || typeof errorData !== "object") return fallback;
+
+  const typed = errorData as {
+    error?: string;
+    formErrors?: string[];
+    fieldErrors?: Record<string, string[] | undefined>;
+  };
+
+  if (typed.error) return typed.error;
+  if (typed.formErrors?.[0]) return typed.formErrors[0];
+
+  const fieldMessage = typed.fieldErrors
+    ? Object.values(typed.fieldErrors).flat().find(Boolean)
+    : undefined;
+
+  return fieldMessage || fallback;
+};
+
 export default function AdminParts() {
   const [cats, setCats] = useState<Category[]>([]);
   const [parts, setParts] = useState<PartRecord[]>([]);
@@ -264,6 +286,8 @@ export default function AdminParts() {
       const imageUrl = file ? await uploadImage() : form.imageUrl;
       const payload = {
         ...form,
+        sku: normalizeSku(form.sku),
+        currency: (form.currency || "BAM").trim().toUpperCase(),
         price: Number(form.price),
         priceWithoutVAT: form.priceWithoutVAT ? Number(form.priceWithoutVAT) : undefined,
         priceWithVAT: form.priceWithVAT ? Number(form.priceWithVAT) : undefined,
@@ -289,7 +313,9 @@ export default function AdminParts() {
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP ${res.status}: ${res.statusText}`);
+        throw new Error(
+          getApiErrorMessage(errorData, `HTTP ${res.status}: ${res.statusText}`)
+        );
       }
 
       const result = await res.json();
@@ -592,7 +618,7 @@ export default function AdminParts() {
                     type="text"
                     placeholder="SKU broj"
                     value={form.sku}
-                    onChange={e => setForm({ ...form, sku: e.target.value })}
+                    onChange={e => setForm({ ...form, sku: normalizeSku(e.target.value) })}
                     className={inputClass}
                     required
                   />

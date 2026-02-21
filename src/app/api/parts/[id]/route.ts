@@ -20,7 +20,20 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const { id } = await params;
   const payload = await req.json();
   const parsed = partUpdateSchema.safeParse(payload);
-  if (!parsed.success) return Response.json(parsed.error.flatten(), { status: 400 });
+  if (!parsed.success) {
+    const flattened = parsed.error.flatten();
+    const firstFieldError = Object.values(flattened.fieldErrors).flat().find(Boolean);
+    const firstFormError = flattened.formErrors[0];
+    const errorMessage = firstFieldError || firstFormError || "Neispravni podaci za izmjenu dijela";
+    return Response.json(
+      {
+        error: errorMessage,
+        fieldErrors: flattened.fieldErrors,
+        formErrors: flattened.formErrors,
+      },
+      { status: 400 }
+    );
+  }
 
   const updateData: Partial<typeof parts.$inferInsert> & { updatedAt: Date } = { updatedAt: new Date() };
   if (parsed.data.price !== undefined) updateData.price = parsed.data.price.toString();

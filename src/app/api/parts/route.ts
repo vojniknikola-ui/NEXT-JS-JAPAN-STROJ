@@ -108,7 +108,20 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const json = await req.json();
   const parsed = partCreateSchema.safeParse(json);
-  if (!parsed.success) return Response.json(parsed.error.flatten(), { status: 400 });
+  if (!parsed.success) {
+    const flattened = parsed.error.flatten();
+    const firstFieldError = Object.values(flattened.fieldErrors).flat().find(Boolean);
+    const firstFormError = flattened.formErrors[0];
+    const errorMessage = firstFieldError || firstFormError || "Neispravni podaci za unos dijela";
+    return Response.json(
+      {
+        error: errorMessage,
+        fieldErrors: flattened.fieldErrors,
+        formErrors: flattened.formErrors,
+      },
+      { status: 400 }
+    );
+  }
 
   const [inserted] = await db.insert(parts).values({
     ...parsed.data,
