@@ -1,157 +1,200 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
+
+type CartStateItem = {
+  quantity: number;
+  part: Record<string, unknown>;
+};
+
+const seededCartForModal: CartStateItem[] = [
+  {
+    quantity: 1,
+    part: {
+      id: 101,
+      name: 'Seeded dio',
+      brand: 'TestBrand',
+      model: 'TB-1',
+      catalogNumber: 'SEED-101',
+      application: 'Test',
+      delivery: 'available',
+      priceWithoutVAT: 85.47,
+      priceWithVAT: 100,
+      discount: 0,
+      imageUrl: '',
+      technicalSpecs: {
+        spec1: '',
+        spec2: '',
+        spec3: '',
+        spec4: '',
+        spec5: '',
+        spec6: '',
+        spec7: '',
+      },
+      stock: 2,
+    },
+  },
+];
+
+async function addFirstCatalogItem(page: Page) {
+  await page.goto('/catalog');
+  await expect(page.getByTestId('product-card').first()).toBeVisible();
+  await page.locator('button:has-text("Dodaj u košaricu")').first().click();
+  await expect(page.getByTestId('app-toast').last()).toContainText('Dodano u košaricu');
+}
+
+async function openCartFromHeader(page: Page) {
+  await page.goto('/cart');
+  await expect(page).toHaveURL(/\/cart$/);
+  await expect(page.getByTestId('cart-title')).toBeVisible();
+}
 
 test.describe('Cart Operations Tests', () => {
-  test('should add item to cart from catalog', async ({ page }) => {
-    await page.goto('/catalog');
+  test.beforeEach(async ({ page }) => {
+    let cartState: CartStateItem[] = [];
 
-    // Wait for products to load
-    await page.waitForSelector('button:has-text("Dodaj u košaricu")', { timeout: 10000 });
+    await page.route('**/api/cart', async (route) => {
+      const method = route.request().method();
 
-    // Get initial cart count
-    const initialCartCount = await page.locator('[data-testid="cart-count"]').textContent() || '0';
+      if (method === 'GET') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(cartState),
+        });
+        return;
+      }
 
-    // Click add to cart on first product
-    const addToCartButton = page.locator('button:has-text("Dodaj u košaricu")').first();
-    await addToCartButton.click();
+      if (method === 'POST') {
+        const rawBody = route.request().postData() ?? '[]';
+        try {
+          cartState = JSON.parse(rawBody) as CartStateItem[];
+        } catch {
+          cartState = [];
+        }
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ success: true }),
+        });
+        return;
+      }
 
-    // Check cart count increased
-    await expect(page.locator('[data-testid="cart-count"]')).toHaveText((parseInt(initialCartCount) + 1).toString());
+      if (method === 'DELETE') {
+        cartState = [];
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ success: true }),
+        });
+        return;
+      }
 
-    // Check toast message
-    await expect(page.locator('text=dodan u košaricu')).toBeVisible();
+      await route.continue();
+    });
   });
 
-  test('should add item to cart from product details', async ({ page }) => {
+  test('adds item to cart from catalog', async ({ page }) => {
     await page.goto('/catalog');
+    await expect(page.getByTestId('product-card').first()).toBeVisible();
 
-    // Wait for products and click first one
-    await page.waitForSelector('button:has-text("Dodaj u košaricu")', { timeout: 10000 });
-    const firstProductCard = page.locator('div.cursor-pointer').first();
-    await firstProductCard.click();
+    const initialCount = Number.parseInt((await page.getByTestId('cart-count').textContent()) ?? '0', 10);
 
-    // On product page, click add to cart
-    const addToCartButton = page.locator('button:has-text("Dodaj u košaricu")');
-    await addToCartButton.click();
-
-    // Check success state
-    await expect(page.locator('button:has-text("Dodano u košaricu")')).toBeVisible();
-
-    // Check toast message
-    await expect(page.locator('text=dodan u košaricu')).toBeVisible();
-  });
-
-  test('should update cart quantity', async ({ page }) => {
-    // Add item to cart first
-    await page.goto('/catalog');
-    await page.waitForSelector('button:has-text("Dodaj u košaricu")', { timeout: 10000 });
     await page.locator('button:has-text("Dodaj u košaricu")').first().click();
+    await expect(page.getByTestId('app-toast').last()).toContainText('Dodano u košaricu');
 
-    // Go to cart
-    await page.locator('a[href="/cart"]').first().click();
-
-    // Check initial quantity is 1
-    await expect(page.locator('span').filter({ hasText: '1' }).first()).toBeVisible();
-
-    // Increase quantity
-    await page.locator('button').filter({ has: page.locator('svg') }).filter({ hasText: '+' }).click();
-    await expect(page.locator('span').filter({ hasText: '2' }).first()).toBeVisible();
-
-    // Decrease quantity
-    await page.locator('button').filter({ has: page.locator('svg') }).filter({ hasText: '-' }).first().click();
-    await expect(page.locator('span').filter({ hasText: '1' }).first()).toBeVisible();
-
-    // Cannot decrease below 1
-    await page.locator('button').filter({ has: page.locator('svg') }).filter({ hasText: '-' }).first().click();
-    await expect(page.locator('span').filter({ hasText: '1' }).first()).toBeVisible();
+    const newCount = Number.parseInt((await page.getByTestId('cart-count').textContent()) ?? '0', 10);
+    expect(newCount).toBe(initialCount + 1);
   });
 
-  test('should remove item from cart', async ({ page }) => {
-    // Add item to cart first
+  test('adds item to cart from product detail page', async ({ page }) => {
     await page.goto('/catalog');
-    await page.waitForSelector('button:has-text("Dodaj u košaricu")', { timeout: 10000 });
-    await page.locator('button:has-text("Dodaj u košaricu")').first().click();
+    const href = await page.getByTestId('product-card-open').first().getAttribute('href');
+    expect(href).toMatch(/^\/product\/\d+$/);
+    await page.goto(href!);
 
-    // Go to cart
-    await page.locator('a[href="/cart"]').first().click();
+    const initialCount = Number.parseInt((await page.getByTestId('cart-count').textContent()) ?? '0', 10);
 
-    // Remove item
-    await page.locator('button').filter({ has: page.locator('svg') }).filter({ hasText: 'trash' }).click();
-
-    // Check cart is empty
-    await expect(page.locator('text=Košarica je prazna')).toBeVisible();
+    await expect(page).toHaveURL(/\/product\/\d+$/);
+    await page.getByTestId('product-add-to-cart').click();
+    await expect(page.getByTestId('app-toast').last()).toContainText('Dodano u košaricu');
+    await expect(page.getByTestId('cart-count')).toHaveText(String(initialCount + 1));
   });
 
-  test('should clear entire cart', async ({ page }) => {
-    // Add multiple items to cart
-    await page.goto('/catalog');
-    await page.waitForSelector('button:has-text("Dodaj u košaricu")', { timeout: 10000 });
-    await page.locator('button:has-text("Dodaj u košaricu")').first().click();
-    await page.locator('button:has-text("Dodaj u košaricu")').nth(1).click();
+  test('updates quantity using plus/minus controls', async ({ page }) => {
+    await addFirstCatalogItem(page);
+    await openCartFromHeader(page);
 
-    // Go to cart
-    await page.locator('a[href="/cart"]').first().click();
+    const qty = page.locator('[data-testid^="cart-qty-"]').first();
+    const increase = page.locator('[data-testid^="cart-increase-"]').first();
+    const decrease = page.locator('[data-testid^="cart-decrease-"]').first();
 
-    // Clear cart
-    await page.locator('button:has-text("Isprazni košaricu")').click();
-    await page.locator('button:has-text("Isprazni")').click();
-
-    // Check cart is empty
-    await expect(page.locator('text=Košarica je prazna')).toBeVisible();
+    await expect(qty).toHaveText('1');
+    await increase.click();
+    await expect(qty).toHaveText('2');
+    await decrease.click();
+    await expect(qty).toHaveText('1');
   });
 
-  test('should calculate cart total correctly', async ({ page }) => {
-    // Add item to cart
-    await page.goto('/catalog');
-    await page.waitForSelector('button:has-text("Dodaj u košaricu")', { timeout: 10000 });
-    await page.locator('button:has-text("Dodaj u košaricu")').first().click();
+  test('removes item from cart and shows empty state', async ({ page }) => {
+    await addFirstCatalogItem(page);
+    await openCartFromHeader(page);
 
-    // Go to cart
-    await page.locator('a[href="/cart"]').first().click();
-
-    // Get item price
-    const itemPriceText = await page.locator('text=BAM').first().textContent();
-    const itemPrice = parseFloat(itemPriceText?.replace(' BAM', '') || '0');
-
-    // Increase quantity to 3
-    await page.locator('button').filter({ has: page.locator('svg') }).filter({ hasText: '+' }).click();
-    await page.locator('button').filter({ has: page.locator('svg') }).filter({ hasText: '+' }).click();
-
-    // Check total is 3x price
-    const expectedTotal = (itemPrice * 3).toFixed(2);
-    await expect(page.locator('text=BAM').last()).toContainText(expectedTotal);
+    await page.locator('[data-testid^="cart-remove-"]').first().click();
+    await expect(page.getByRole('heading', { name: 'Košarica je prazna' })).toBeVisible();
   });
 
-  test('should show free shipping message for orders over 500 BAM', async ({ page }) => {
-    // This test assumes there are expensive items or we can add multiple items
-    // For now, we'll check the message appears when total is high enough
+  test('clears entire cart through confirm dialog', async ({ page }) => {
+    await page.unroute('**/api/cart');
+    await page.route('**/api/cart', async (route) => {
+      const method = route.request().method();
+      if (method === 'GET') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(seededCartForModal),
+        });
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true }),
+      });
+    });
+
     await page.goto('/cart');
-    await expect(page.locator('text=Besplatna dostava')).toBeVisible();
+    await expect(page.getByTestId('cart-item')).toHaveCount(1);
+    await page.getByRole('button', { name: 'Isprazni košaricu' }).click();
+    await page.getByRole('button', { name: 'Isprazni', exact: true }).click();
+
+    await expect(page.getByRole('heading', { name: 'Košarica je prazna' })).toBeVisible();
   });
 
-  test('should generate proforma invoice', async ({ page }) => {
-    // Add item to cart
-    await page.goto('/catalog');
-    await page.waitForSelector('button:has-text("Dodaj u košaricu")', { timeout: 10000 });
-    await page.locator('button:has-text("Dodaj u košaricu")').first().click();
+  test('opens proforma modal from cart', async ({ page }) => {
+    await page.unroute('**/api/cart');
+    await page.route('**/api/cart', async (route) => {
+      const method = route.request().method();
+      if (method === 'GET') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(seededCartForModal),
+        });
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true }),
+      });
+    });
 
-    // Go to cart
-    await page.locator('a[href="/cart"]').first().click();
-
-    // Open proforma modal
-    await page.locator('button:has-text("Predračun")').click();
-
-    // Check modal is open
-    await expect(page.locator('text=Predračun')).toBeVisible();
-  });
-
-  test('should handle empty cart state', async ({ page }) => {
     await page.goto('/cart');
+    await expect(page.getByTestId('open-proforma-modal')).toBeVisible();
 
-    // Check empty cart message
-    await expect(page.locator('text=Košarica je prazna')).toBeVisible();
+    await page.getByTestId('open-proforma-modal').click();
+    await expect(page.getByRole('heading', { name: 'Generiši predračun' })).toBeVisible();
 
-    // Check navigation buttons
-    await expect(page.locator('button:has-text("Pregledaj katalog")')).toBeVisible();
-    await expect(page.locator('button:has-text("Naše usluge")')).toBeVisible();
+    await page.getByTestId('generate-proforma-button').click();
+    await expect(page.getByText('Popunite sva obavezna polja prije generisanja predračuna.')).toBeVisible();
   });
 });

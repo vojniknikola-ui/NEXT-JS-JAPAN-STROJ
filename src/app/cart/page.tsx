@@ -82,12 +82,12 @@ export default function CartPage() {
                 <ArrowLeftIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                 Nastavi kupovinu
               </button>
-              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-3 sm:mb-4 bg-gradient-to-r from-white to-neutral-300 bg-clip-text text-transparent">
+              <h1 data-testid="cart-title" className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-3 sm:mb-4 bg-gradient-to-r from-white to-neutral-300 bg-clip-text text-transparent">
                   Košarica
                 </h1>
               <p className="text-sm sm:text-base text-neutral-400">
                 {cartItems.length === 0
-                  ? 'Vaša košarica je prazna'
+                  ? 'Trenutno nema artikala u vašoj košarici'
                   : `${cartItemCount} ${cartItemCount === 1 ? 'artikl' : cartItemCount < 5 ? 'artikla' : 'artikala'} u košarici`
                 }
               </p>
@@ -173,6 +173,7 @@ export default function CartPage() {
                             {/* Remove Button - Mobile Top Right */}
                             <button
                               onClick={() => removeFromCart(item.part.id)}
+                              data-testid={`cart-remove-${item.part.id}`}
                               className="text-red-400 active:text-red-300 transition-colors p-1.5 active:scale-95 touch-manipulation"
                             >
                               <TrashIcon className="w-5 h-5" />
@@ -228,7 +229,7 @@ export default function CartPage() {
                         {cartItemCount} {cartItemCount === 1 ? 'artikl' : cartItemCount < 5 ? 'artikla' : 'artikala'}
                       </p>
                       {cartTotal >= 500 && (
-                        <div className="flex items-center gap-2 mt-2">
+                        <div data-testid="free-shipping-message" className="flex items-center gap-2 mt-2">
                           <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                           <span className="text-xs text-green-400 font-medium">Besplatna dostava!</span>
                         </div>
@@ -236,7 +237,7 @@ export default function CartPage() {
                     </div>
                     <div className="text-left sm:text-right">
                       <p className="text-2xl sm:text-3xl md:text-4xl font-black text-[#ff6b00] mb-1 sm:mb-2 animate-pulse">
-                        {cartTotal.toFixed(2)} BAM
+                        <span data-testid="cart-total">{cartTotal.toFixed(2)} BAM</span>
                       </p>
                       <p className="text-xs sm:text-sm text-neutral-400">PDV uključen</p>
                       {cartTotal < 500 && (

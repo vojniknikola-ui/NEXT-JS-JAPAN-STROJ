@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback, useRef, useDeferredValue } from 'react';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Page, SparePart, Availability } from '@/types';
@@ -65,14 +65,12 @@ const AvailabilityBadge: React.FC<{ availability: string }> = ({ availability })
 interface ProductCardProps {
   part: PartData;
   onAddToCart: (part: PartData) => void;
-  onOpenProduct: (id: number) => void;
   isAdded: boolean;
 }
 
 const ProductCard = React.memo(function ProductCard({
   part,
   onAddToCart,
-  onOpenProduct,
   isAdded,
 }: ProductCardProps) {
   const priceAfterDiscount = part.priceWithVAT && part.discount
@@ -80,8 +78,15 @@ const ProductCard = React.memo(function ProductCard({
     : parseFloat(part.priceWithVAT || part.price);
 
   return (
-    <article className="group bg-[#101010] border border-white/5 rounded-xl sm:rounded-2xl overflow-hidden active:border-[#ff6b00]/30 transition-all duration-300 sm:hover:shadow-[0_10px_40px_-15px_rgba(255,107,0,0.3)] sm:hover:-translate-y-1">
-      <div className="relative aspect-square bg-[#1a1a1a] overflow-hidden cursor-pointer touch-manipulation" onClick={() => onOpenProduct(part.id)}>
+    <article
+      data-testid="product-card"
+      className="group bg-[#101010] border border-white/5 rounded-xl sm:rounded-2xl overflow-hidden active:border-[#ff6b00]/30 transition-all duration-300 sm:hover:shadow-[0_10px_40px_-15px_rgba(255,107,0,0.3)] sm:hover:-translate-y-1"
+    >
+      <Link
+        href={`/product/${part.id}`}
+        data-testid="product-card-open"
+        className="relative block aspect-square bg-[#1a1a1a] overflow-hidden cursor-pointer touch-manipulation"
+      >
         {part.imageUrl ? (
           <Image
             src={part.imageUrl}
@@ -111,14 +116,16 @@ const ProductCard = React.memo(function ProductCard({
             -{part.discount}%
           </div>
         )}
-      </div>
+      </Link>
 
       <div className="p-4 sm:p-5 md:p-6">
         <div className="mb-2 sm:mb-3">
           <div className="text-[10px] sm:text-xs text-neutral-500 mb-1 font-mono truncate">{part.sku}</div>
-          <h3 className="text-sm sm:text-base font-semibold text-white mb-1 line-clamp-2 sm:group-hover:text-[#ff6b00] transition-colors cursor-pointer" onClick={() => onOpenProduct(part.id)}>
-            {part.title}
-          </h3>
+          <Link href={`/product/${part.id}`} className="block">
+            <h3 className="text-sm sm:text-base font-semibold text-white mb-1 line-clamp-2 sm:group-hover:text-[#ff6b00] transition-colors">
+              {part.title}
+            </h3>
+          </Link>
           {(part.brand || part.model) && (
             <p className="text-xs sm:text-sm text-neutral-400 truncate">
               {part.brand}{part.brand && part.model && ' • '}{part.model}
@@ -150,7 +157,11 @@ const ProductCard = React.memo(function ProductCard({
         </div>
 
         <button
-          onClick={() => onAddToCart(part)}
+          data-testid={`add-to-cart-${part.id}`}
+          onClick={(event) => {
+            event.stopPropagation();
+            onAddToCart(part);
+          }}
           disabled={isAdded}
           className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-full font-semibold text-xs sm:text-sm uppercase tracking-wide transition-all duration-300 flex items-center justify-center gap-1.5 sm:gap-2 touch-manipulation ${
             isAdded
@@ -177,7 +188,6 @@ const ProductCard = React.memo(function ProductCard({
 
 export default function CatalogPage() {
   const toast = useToast();
-  const router = useRouter();
   const [activePage, setActivePage] = useState<Page>('catalog');
   const { cartItemCount, addToCart } = useCart();
   const [partsData, setPartsData] = useState<PartData[]>([]);
@@ -412,13 +422,6 @@ export default function CatalogPage() {
     }
   }, [loading, loadingMore, hasMore, nextCursor, fetchCatalogPage, toast]);
 
-  const handleOpenProduct = useCallback(
-    (id: number) => {
-      router.push(`/product/${id}`);
-    },
-    [router]
-  );
-
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -449,7 +452,7 @@ export default function CatalogPage() {
         <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 md:py-10 lg:py-12">
           <div className="max-w-7xl mx-auto">
             <div className="mb-6 sm:mb-8">
-              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-3 sm:mb-4">
+              <h1 data-testid="catalog-title" className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-3 sm:mb-4">
                 Katalog rezervnih dijelova
               </h1>
               <p className="text-sm sm:text-base md:text-lg text-neutral-400 max-w-2xl">
@@ -459,16 +462,20 @@ export default function CatalogPage() {
             </div>
 
             <div className="flex gap-4 lg:gap-6">
-              <aside className={`
+              <aside
+                data-testid="catalog-filters-panel"
+                className={`
                 fixed lg:sticky lg:top-24 left-0 top-14 sm:top-16 h-[calc(100dvh-3.5rem)] sm:h-[calc(100dvh-4rem)] lg:h-auto w-full sm:w-80 bg-[#0b0b0b] lg:bg-transparent
                 border-r border-white/10 lg:border-0 p-4 sm:p-6 lg:p-0 z-[70] lg:z-auto overflow-y-auto pb-24 sm:pb-28 lg:pb-0
                 transition-transform duration-300 lg:translate-x-0
                 ${showMobileFilters ? 'translate-x-0' : '-translate-x-full'}
-              `}>
+              `}
+              >
                 <div className="lg:sticky lg:top-24 space-y-4 sm:space-y-6">
                   <div className="flex items-center justify-between lg:hidden mb-4 sm:mb-6">
                     <h2 className="text-lg sm:text-xl font-bold text-white">Filteri</h2>
                     <button
+                      data-testid="catalog-mobile-filters-close"
                       onClick={() => setShowMobileFilters(false)}
                       className="p-2.5 text-neutral-400 hover:text-white active:scale-95 touch-manipulation rounded-lg hover:bg-white/5"
                     >
@@ -479,8 +486,9 @@ export default function CatalogPage() {
                   <div className="relative">
                     <SearchIcon className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-neutral-400" />
                     <input
+                      data-testid="catalog-search"
                       type="text"
-                      placeholder="Pretraži..."
+                      placeholder="Pretraga proizvoda..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="w-full pl-10 sm:pl-12 pr-3 sm:pr-4 py-2.5 sm:py-3 bg-[#101010] border border-white/10 rounded-lg sm:rounded-xl text-sm sm:text-base text-white placeholder-neutral-500 focus:border-[#ff6b00]/50 focus:ring-2 focus:ring-[#ff6b00]/20 outline-none transition-all"
@@ -599,10 +607,11 @@ export default function CatalogPage() {
 
                   {hasActiveFilters && (
                     <button
+                      data-testid="catalog-clear-filters"
                       onClick={clearFilters}
                       className="w-full bg-red-500/10 active:bg-red-500/20 text-red-400 px-4 py-3 rounded-lg sm:rounded-xl font-semibold transition-all active:scale-95 touch-manipulation text-sm sm:text-base"
                     >
-                      Očisti sve filtere
+                      Poništi filtere
                     </button>
                   )}
                 </div>
@@ -619,6 +628,7 @@ export default function CatalogPage() {
                 <div className="flex items-center justify-between mb-4 sm:mb-6">
                   <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
                     <button
+                      data-testid="catalog-mobile-filters-open"
                       onClick={() => setShowMobileFilters(true)}
                       className="lg:hidden flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-[#101010] border border-white/10 rounded-lg sm:rounded-xl text-neutral-200 active:border-[#ff6b00]/50 transition-all active:scale-95 touch-manipulation text-sm sm:text-base"
                     >
@@ -688,13 +698,12 @@ export default function CatalogPage() {
                   </div>
                 ) : (
                   <>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-5 lg:gap-6">
+                    <div data-testid="catalog-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-5 lg:gap-6">
                       {partsData.map((part) => (
                         <ProductCard
                           key={part.id}
                           part={part}
                           onAddToCart={handleAddToCart}
-                          onOpenProduct={handleOpenProduct}
                           isAdded={addedToCart.has(part.id)}
                         />
                       ))}

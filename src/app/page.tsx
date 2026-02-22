@@ -95,7 +95,7 @@ export default function Home() {
               Profesionalni servis
             </span>
           </div>
-          <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-black text-white mb-3 sm:mb-4 md:mb-6 tracking-tight leading-tight animate-slide-in-up" style={{ animationDelay: '0.2s' }}>
+          <h1 data-testid="hero-title" className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-black text-white mb-3 sm:mb-4 md:mb-6 tracking-tight leading-tight animate-slide-in-up" style={{ animationDelay: '0.2s' }}>
             Japan<span className="text-[#ff6b00]">Stroj</span>
           </h1>
           <p className="text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl text-neutral-200 mb-6 sm:mb-8 max-w-3xl mx-auto leading-relaxed px-4 animate-slide-in-up" style={{ animationDelay: '0.4s' }}>
@@ -197,6 +197,7 @@ export default function Home() {
               {spareParts.slice(0, 4).map((part, index) => (
                 <div
                   key={part.id}
+                  data-testid="home-featured-card"
                   className="group bg-secondary-900/50 backdrop-blur-sm border border-white/10 rounded-xl sm:rounded-2xl overflow-hidden hover:border-primary-500/30 transition-all duration-500 cursor-pointer active:scale-95 sm:hover:scale-105 shadow-soft sm:hover:shadow-large touch-manipulation animate-slide-in-up"
                   style={{ animationDelay: `${index * 0.1}s` }}
                   onClick={() => handleSelectProduct(part)}

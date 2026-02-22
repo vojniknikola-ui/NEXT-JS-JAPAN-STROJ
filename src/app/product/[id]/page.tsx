@@ -43,51 +43,69 @@ export default function ProductDetailPage() {
   const [isAdded, setIsAdded] = useState(false);
 
   useEffect(() => {
-    // Load product from API
-    if (productId) {
-      fetch(`/api/parts/${productId}`)
-        .then(res => res.json())
-        .then(data => {
-          // Convert PartData to SparePart format
-          const sparePart: SparePart = {
-            id: data.id,
-            name: data.title,
-            brand: data.brand || '',
-            model: data.model || '',
-            catalogNumber: data.catalogNumber || '',
-            application: data.application || '',
-            delivery: data.delivery === 'available' ? Availability.Available :
-                     data.delivery === '15_days' ? Availability.FifteenDays :
-                     Availability.OnRequest,
-            priceWithoutVAT: parseFloat(data.priceWithoutVAT || data.price),
-            priceWithVAT: parseFloat(data.priceWithVAT || data.price),
-            discount: parseFloat(data.discount || '0'),
-            imageUrl: data.imageUrl || '',
-            technicalSpecs: {
-              spec1: data.spec1 || '',
-              spec2: data.spec2 || '',
-              spec3: data.spec3 || '',
-              spec4: data.spec4 || '',
-              spec5: data.spec5 || '',
-              spec6: data.spec6 || '',
-              spec7: data.spec7 || '',
-            },
-            stock: data.stock,
-          };
-
-          setProduct(sparePart);
-
-          // Generate recommendations after product is loaded
-          if (sparePart) {
-            const recommendedProducts = getRecommendations(sparePart, 3);
-            setRecommendations(recommendedProducts);
-          }
-        })
-        .catch(error => {
-          console.error('Error loading product:', error);
-          setProduct(null);
-        });
+    if (!Number.isFinite(productId) || productId <= 0) {
+      setProduct(null);
+      setRecommendations([]);
+      return;
     }
+
+    const controller = new AbortController();
+
+    const loadProduct = async () => {
+      try {
+        const response = await fetch(`/api/parts/${productId}`, { signal: controller.signal });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json() as Record<string, unknown>;
+        if (typeof data.id !== 'number' || typeof data.title !== 'string') {
+          throw new Error('Neispravan odgovor za proizvod');
+        }
+
+        const sparePart: SparePart = {
+          id: data.id,
+          name: data.title,
+          brand: typeof data.brand === 'string' ? data.brand : '',
+          model: typeof data.model === 'string' ? data.model : '',
+          catalogNumber: typeof data.catalogNumber === 'string' ? data.catalogNumber : '',
+          application: typeof data.application === 'string' ? data.application : '',
+          delivery: data.delivery === 'available'
+            ? Availability.Available
+            : data.delivery === '15_days'
+              ? Availability.FifteenDays
+              : Availability.OnRequest,
+          priceWithoutVAT: parseFloat(String(data.priceWithoutVAT ?? data.price ?? 0)),
+          priceWithVAT: parseFloat(String(data.priceWithVAT ?? data.price ?? 0)),
+          discount: parseFloat(String(data.discount ?? 0)),
+          imageUrl: typeof data.imageUrl === 'string' ? data.imageUrl : '',
+          technicalSpecs: {
+            spec1: typeof data.spec1 === 'string' ? data.spec1 : '',
+            spec2: typeof data.spec2 === 'string' ? data.spec2 : '',
+            spec3: typeof data.spec3 === 'string' ? data.spec3 : '',
+            spec4: typeof data.spec4 === 'string' ? data.spec4 : '',
+            spec5: typeof data.spec5 === 'string' ? data.spec5 : '',
+            spec6: typeof data.spec6 === 'string' ? data.spec6 : '',
+            spec7: typeof data.spec7 === 'string' ? data.spec7 : '',
+          },
+          stock: typeof data.stock === 'number' ? data.stock : 0,
+        };
+
+        setProduct(sparePart);
+        setRecommendations(getRecommendations(sparePart, 3));
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          return;
+        }
+        console.error('Error loading product:', error);
+        setProduct(null);
+        setRecommendations([]);
+      }
+    };
+
+    void loadProduct();
+    return () => controller.abort();
   }, [productId, getRecommendations]);
 
   const handleAddToCart = () => {
@@ -151,6 +169,17 @@ export default function ProductDetailPage() {
       <main className="flex-grow safe-main-padding lg:pb-0">
         <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 md:py-10 lg:py-12">
           <div className="max-w-6xl mx-auto">
+            <button
+              type="button"
+              data-testid="back-to-catalog"
+              onClick={() => {
+                setActivePage('catalog');
+                router.push('/catalog');
+              }}
+              className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/15 px-4 py-2 text-sm text-neutral-200 transition-colors hover:border-[#ff6b00]/40 hover:text-[#ff6b00]"
+            >
+              Nazad na katalog
+            </button>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 md:gap-10 lg:gap-12">
               {/* Product Image */}
               <div className="relative h-64 sm:h-80 md:h-96">
@@ -237,6 +266,7 @@ export default function ProductDetailPage() {
 
                 <div className="pt-4">
                   <button
+                    data-testid="product-add-to-cart"
                     onClick={handleAddToCart}
                     disabled={isAdded}
                     className={`w-full px-8 py-4 rounded-full font-black text-lg uppercase tracking-wide transition-all duration-300 flex items-center justify-center gap-3 ${
