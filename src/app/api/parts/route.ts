@@ -364,12 +364,17 @@ export async function POST(req: Request) {
 
   let inserted: { id: number } | undefined;
   try {
+    const normalizedImageUrl = parsed.data.imageUrl ? parsed.data.imageUrl : null;
+    const normalizedThumbUrl = parsed.data.thumbUrl ? parsed.data.thumbUrl : null;
+
     [inserted] = await db.insert(parts).values({
       ...parsed.data,
       price: parsed.data.price.toString(),
       priceWithoutVAT: parsed.data.priceWithoutVAT ? parsed.data.priceWithoutVAT.toString() : undefined,
       priceWithVAT: parsed.data.priceWithVAT ? parsed.data.priceWithVAT.toString() : undefined,
       discount: parsed.data.discount ? parsed.data.discount.toString() : undefined,
+      imageUrl: normalizedImageUrl,
+      thumbUrl: normalizedThumbUrl,
       updatedAt: new Date(),
     }).returning({ id: parts.id });
   } catch (error) {

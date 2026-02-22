@@ -116,8 +116,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (parsed.data.currency !== undefined) updateData.currency = parsed.data.currency;
   if (parsed.data.stock !== undefined) updateData.stock = parsed.data.stock;
   if (parsed.data.categoryId !== undefined) updateData.categoryId = parsed.data.categoryId;
-  if (parsed.data.imageUrl !== undefined) updateData.imageUrl = parsed.data.imageUrl;
-  if (parsed.data.thumbUrl !== undefined) updateData.thumbUrl = parsed.data.thumbUrl;
+  if (parsed.data.imageUrl !== undefined) {
+    updateData.imageUrl = parsed.data.imageUrl ? parsed.data.imageUrl : null;
+  }
+  if (parsed.data.thumbUrl !== undefined) {
+    updateData.thumbUrl = parsed.data.thumbUrl ? parsed.data.thumbUrl : null;
+  }
   if (parsed.data.spec1 !== undefined) updateData.spec1 = parsed.data.spec1;
   if (parsed.data.spec2 !== undefined) updateData.spec2 = parsed.data.spec2;
   if (parsed.data.spec3 !== undefined) updateData.spec3 = parsed.data.spec3;

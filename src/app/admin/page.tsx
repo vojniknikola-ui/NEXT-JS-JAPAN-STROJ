@@ -237,6 +237,8 @@ export default function AdminParts() {
   const [formFieldErrors, setFormFieldErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [file, setFile] = useState<File | null>(null);
+  const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
+  const [originalImageUrl, setOriginalImageUrl] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
@@ -292,6 +294,17 @@ export default function AdminParts() {
 
   const getInputClassName = (field: string) =>
     `${inputClass} ${formFieldErrors[field] ? 'border-red-500/60 focus:border-red-500 focus:ring-red-500/40' : ''}`;
+
+  useEffect(() => {
+    if (!file) {
+      setFilePreviewUrl(null);
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(file);
+    setFilePreviewUrl(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [file]);
 
   const applySession = useCallback((payload: AdminSessionPayload | null) => {
     if (!payload?.authenticated || !payload.role) {
@@ -385,9 +398,16 @@ export default function AdminParts() {
       if (invoiceStatusFilter !== 'all') params.set('status', invoiceStatusFilter);
 
       const response = await fetch(`/api/invoices?${params.toString()}`, { cache: 'no-store' });
-      const payload = (await response.json().catch(() => ({}))) as Partial<InvoiceHistoryResponse> & { error?: string };
+      const payload = (await response.json().catch(() => ({}))) as Partial<InvoiceHistoryResponse> & {
+        error?: string;
+        detail?: string;
+      };
       if (!response.ok) {
-        throw new Error(payload.error || `HTTP ${response.status}`);
+        throw new Error(
+          payload.detail
+            ? `${payload.error || `HTTP ${response.status}`} (${payload.detail})`
+            : payload.error || `HTTP ${response.status}`
+        );
       }
 
       setInvoiceItems(payload.items || []);
@@ -505,17 +525,35 @@ export default function AdminParts() {
     return url as string;
   }
 
+  async function deleteImageByUrl(imageUrl: string): Promise<void> {
+    if (!canEdit || !imageUrl.trim()) return;
+
+    const response = await fetch('/api/upload', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: imageUrl }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      const parsed = parseApiError(errorData, 'Brisanje stare slike nije uspjelo.');
+      throw new Error(parsed.message);
+    }
+  }
+
   async function savePart(e: React.FormEvent) {
     e.preventDefault();
     if (!canEdit) {
       toast.error('Nedozvoljena akcija', 'Vaša uloga nema pravo izmjene.');
       return;
     }
+    const isEditing = editingId !== null;
     setSaving(true);
     setError(null);
     setFormError(null);
     setFormFieldErrors({});
 
+    let uploadedImageUrl: string | undefined;
     try {
       const validationErrors: Record<string, string> = {};
       if (!form.sku?.trim()) validationErrors.sku = "SKU je obavezan.";
@@ -538,7 +576,13 @@ export default function AdminParts() {
         throw new Error("Provjerite obavezna i neispravna polja.");
       }
 
-      const imageUrl = file ? await uploadImage() : form.imageUrl;
+      const previousImageUrl = (originalImageUrl || '').trim();
+      const nextImageUrlRaw = file ? (await uploadImage()) || '' : (form.imageUrl || '');
+      if (file) {
+        uploadedImageUrl = nextImageUrlRaw;
+      }
+      const normalizedImageUrl = nextImageUrlRaw.trim();
+
       const payload = {
         ...form,
         sku: normalizeSku(form.sku),
@@ -548,11 +592,11 @@ export default function AdminParts() {
         priceWithVAT: form.priceWithVAT ? Number(form.priceWithVAT) : undefined,
         discount: form.discount ? Number(form.discount) : 0,
         stock: Number(form.stock),
-        ...(imageUrl && { imageUrl })
+        imageUrl: normalizedImageUrl,
       };
 
       let res;
-      if (editingId) {
+      if (isEditing) {
         res = await fetch(`/api/parts/${editingId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -580,13 +624,29 @@ export default function AdminParts() {
 
       await res.json();
 
+      if (isEditing && previousImageUrl && previousImageUrl !== normalizedImageUrl) {
+        try {
+          await deleteImageByUrl(previousImageUrl);
+        } catch (deleteError) {
+          console.warn('Old image cleanup failed:', deleteError);
+          toast.warning('Stara slika nije obrisana sa storage-a', 'Nova slika je ipak sačuvana u artiklu.');
+        }
+      }
+
       resetForm();
       await refresh();
 
-      toast.success(editingId ? 'Dio je uspješno ažuriran.' : 'Dio je uspješno dodan.');
+      toast.success(isEditing ? 'Dio je uspješno ažuriran.' : 'Dio je uspješno dodan.');
 
     } catch (e: unknown) {
       console.error('Save error:', e);
+      if (uploadedImageUrl) {
+        try {
+          await deleteImageByUrl(uploadedImageUrl);
+        } catch (deleteError) {
+          console.warn('Rollback image cleanup failed:', deleteError);
+        }
+      }
       setFormError(getErrorMessage(e, "Došlo je do greške prilikom spremanja"));
       toast.error('Spremanje nije uspjelo', getErrorMessage(e, 'Provjerite unesene podatke i pokušajte ponovo.'));
     } finally {
@@ -651,6 +711,7 @@ export default function AdminParts() {
     setFormError(null);
     setFormFieldErrors({});
     setEditingId(p.id);
+    setOriginalImageUrl(p.imageUrl || null);
     setForm({
       sku: p.sku,
       title: p.title,
@@ -682,6 +743,7 @@ export default function AdminParts() {
 
   function resetForm() {
     setEditingId(null);
+    setOriginalImageUrl(null);
     setForm(createInitialForm(cats[0]?.id || 1));
     setFile(null);
     setFormError(null);
@@ -1334,10 +1396,66 @@ export default function AdminParts() {
                     onChange={(e) => setFile(e.target.files?.[0] ?? null)}
                     className="w-full rounded-2xl border border-white/10 bg-[#111111] px-4 py-3 text-sm text-neutral-100 file:mr-4 file:rounded-full file:border-0 file:bg-[#ff6b00] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-black hover:file:bg-[#ff7f1a]"
                   />
-                  {form.imageUrl && !file && (
-                    <div className="mt-2 text-sm text-neutral-400">
-                      Trenutna slika: <a href={form.imageUrl} target="_blank" rel="noopener noreferrer" className="text-[#ff6b00] hover:text-[#ff7f1a] hover:underline">Pogledaj</a>
+                  {file && (
+                    <div className="mt-3 rounded-xl border border-[#ff6b00]/30 bg-[#ff6b00]/5 p-3">
+                      <p className="text-sm text-neutral-200">
+                        Nova slika: <span className="font-semibold">{file.name}</span>
+                      </p>
+                      {filePreviewUrl && (
+                        <a
+                          href={filePreviewUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-2 inline-block text-sm text-[#ff6b00] hover:text-[#ff7f1a] hover:underline"
+                        >
+                          Pregled nove slike
+                        </a>
+                      )}
+                      <div className="mt-2">
+                        <button
+                          type="button"
+                          onClick={() => setFile(null)}
+                          className="inline-flex items-center justify-center rounded-full border border-red-500/40 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-red-300 transition hover:bg-red-500/10"
+                        >
+                          Ukloni novu sliku
+                        </button>
+                      </div>
+                      {form.imageUrl && (
+                        <p className="mt-2 text-xs text-neutral-400">
+                          Nakon spremanja, nova slika će zamijeniti postojeću.
+                        </p>
+                      )}
                     </div>
+                  )}
+                  {form.imageUrl && !file && (
+                    <div className="mt-3 rounded-xl border border-white/10 bg-[#0f0f0f] p-3 text-sm text-neutral-300">
+                      <p>
+                        Trenutna slika:{" "}
+                        <a
+                          href={form.imageUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[#ff6b00] hover:text-[#ff7f1a] hover:underline"
+                        >
+                          Pogledaj
+                        </a>
+                      </p>
+                      <div className="mt-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setForm((prev) => ({ ...prev, imageUrl: '' }));
+                            clearFieldError('imageUrl');
+                          }}
+                          className="inline-flex items-center justify-center rounded-full border border-red-500/40 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-red-300 transition hover:bg-red-500/10"
+                        >
+                          Obriši trenutnu sliku
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  {!form.imageUrl && !file && (
+                    <p className="mt-2 text-sm text-neutral-500">Trenutno nema slike za ovaj dio.</p>
                   )}
                 </div>
                 <div className="flex items-center gap-3">

@@ -18,7 +18,7 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const q = searchParams.get("q")?.trim();
-    const status = searchParams.get("status")?.trim();
+    const status = searchParams.get("status")?.trim().toLowerCase();
     const page = Math.max(Number(searchParams.get("page") ?? 1), 1);
     const pageSize = Math.min(Math.max(Number(searchParams.get("pageSize") ?? 20), 1), 100);
     const offset = (page - 1) * pageSize;
@@ -72,8 +72,12 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error("Error loading invoice history:", error);
+    const detail =
+      error instanceof Error && error.message
+        ? error.message
+        : "Neočekivana greška na serveru.";
     return NextResponse.json(
-      { error: "Greška pri učitavanju istorije predračuna." },
+      { error: "Greška pri učitavanju istorije predračuna.", detail },
       { status: 500 }
     );
   }

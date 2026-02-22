@@ -3,15 +3,63 @@ import { db, withRetry } from "@/db";
 
 let schemaReadyPromise: Promise<void> | null = null;
 
+type InvoiceColumnsState = {
+  hasStatus: boolean;
+  hasSentAt: boolean;
+};
+
+async function getInvoiceColumnsState(): Promise<InvoiceColumnsState> {
+  const result = await db.execute(
+    sql`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_schema = current_schema()
+        AND table_name = 'invoices'
+        AND column_name IN ('status', 'sent_at')
+    `
+  );
+
+  const rows =
+    (result as { rows?: Array<{ column_name?: unknown }> }).rows ?? [];
+  const names = new Set(
+    rows
+      .map((row) =>
+        typeof row.column_name === "string" ? row.column_name : null
+      )
+      .filter((name): name is string => Boolean(name))
+  );
+
+  return {
+    hasStatus: names.has("status"),
+    hasSentAt: names.has("sent_at"),
+  };
+}
+
 async function ensureSchemaInternal() {
+  const existing = await getInvoiceColumnsState();
+  if (existing.hasStatus && existing.hasSentAt) {
+    return;
+  }
+
   await withRetry(async () => {
-    await db.execute(
-      sql`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS status varchar(20) NOT NULL DEFAULT 'created'`
-    );
-    await db.execute(
-      sql`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS sent_at timestamp`
-    );
+    if (!existing.hasStatus) {
+      await db.execute(
+        sql`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS status varchar(20) NOT NULL DEFAULT 'created'`
+      );
+    }
+    if (!existing.hasSentAt) {
+      await db.execute(
+        sql`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS sent_at timestamp`
+      );
+    }
   });
+
+  const after = await getInvoiceColumnsState();
+  if (!after.hasStatus || !after.hasSentAt) {
+    throw new Error(
+      "Kolone status/sent_at na invoices tabeli nisu dostupne. Pokrenite DB migracije."
+    );
+  }
 }
 
 export async function ensureInvoiceColumns() {
