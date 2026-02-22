@@ -8,6 +8,8 @@ export interface InvoiceCompanyDetails {
   idNumber: string;
   pdvNumber: string;
   name: string;
+  phone?: string;
+  email?: string;
   address: string;
 }
 
@@ -129,7 +131,7 @@ export async function generateProformaPdf({
 
   doc.setDrawColor(255, 107, 0);
   doc.setLineWidth(1);
-  doc.rect(margin, 105, contentWidth, 35);
+  doc.rect(margin, 105, contentWidth, 43);
   doc.setFontSize(10);
   setPdfFont("normal");
   doc.setTextColor(0, 0, 0);
@@ -142,6 +144,16 @@ export async function generateProformaPdf({
   doc.text(truncateText(doc, `PDV broj: ${companyDetails.pdvNumber}`, leftColumnWidth), margin + 5, 131);
   doc.text(truncateText(doc, `Kontakt osoba: ${companyDetails.name}`, rightColumnWidth), pageWidth / 2 + 10, 115);
   doc.text(truncateText(doc, `Adresa: ${companyDetails.address}`, rightColumnWidth), pageWidth / 2 + 10, 123);
+  doc.text(
+    truncateText(doc, `Telefon: ${companyDetails.phone?.trim() || "-"}`, rightColumnWidth),
+    pageWidth / 2 + 10,
+    131
+  );
+  doc.text(
+    truncateText(doc, `Email: ${companyDetails.email?.trim() || "-"}`, rightColumnWidth),
+    pageWidth / 2 + 10,
+    139
+  );
 
   let yPosition = 155;
 

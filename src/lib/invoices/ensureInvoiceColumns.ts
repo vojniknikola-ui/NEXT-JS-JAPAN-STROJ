@@ -9,6 +9,35 @@ type InvoiceColumnsState = {
   hasSentAt: boolean;
 };
 
+async function createInvoicesTableIfMissing() {
+  await withRetry(async () => {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS invoices (
+        id serial PRIMARY KEY,
+        invoice_number varchar(50) NOT NULL,
+        customer_name varchar(200) NOT NULL,
+        customer_id varchar(50),
+        customer_pdv varchar(50),
+        customer_contact varchar(200),
+        customer_address text,
+        cart_data text NOT NULL,
+        total_amount numeric(10, 2) NOT NULL,
+        status varchar(20) NOT NULL DEFAULT 'created',
+        sent_at timestamp,
+        created_at timestamp NOT NULL DEFAULT now(),
+        updated_at timestamp NOT NULL DEFAULT now()
+      )
+    `);
+
+    await db.execute(
+      sql`CREATE UNIQUE INDEX IF NOT EXISTS invoices_invoice_number_idx ON invoices (invoice_number)`
+    );
+    await db.execute(
+      sql`CREATE INDEX IF NOT EXISTS invoices_created_at_idx ON invoices (created_at)`
+    );
+  });
+}
+
 async function getInvoiceColumnsState(): Promise<InvoiceColumnsState> {
   try {
     const tableResult = await db.execute(
@@ -78,7 +107,18 @@ async function getInvoiceColumnsState(): Promise<InvoiceColumnsState> {
 
 async function ensureSchemaInternal() {
   const existing = await getInvoiceColumnsState();
-  if (!existing.hasTable || (existing.hasStatus && existing.hasSentAt)) {
+
+  if (!existing.hasTable) {
+    try {
+      await createInvoicesTableIfMissing();
+      return await getInvoiceColumnsState();
+    } catch (error) {
+      console.warn("Invoice table auto-create skipped:", error);
+      return existing;
+    }
+  }
+
+  if (existing.hasStatus && existing.hasSentAt) {
     return existing;
   }
 

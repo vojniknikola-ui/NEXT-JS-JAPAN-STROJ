@@ -8,6 +8,8 @@ import {
   generateProformaPdf,
   type InvoiceCompanyDetails,
 } from "@/lib/invoices/generateProformaPdf";
+import { fetchInvoicePdfFromBlob } from "@/lib/invoices/blobStorage";
+import { parseCustomerContactSummary } from "@/lib/invoices/contactDetails";
 import { requireAdminRole } from "@/lib/auth/adminSession";
 
 export const runtime = "nodejs";
@@ -23,6 +25,17 @@ export async function GET(
     await ensureInvoiceColumns();
     const { invoiceNumber: invoiceNumberParam } = await params;
     const invoiceNumber = decodeURIComponent(invoiceNumberParam);
+
+    const blobPdf = await fetchInvoicePdfFromBlob(invoiceNumber);
+    if (blobPdf) {
+      return new NextResponse(Buffer.from(blobPdf), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `attachment; filename="predracun-${invoiceNumber}.pdf"`,
+        },
+      });
+    }
 
     const [row] = await db
       .select({
@@ -46,12 +59,15 @@ export async function GET(
 
     const parsedCart = JSON.parse(row.cartData) as CartItem[];
     const cartItems = Array.isArray(parsedCart) ? parsedCart : [];
+    const parsedContact = parseCustomerContactSummary(row.customerContact);
 
     const companyDetails: InvoiceCompanyDetails = {
       companyName: row.customerName,
       idNumber: row.customerId || "",
       pdvNumber: row.customerPdv || "",
-      name: row.customerContact || "",
+      name: parsedContact.name,
+      phone: parsedContact.phone,
+      email: parsedContact.email,
       address: row.customerAddress || "",
     };
 

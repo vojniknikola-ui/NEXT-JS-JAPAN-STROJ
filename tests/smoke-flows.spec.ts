@@ -189,6 +189,7 @@ test.describe('Smoke Flows', () => {
     await page.fill('#invoice-pdv-number', '987654321');
     await page.fill('#invoice-contact-name', 'Šaban Žurić');
     await page.fill('#invoice-company-address', 'Ćuprija 12, Živinice');
+    await page.fill('#invoice-contact-phone', '+38761123456');
 
     const downloadPromise = page.waitForEvent('download');
     await page.getByTestId('generate-proforma-button').click();

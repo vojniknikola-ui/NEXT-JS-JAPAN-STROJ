@@ -1834,7 +1834,7 @@ export default function AdminParts() {
               value={invoiceQ}
               onChange={(event) => setInvoiceQ(event.target.value)}
               className={inputClass}
-              placeholder="Pretraga: broj predračuna ili naziv kupca..."
+              placeholder="Pretraga: broj predračuna, naziv kupca, telefon ili email..."
             />
             <select
               className={inputClass}

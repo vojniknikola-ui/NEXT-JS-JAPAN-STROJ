@@ -6,14 +6,19 @@ import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import { CartItem } from '@/types';
 import { useToast } from '@/components/ui/ToastProvider';
+import { isValidEmail } from '@/lib/invoices/contactDetails';
 
 interface CompanyDetails {
   companyName: string;
   idNumber: string;
   pdvNumber: string;
   name: string;
+  phone: string;
+  email: string;
   address: string;
 }
+
+type CompanyDetailsField = keyof CompanyDetails | 'contact';
 
 interface ProformaInvoiceModalProps {
   isOpen: boolean;
@@ -34,10 +39,12 @@ export default function ProformaInvoiceModal({
     idNumber: '',
     pdvNumber: '',
     name: '',
+    phone: '',
+    email: '',
     address: '',
   });
   const [isGenerating, setIsGenerating] = useState(false);
-  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof CompanyDetails, string>>>({});
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<CompanyDetailsField, string>>>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const handleInputChange = (field: keyof CompanyDetails, value: string) => {
@@ -46,23 +53,32 @@ export default function ProformaInvoiceModal({
       if (!prev[field]) return prev;
       const next = { ...prev };
       delete next[field];
+      if (field === 'phone' || field === 'email') delete next.contact;
       return next;
     });
     setCompanyDetails(prev => ({ ...prev, [field]: value }));
   };
 
   const generatePDF = async () => {
-    const nextFieldErrors: Partial<Record<keyof CompanyDetails, string>> = {};
+    const nextFieldErrors: Partial<Record<CompanyDetailsField, string>> = {};
     if (!companyDetails.companyName.trim()) nextFieldErrors.companyName = 'Naziv firme je obavezan.';
     if (!companyDetails.idNumber.trim()) nextFieldErrors.idNumber = 'ID broj je obavezan.';
     if (!companyDetails.pdvNumber.trim()) nextFieldErrors.pdvNumber = 'PDV broj je obavezan.';
     if (!companyDetails.name.trim()) nextFieldErrors.name = 'Ime i prezime su obavezni.';
     if (!companyDetails.address.trim()) nextFieldErrors.address = 'Adresa je obavezna.';
+    const phone = companyDetails.phone.trim();
+    const email = companyDetails.email.trim();
+    if (!phone && !email) {
+      nextFieldErrors.contact = 'Unesite barem broj telefona ili email.';
+    }
+    if (email && !isValidEmail(email)) {
+      nextFieldErrors.email = 'Email nije ispravan.';
+    }
 
     if (Object.keys(nextFieldErrors).length > 0) {
       setFieldErrors(nextFieldErrors);
-      setSubmitError('Popunite sva obavezna polja prije generisanja predračuna.');
-      toast.warning('Nedostaju podaci', 'Popunite sva obavezna polja.');
+      setSubmitError('Popunite obavezna polja. Potreban je telefon ili email.');
+      toast.warning('Nedostaju podaci', 'Popunite obavezna polja i unesite telefon ili email.');
       return;
     }
 
@@ -107,6 +123,8 @@ export default function ProformaInvoiceModal({
         idNumber: '',
         pdvNumber: '',
         name: '',
+        phone: '',
+        email: '',
         address: '',
       });
       setSubmitError(null);
@@ -208,6 +226,45 @@ export default function ProformaInvoiceModal({
             error={fieldErrors.address}
           />
         </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label htmlFor="invoice-contact-phone" className="block text-sm font-semibold text-neutral-100 mb-1">
+              Broj telefona
+            </label>
+            <Input
+              id="invoice-contact-phone"
+              type="tel"
+              value={companyDetails.phone}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('phone', e.target.value)}
+              placeholder="+387 61 123 456"
+              className="w-full"
+              error={fieldErrors.phone}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="invoice-contact-email" className="block text-sm font-semibold text-neutral-100 mb-1">
+              Email
+            </label>
+            <Input
+              id="invoice-contact-email"
+              type="email"
+              value={companyDetails.email}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('email', e.target.value)}
+              placeholder="firma@domena.ba"
+              className="w-full"
+              error={fieldErrors.email}
+            />
+          </div>
+        </div>
+
+        <p className="text-xs text-neutral-400">
+          Potrebno je unijeti barem broj telefona ili email.
+        </p>
+        {fieldErrors.contact && (
+          <p className="text-xs text-red-300">{fieldErrors.contact}</p>
+        )}
 
         <div className="flex gap-3 pt-4">
           <Button
