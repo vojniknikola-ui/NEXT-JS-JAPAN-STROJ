@@ -3,6 +3,7 @@ import { parts, categories } from "@/db/schema";
 import { and, asc, desc, eq, gt, ilike, lt, or, sql } from "drizzle-orm";
 import { partCreateSchema } from "@/lib/validation";
 import { revalidatePath } from "next/cache";
+import { requireAdminRole } from "@/lib/auth/adminSession";
 
 export const runtime = 'nodejs';
 
@@ -341,6 +342,9 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  const auth = requireAdminRole(req, ["admin", "editor"]);
+  if ("response" in auth) return auth.response;
+
   const json = await req.json();
   const parsed = partCreateSchema.safeParse(json);
   if (!parsed.success) {

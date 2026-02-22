@@ -3,6 +3,7 @@ import { parts } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { partUpdateSchema } from "@/lib/validation";
 import { revalidatePath } from "next/cache";
+import { requireAdminRole } from "@/lib/auth/adminSession";
 
 function createDbErrorResponse(error: unknown): Response {
   const errorWithCause = error as Error & { cause?: unknown };
@@ -78,6 +79,9 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
 }
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const auth = requireAdminRole(req, ["admin", "editor"]);
+  if ("response" in auth) return auth.response;
+
   const { id } = await params;
   const payload = await req.json();
   const parsed = partUpdateSchema.safeParse(payload);
@@ -145,6 +149,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 }
 
 export async function DELETE(_: Request, { params }: { params: Promise<{ id: string }> }) {
+  const auth = requireAdminRole(_, ["admin"]);
+  if ("response" in auth) return auth.response;
+
   const { id } = await params;
   try {
     await db.delete(parts).where(eq(parts.id, Number(id)));

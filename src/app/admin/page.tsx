@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { useToast } from '@/components/ui/ToastProvider';
@@ -145,6 +145,42 @@ type ApiErrorPayload = {
   fieldErrors?: Record<string, string[] | undefined>;
 };
 
+type AdminRole = 'admin' | 'editor' | 'read_only';
+
+type AdminSessionPayload = {
+  authenticated: boolean;
+  role: AdminRole | null;
+  roleLabel: string | null;
+  permissions: {
+    canRead: boolean;
+    canEdit: boolean;
+    canDelete: boolean;
+  };
+  error?: string;
+};
+
+type InvoiceStatus = 'created' | 'sent';
+
+type InvoiceHistoryRecord = {
+  id: number;
+  invoiceNumber: string;
+  customerName: string;
+  customerContact: string | null;
+  customerAddress: string | null;
+  totalAmount: string;
+  status: InvoiceStatus;
+  sentAt: string | Date | null;
+  createdAt: string | Date | null;
+};
+
+type InvoiceHistoryResponse = {
+  items: InvoiceHistoryRecord[];
+  page: number;
+  pageSize: number;
+  total: number;
+  hasMore: boolean;
+};
+
 const fieldLabelMap: Record<string, string> = {
   sku: "SKU",
   title: "Naziv",
@@ -213,12 +249,37 @@ export default function AdminParts() {
   const [filterCategory, setFilterCategory] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [filterBrand, setFilterBrand] = useState<string>('');
+  const [authLoading, setAuthLoading] = useState(true);
+  const [authRole, setAuthRole] = useState<AdminRole | null>(null);
+  const [authRoleLabel, setAuthRoleLabel] = useState<string | null>(null);
+  const [authPermissions, setAuthPermissions] = useState({
+    canRead: false,
+    canEdit: false,
+    canDelete: false,
+  });
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [loginUsername, setLoginUsername] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginLoading, setLoginLoading] = useState(false);
+
+  const [invoiceItems, setInvoiceItems] = useState<InvoiceHistoryRecord[]>([]);
+  const [invoiceLoading, setInvoiceLoading] = useState(false);
+  const [invoiceError, setInvoiceError] = useState<string | null>(null);
+  const [invoiceQ, setInvoiceQ] = useState('');
+  const [invoiceStatusFilter, setInvoiceStatusFilter] = useState<'all' | InvoiceStatus>('all');
+  const [invoicePage, setInvoicePage] = useState(1);
+  const [invoiceTotal, setInvoiceTotal] = useState(0);
+  const [invoiceActionLoading, setInvoiceActionLoading] = useState<string | null>(null);
+  const invoicePageSize = 20;
 
   const primaryButtonClass = 'inline-flex items-center justify-center gap-2 rounded-full bg-[#ff6b00] px-6 py-3 text-sm font-semibold uppercase tracking-wide text-black shadow-[0_18px_45px_-20px_rgba(255,107,0,0.9)] transition-all hover:scale-105 hover:bg-[#ff7f1a] disabled:opacity-50 disabled:cursor-not-allowed';
   const secondaryButtonClass = 'inline-flex items-center justify-center gap-2 rounded-full border border-white/15 px-6 py-3 text-sm font-semibold uppercase tracking-wide text-neutral-200 transition-all hover:border-[#ff6b00] hover:text-[#ff6b00] hover:scale-105';
   const inputClass = 'w-full rounded-2xl border border-white/10 bg-[#111111] px-4 py-3 text-sm text-neutral-100 placeholder:text-neutral-500 outline-none transition focus:border-[#ff6b00]/50 focus:ring-2 focus:ring-[#ff6b00]/60';
   const labelClass = 'block text-[0.7rem] font-semibold uppercase tracking-[0.35em] text-neutral-400 mb-2';
   const validSortFields: SortField[] = ['id', 'sku', 'brand', 'model', 'title', 'stock', 'priceWithoutVAT', 'priceWithVAT', 'createdAt', 'updatedAt'];
+  const canRead = authPermissions.canRead;
+  const canEdit = authPermissions.canEdit;
+  const canDelete = authPermissions.canDelete;
 
   const clearFieldError = (field: string) => {
     setFormFieldErrors((prev) => {
@@ -232,7 +293,123 @@ export default function AdminParts() {
   const getInputClassName = (field: string) =>
     `${inputClass} ${formFieldErrors[field] ? 'border-red-500/60 focus:border-red-500 focus:ring-red-500/40' : ''}`;
 
+  const applySession = useCallback((payload: AdminSessionPayload | null) => {
+    if (!payload?.authenticated || !payload.role) {
+      setAuthRole(null);
+      setAuthRoleLabel(null);
+      setAuthPermissions({ canRead: false, canEdit: false, canDelete: false });
+      return;
+    }
+    setAuthRole(payload.role);
+    setAuthRoleLabel(payload.roleLabel);
+    setAuthPermissions(payload.permissions);
+  }, []);
+
+  const fetchSession = useCallback(async () => {
+    try {
+      setAuthLoading(true);
+      setAuthError(null);
+
+      const response = await fetch('/api/admin/session', { cache: 'no-store' });
+      const payload = (await response.json().catch(() => ({}))) as Partial<AdminSessionPayload>;
+      if (!response.ok) {
+        applySession(null);
+        return;
+      }
+      applySession(payload as AdminSessionPayload);
+    } catch (error) {
+      console.error('Error loading admin session:', error);
+      applySession(null);
+      setAuthError('Ne mogu provjeriti sesiju. Pokušajte ponovo.');
+    } finally {
+      setAuthLoading(false);
+    }
+  }, [applySession]);
+
+  const login = async (event: React.FormEvent) => {
+    event.preventDefault();
+    try {
+      setLoginLoading(true);
+      setAuthError(null);
+
+      const response = await fetch('/api/admin/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: loginUsername.trim(),
+          password: loginPassword,
+        }),
+      });
+
+      const payload = (await response.json().catch(() => ({}))) as Partial<AdminSessionPayload> & { error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error || 'Prijava nije uspjela.');
+      }
+
+      applySession(payload as AdminSessionPayload);
+      setLoginPassword('');
+      toast.success('Prijava uspješna', 'Admin sesija je aktivna.');
+    } catch (error) {
+      const message = getErrorMessage(error, 'Prijava nije uspjela.');
+      setAuthError(message);
+      toast.error('Prijava nije uspjela', message);
+    } finally {
+      setLoginLoading(false);
+      setAuthLoading(false);
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await fetch('/api/admin/session', { method: 'DELETE' });
+    } catch (error) {
+      console.error('Error during logout:', error);
+    } finally {
+      applySession(null);
+      setLoginPassword('');
+      toast.info('Odjavljeni ste.');
+    }
+  };
+
+  const loadInvoices = useCallback(async (targetPage = 1) => {
+    if (!canRead) return;
+
+    try {
+      setInvoiceLoading(true);
+      setInvoiceError(null);
+
+      const params = new URLSearchParams();
+      params.set('page', String(targetPage));
+      params.set('pageSize', String(invoicePageSize));
+      if (invoiceQ.trim()) params.set('q', invoiceQ.trim());
+      if (invoiceStatusFilter !== 'all') params.set('status', invoiceStatusFilter);
+
+      const response = await fetch(`/api/invoices?${params.toString()}`, { cache: 'no-store' });
+      const payload = (await response.json().catch(() => ({}))) as Partial<InvoiceHistoryResponse> & { error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error || `HTTP ${response.status}`);
+      }
+
+      setInvoiceItems(payload.items || []);
+      setInvoiceTotal(payload.total || 0);
+      setInvoicePage(targetPage);
+    } catch (error) {
+      console.error('Error loading invoices:', error);
+      const message = getErrorMessage(error, 'Greška pri učitavanju predračuna.');
+      setInvoiceError(message);
+      toast.error('Historija predračuna', message);
+    } finally {
+      setInvoiceLoading(false);
+    }
+  }, [canRead, invoicePageSize, invoiceQ, invoiceStatusFilter, toast]);
+
   useEffect(() => {
+    void fetchSession();
+  }, [fetchSession]);
+
+  useEffect(() => {
+    if (authLoading || !canRead) return;
+
     const loadInitialData = async () => {
       try {
         setLoading(true);
@@ -269,9 +446,11 @@ export default function AdminParts() {
     };
 
     loadInitialData();
-  }, []);
+  }, [authLoading, canRead]);
 
   async function refresh(search?: string) {
+    if (!canRead) return;
+
     try {
       setLoading(true);
       setError(null);
@@ -303,7 +482,16 @@ export default function AdminParts() {
     }
   }
 
+  useEffect(() => {
+    if (!authLoading && canRead) {
+      void loadInvoices(1);
+    }
+  }, [authLoading, canRead, loadInvoices]);
+
   async function uploadImage(): Promise<string | undefined> {
+    if (!canEdit) {
+      throw new Error('Nemate dozvolu za upload slike.');
+    }
     if (!file) return undefined;
     const fd = new FormData();
     fd.append("file", file);
@@ -319,6 +507,10 @@ export default function AdminParts() {
 
   async function savePart(e: React.FormEvent) {
     e.preventDefault();
+    if (!canEdit) {
+      toast.error('Nedozvoljena akcija', 'Vaša uloga nema pravo izmjene.');
+      return;
+    }
     setSaving(true);
     setError(null);
     setFormError(null);
@@ -403,6 +595,10 @@ export default function AdminParts() {
   }
 
   async function deletePart(id: number) {
+    if (!canDelete) {
+      toast.error('Nedozvoljena akcija', 'Samo admin može brisati dijelove.');
+      return;
+    }
     setLoading(true);
     setError(null);
     setFormError(null);
@@ -433,6 +629,10 @@ export default function AdminParts() {
   }
 
   const requestDeletePart = (id: number) => {
+    if (!canDelete) {
+      toast.error('Nedozvoljena akcija', 'Samo admin može brisati dijelove.');
+      return;
+    }
     setPendingDeleteId(id);
   };
 
@@ -444,6 +644,10 @@ export default function AdminParts() {
   };
 
   function editPart(p: PartRecord) {
+    if (!canEdit) {
+      toast.error('Nedozvoljena akcija', 'Vaša uloga nema pravo izmjene.');
+      return;
+    }
     setFormError(null);
     setFormFieldErrors({});
     setEditingId(p.id);
@@ -485,6 +689,10 @@ export default function AdminParts() {
   }
 
   const requestResetForm = () => {
+    if (!canEdit) {
+      toast.error('Nedozvoljena akcija', 'Vaša uloga nema pravo izmjene.');
+      return;
+    }
     setIsResetDialogOpen(true);
   };
 
@@ -546,13 +754,144 @@ export default function AdminParts() {
     setCurrentPage(1);
   };
 
+  const invoiceTotalPages = Math.max(1, Math.ceil(invoiceTotal / invoicePageSize));
+
+  const searchInvoices = () => {
+    void loadInvoices(1);
+  };
+
+  const downloadInvoicePdf = async (invoiceNumber: string) => {
+    try {
+      setInvoiceActionLoading(`download-${invoiceNumber}`);
+      const response = await fetch(`/api/invoices/${encodeURIComponent(invoiceNumber)}/download`, {
+        cache: 'no-store',
+      });
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => ({} as { error?: string })));
+        throw new Error(payload.error || `HTTP ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `predracun-${invoiceNumber}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      toast.success('Predračun preuzet', invoiceNumber);
+    } catch (error) {
+      const message = getErrorMessage(error, 'Neuspjelo preuzimanje predračuna.');
+      toast.error('Preuzimanje nije uspjelo', message);
+    } finally {
+      setInvoiceActionLoading(null);
+    }
+  };
+
+  const updateInvoiceStatus = async (invoiceNumber: string, status: InvoiceStatus) => {
+    if (!canEdit) {
+      toast.error('Nedozvoljena akcija', 'Vaša uloga nema pravo izmjene statusa.');
+      return;
+    }
+
+    try {
+      setInvoiceActionLoading(`status-${invoiceNumber}`);
+      const response = await fetch(`/api/invoices/${encodeURIComponent(invoiceNumber)}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      });
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => ({} as { error?: string })));
+        throw new Error(payload.error || `HTTP ${response.status}`);
+      }
+      toast.success('Status ažuriran', `${invoiceNumber} -> ${status === 'sent' ? 'sent' : 'created'}`);
+      await loadInvoices(invoicePage);
+    } catch (error) {
+      const message = getErrorMessage(error, 'Neuspjelo ažuriranje statusa.');
+      toast.error('Status nije izmijenjen', message);
+    } finally {
+      setInvoiceActionLoading(null);
+    }
+  };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-[#050505] via-[#0b0b0b] to-[#111111] px-3 py-10 text-neutral-100">
+        <div className="mx-auto max-w-xl rounded-3xl border border-white/10 bg-[#101010] p-8 text-center">
+          <p className="text-sm uppercase tracking-[0.35em] text-neutral-400">Admin</p>
+          <h1 className="mt-3 text-2xl font-bold">Provjera sesije...</h1>
+        </div>
+      </div>
+    );
+  }
+
+  if (!canRead) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-[#050505] via-[#0b0b0b] to-[#111111] px-3 py-10 text-neutral-100">
+        <div className="mx-auto max-w-xl rounded-3xl border border-white/10 bg-[#101010] p-8 shadow-[0_35px_90px_-40px_rgba(255,107,0,0.5)]">
+          <p className="text-sm uppercase tracking-[0.35em] text-neutral-400">Admin Prijava</p>
+          <h1 className="mt-3 text-3xl font-bold text-white">Pristup administraciji</h1>
+          <p className="mt-2 text-sm text-neutral-400">
+            Ulogujte se kao `admin`, `editor` ili `viewer` korisnik.
+          </p>
+          <form className="mt-6 space-y-4" onSubmit={login}>
+            <div>
+              <label className={labelClass}>Korisničko ime</label>
+              <input
+                value={loginUsername}
+                onChange={(event) => setLoginUsername(event.target.value)}
+                className={inputClass}
+                placeholder="admin"
+                autoComplete="username"
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Lozinka</label>
+              <input
+                type="password"
+                value={loginPassword}
+                onChange={(event) => setLoginPassword(event.target.value)}
+                className={inputClass}
+                placeholder="••••••••"
+                autoComplete="current-password"
+              />
+            </div>
+            {authError && (
+              <div className="rounded-xl border border-red-500/40 bg-red-950/35 px-4 py-3 text-sm text-red-200">
+                {authError}
+              </div>
+            )}
+            <button
+              type="submit"
+              disabled={loginLoading}
+              className={primaryButtonClass}
+            >
+              {loginLoading ? 'Prijava...' : 'Prijavi se'}
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#050505] via-[#0b0b0b] to-[#111111] px-3 py-8 sm:px-4 sm:py-10 md:px-6 md:py-14 lg:py-16">
       <div className="mx-auto w-full max-w-7xl space-y-14">
         <div className="flex flex-col gap-3">
-          <span className="inline-flex w-max items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.4em] text-neutral-300">
-            JapanStroj Admin
-          </span>
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="inline-flex w-max items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.4em] text-neutral-300">
+              JapanStroj Admin
+            </span>
+            <span className="inline-flex w-max items-center gap-2 rounded-full border border-emerald-500/35 bg-emerald-900/30 px-4 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.35em] text-emerald-200">
+              Uloga: {authRoleLabel || authRole}
+            </span>
+            <button onClick={logout} className={secondaryButtonClass}>
+              Odjava
+            </button>
+          </div>
           <h1 className="text-4xl font-extrabold text-white md:text-5xl">Upravljanje rezervnim dijelovima</h1>
           <p className="max-w-2xl text-sm text-neutral-400">
             Ažurirajte ponudu komponenti, pratite stanja i kontrolirajte dostupnost u realnom vremenu.
@@ -659,12 +998,18 @@ export default function AdminParts() {
         <div className="rounded-3xl border border-white/10 bg-[#101010] p-10 shadow-[0_35px_90px_-40px_rgba(255,107,0,0.5)]">
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <h2 className="text-2xl font-bold text-white">{editingId ? 'Uredi postojeći dio' : 'Dodaj novi dio'}</h2>
-            {editingId && (
+            {editingId && canEdit && (
               <button onClick={resetForm} className={secondaryButtonClass}>
                 Otkaži izmjene
               </button>
             )}
           </div>
+
+          {!canEdit && (
+            <div className="mt-4 rounded-2xl border border-amber-500/40 bg-amber-950/30 px-4 py-3 text-sm text-amber-200">
+              Trenutna uloga ima samo pregled. Za izmjene je potreban `admin` ili `editor`.
+            </div>
+          )}
 
           <form onSubmit={savePart} className="mt-8 space-y-8">
             {formError && (
@@ -1013,7 +1358,7 @@ export default function AdminParts() {
             <div className="flex gap-4 pt-4 border-t border-white/10">
               <button
                 type="submit"
-                disabled={saving || loading}
+                disabled={!canEdit || saving || loading}
                 className={primaryButtonClass}
                 data-testid="admin-save-button"
               >
@@ -1027,7 +1372,7 @@ export default function AdminParts() {
               <button
                 type="button"
                 onClick={requestResetForm}
-                disabled={saving || loading}
+                disabled={!canEdit || saving || loading}
                 className={secondaryButtonClass}
               >
                 Resetuj formu
@@ -1265,14 +1610,14 @@ export default function AdminParts() {
                       <div className="flex flex-col justify-center gap-2 sm:flex-row">
                         <button
                           onClick={() => editPart(p)}
-                          disabled={loading}
+                          disabled={loading || !canEdit}
                           className="bg-[#ff6b00] hover:bg-[#ff7f1a] text-black px-4 py-2 rounded-full font-semibold transition-all hover:scale-105 disabled:opacity-50 text-xs"
                         >
                           Uredi
                         </button>
                         <button
                           onClick={() => requestDeletePart(p.id)}
-                          disabled={loading}
+                          disabled={loading || !canDelete}
                           className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-full font-semibold transition-all hover:scale-105 disabled:opacity-50 text-xs"
                         >
                           Obriši
@@ -1347,6 +1692,152 @@ export default function AdminParts() {
               </div>
             </div>
           )}
+        </div>
+
+        <div className="rounded-3xl border border-white/10 bg-[#101010] p-8 shadow-[0_35px_90px_-40px_rgba(56,189,248,0.35)]">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-white">Historija predračuna</h2>
+              <p className="mt-1 text-sm text-neutral-400">
+                Pregled, pretraga, status i ponovni download PDF predračuna.
+              </p>
+            </div>
+            <button
+              className={secondaryButtonClass}
+              onClick={() => void loadInvoices(invoicePage)}
+              disabled={invoiceLoading}
+            >
+              Osvježi istoriju
+            </button>
+          </div>
+
+          <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_220px_auto]">
+            <input
+              value={invoiceQ}
+              onChange={(event) => setInvoiceQ(event.target.value)}
+              className={inputClass}
+              placeholder="Pretraga: broj predračuna ili naziv kupca..."
+            />
+            <select
+              className={inputClass}
+              value={invoiceStatusFilter}
+              onChange={(event) => setInvoiceStatusFilter(event.target.value as 'all' | InvoiceStatus)}
+            >
+              <option value="all">Svi statusi</option>
+              <option value="created">Created</option>
+              <option value="sent">Sent</option>
+            </select>
+            <button className={secondaryButtonClass} onClick={searchInvoices}>
+              Traži
+            </button>
+          </div>
+
+          {invoiceError && (
+            <div className="mt-4 rounded-xl border border-red-500/40 bg-red-950/35 px-4 py-3 text-sm text-red-200">
+              {invoiceError}
+            </div>
+          )}
+
+          <div className="mt-6 overflow-x-auto rounded-2xl border border-white/10">
+            <table className="w-full min-w-[1100px] text-sm">
+              <thead className="bg-[#161616] text-neutral-300">
+                <tr>
+                  <th className="px-4 py-3 text-left">Broj</th>
+                  <th className="px-4 py-3 text-left">Kupac</th>
+                  <th className="px-4 py-3 text-left">Kontakt</th>
+                  <th className="px-4 py-3 text-left">Ukupno</th>
+                  <th className="px-4 py-3 text-left">Status</th>
+                  <th className="px-4 py-3 text-left">Kreiran</th>
+                  <th className="px-4 py-3 text-left">Poslan</th>
+                  <th className="px-4 py-3 text-center">Akcije</th>
+                </tr>
+              </thead>
+              <tbody>
+                {invoiceItems.map((invoice) => {
+                  const statusBadgeClass =
+                    invoice.status === 'sent'
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-amber-600 text-black';
+                  return (
+                    <tr key={invoice.id} className="border-t border-white/10 text-neutral-200">
+                      <td className="px-4 py-3 font-mono text-xs">{invoice.invoiceNumber}</td>
+                      <td className="px-4 py-3">{invoice.customerName}</td>
+                      <td className="px-4 py-3 text-xs">{invoice.customerContact || '-'}</td>
+                      <td className="px-4 py-3 font-semibold">{Number(invoice.totalAmount).toFixed(2)} BAM</td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${statusBadgeClass}`}>
+                          {invoice.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-xs">
+                        {invoice.createdAt ? new Date(invoice.createdAt).toLocaleString('bs-BA') : '-'}
+                      </td>
+                      <td className="px-4 py-3 text-xs">
+                        {invoice.sentAt ? new Date(invoice.sentAt).toLocaleString('bs-BA') : '-'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap items-center justify-center gap-2">
+                          <button
+                            className={secondaryButtonClass}
+                            disabled={invoiceActionLoading === `download-${invoice.invoiceNumber}`}
+                            onClick={() => void downloadInvoicePdf(invoice.invoiceNumber)}
+                          >
+                            PDF
+                          </button>
+                          <button
+                            className={secondaryButtonClass}
+                            disabled={!canEdit || invoice.status === 'created' || invoiceActionLoading === `status-${invoice.invoiceNumber}`}
+                            onClick={() => void updateInvoiceStatus(invoice.invoiceNumber, 'created')}
+                          >
+                            Created
+                          </button>
+                          <button
+                            className={primaryButtonClass}
+                            disabled={!canEdit || invoice.status === 'sent' || invoiceActionLoading === `status-${invoice.invoiceNumber}`}
+                            onClick={() => void updateInvoiceStatus(invoice.invoiceNumber, 'sent')}
+                          >
+                            Sent
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {!invoiceLoading && invoiceItems.length === 0 && (
+                  <tr>
+                    <td colSpan={8} className="px-4 py-8 text-center text-neutral-400">
+                      Nema predračuna za zadane kriterije.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="mt-4 flex flex-col items-center justify-between gap-3 border-t border-white/10 pt-4 text-sm text-neutral-400 md:flex-row">
+            <p>
+              Prikazano {invoiceItems.length} od ukupno {invoiceTotal}
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                className="rounded-lg bg-white/5 px-3 py-2 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={invoicePage <= 1 || invoiceLoading}
+                onClick={() => void loadInvoices(invoicePage - 1)}
+              >
+                Prethodna
+              </button>
+              <span className="min-w-[120px] text-center">
+                Stranica {invoicePage} / {invoiceTotalPages}
+              </span>
+              <button
+                className="rounded-lg bg-white/5 px-3 py-2 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={invoicePage >= invoiceTotalPages || invoiceLoading}
+                onClick={() => void loadInvoices(invoicePage + 1)}
+              >
+                Sljedeća
+              </button>
+            </div>
+          </div>
         </div>
       </div>
       <ConfirmDialog

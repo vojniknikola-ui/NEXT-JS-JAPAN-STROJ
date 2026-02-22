@@ -79,6 +79,8 @@ export const invoices = pgTable('invoices', {
   customerAddress: text('customer_address'),
   cartData: text('cart_data').notNull(), // JSON string of cart items
   totalAmount: numeric('total_amount', { precision: 10, scale: 2 }).notNull(),
+  status: varchar('status', { length: 20 }).notNull().default('created'),
+  sentAt: timestamp('sent_at'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 }, (table) => ({

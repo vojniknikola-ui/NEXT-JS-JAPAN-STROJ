@@ -37,6 +37,42 @@ test.describe('Smoke Flows', () => {
   test('admin add part flow', async ({ page }) => {
     let postedPayload: Record<string, unknown> | null = null;
 
+    await page.route('**/api/admin/session', async (route) => {
+      const method = route.request().method();
+      if (method === 'GET') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            authenticated: true,
+            role: 'admin',
+            roleLabel: 'Admin',
+            permissions: { canRead: true, canEdit: true, canDelete: true },
+          }),
+        });
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ok: true }),
+      });
+    });
+
+    await page.route('**/api/invoices**', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          items: [],
+          page: 1,
+          pageSize: 20,
+          total: 0,
+          hasMore: false,
+        }),
+      });
+    });
+
     await page.route('**/api/categories', async (route) => {
       await route.fulfill({
         status: 200,
