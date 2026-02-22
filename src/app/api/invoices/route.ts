@@ -14,7 +14,7 @@ export async function GET(request: Request) {
   if ("response" in auth) return auth.response;
 
   try {
-    await ensureInvoiceColumns();
+    const invoiceColumns = await ensureInvoiceColumns();
 
     const { searchParams } = new URL(request.url);
     const q = searchParams.get("q")?.trim();
@@ -34,7 +34,17 @@ export async function GET(request: Request) {
       );
     }
 
-    if (status && ALLOWED_STATUSES.has(status)) {
+    if (status === "sent" && !invoiceColumns.hasStatus) {
+      return NextResponse.json({
+        items: [],
+        page,
+        pageSize,
+        total: 0,
+        hasMore: false,
+      });
+    }
+
+    if (status && ALLOWED_STATUSES.has(status) && invoiceColumns.hasStatus) {
       where.push(eq(invoices.status, status));
     }
 
@@ -45,23 +55,103 @@ export async function GET(request: Request) {
       .from(invoices)
       .where(whereClause);
 
-    const rows = await db
-      .select({
-        id: invoices.id,
-        invoiceNumber: invoices.invoiceNumber,
-        customerName: invoices.customerName,
-        customerContact: invoices.customerContact,
-        customerAddress: invoices.customerAddress,
-        totalAmount: invoices.totalAmount,
-        status: invoices.status,
-        sentAt: invoices.sentAt,
-        createdAt: invoices.createdAt,
-      })
-      .from(invoices)
-      .where(whereClause)
-      .orderBy(desc(invoices.createdAt), desc(invoices.id))
-      .limit(pageSize)
-      .offset(offset);
+    let rows: Array<{
+      id: number;
+      invoiceNumber: string;
+      customerName: string;
+      customerContact: string | null;
+      customerAddress: string | null;
+      totalAmount: string;
+      status: string;
+      sentAt: string | Date | null;
+      createdAt: string | Date | null;
+    }>;
+
+    if (invoiceColumns.hasStatus && invoiceColumns.hasSentAt) {
+      rows = await db
+        .select({
+          id: invoices.id,
+          invoiceNumber: invoices.invoiceNumber,
+          customerName: invoices.customerName,
+          customerContact: invoices.customerContact,
+          customerAddress: invoices.customerAddress,
+          totalAmount: invoices.totalAmount,
+          status: invoices.status,
+          sentAt: invoices.sentAt,
+          createdAt: invoices.createdAt,
+        })
+        .from(invoices)
+        .where(whereClause)
+        .orderBy(desc(invoices.createdAt), desc(invoices.id))
+        .limit(pageSize)
+        .offset(offset);
+    } else if (invoiceColumns.hasStatus) {
+      const baseRows = await db
+        .select({
+          id: invoices.id,
+          invoiceNumber: invoices.invoiceNumber,
+          customerName: invoices.customerName,
+          customerContact: invoices.customerContact,
+          customerAddress: invoices.customerAddress,
+          totalAmount: invoices.totalAmount,
+          status: invoices.status,
+          createdAt: invoices.createdAt,
+        })
+        .from(invoices)
+        .where(whereClause)
+        .orderBy(desc(invoices.createdAt), desc(invoices.id))
+        .limit(pageSize)
+        .offset(offset);
+
+      rows = baseRows.map((row) => ({
+        ...row,
+        sentAt: null,
+      }));
+    } else if (invoiceColumns.hasSentAt) {
+      const baseRows = await db
+        .select({
+          id: invoices.id,
+          invoiceNumber: invoices.invoiceNumber,
+          customerName: invoices.customerName,
+          customerContact: invoices.customerContact,
+          customerAddress: invoices.customerAddress,
+          totalAmount: invoices.totalAmount,
+          sentAt: invoices.sentAt,
+          createdAt: invoices.createdAt,
+        })
+        .from(invoices)
+        .where(whereClause)
+        .orderBy(desc(invoices.createdAt), desc(invoices.id))
+        .limit(pageSize)
+        .offset(offset);
+
+      rows = baseRows.map((row) => ({
+        ...row,
+        status: "created",
+      }));
+    } else {
+      const baseRows = await db
+        .select({
+          id: invoices.id,
+          invoiceNumber: invoices.invoiceNumber,
+          customerName: invoices.customerName,
+          customerContact: invoices.customerContact,
+          customerAddress: invoices.customerAddress,
+          totalAmount: invoices.totalAmount,
+          createdAt: invoices.createdAt,
+        })
+        .from(invoices)
+        .where(whereClause)
+        .orderBy(desc(invoices.createdAt), desc(invoices.id))
+        .limit(pageSize)
+        .offset(offset);
+
+      rows = baseRows.map((row) => ({
+        ...row,
+        status: "created",
+        sentAt: null,
+      }));
+    }
 
     return NextResponse.json({
       items: rows,

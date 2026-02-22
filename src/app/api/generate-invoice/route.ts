@@ -22,9 +22,10 @@ export async function POST(request: NextRequest) {
 
     let invoiceNumber = `PR-${Date.now().toString().slice(-8)}`;
     let dbAvailable = false;
+    let invoiceColumns = { hasStatus: true, hasSentAt: true };
 
     try {
-      await ensureInvoiceColumns();
+      invoiceColumns = await ensureInvoiceColumns();
       const result = await withRetry(async () =>
         db.select({ count: count() }).from(invoices)
       );
@@ -58,21 +59,28 @@ export async function POST(request: NextRequest) {
     let invoiceSaved = false;
     if (dbAvailable) {
       try {
+        const values: typeof invoices.$inferInsert = {
+          invoiceNumber,
+          customerName: companyDetails.companyName,
+          customerId: companyDetails.idNumber,
+          customerPdv: companyDetails.pdvNumber,
+          customerContact: companyDetails.name,
+          customerAddress: companyDetails.address,
+          cartData: JSON.stringify(cartItems),
+          totalAmount: cartTotal.toString(),
+          createdAt: issuedAt,
+          updatedAt: issuedAt,
+        };
+
+        if (invoiceColumns.hasStatus) {
+          values.status = "created";
+        }
+        if (invoiceColumns.hasSentAt) {
+          values.sentAt = null;
+        }
+
         await withRetry(async () =>
-          db.insert(invoices).values({
-            invoiceNumber,
-            customerName: companyDetails.companyName,
-            customerId: companyDetails.idNumber,
-            customerPdv: companyDetails.pdvNumber,
-            customerContact: companyDetails.name,
-            customerAddress: companyDetails.address,
-            cartData: JSON.stringify(cartItems),
-            totalAmount: cartTotal.toString(),
-            status: "created",
-            sentAt: null,
-            createdAt: issuedAt,
-            updatedAt: issuedAt,
-          })
+          db.insert(invoices).values(values)
         );
         invoiceSaved = true;
       } catch (saveError) {

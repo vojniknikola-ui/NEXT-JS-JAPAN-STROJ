@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { db, withRetry } from "@/db";
 
-let schemaReadyPromise: Promise<void> | null = null;
+let schemaReadyPromise: Promise<InvoiceColumnsState> | null = null;
 
 type InvoiceColumnsState = {
   hasStatus: boolean;
@@ -38,28 +38,31 @@ async function getInvoiceColumnsState(): Promise<InvoiceColumnsState> {
 async function ensureSchemaInternal() {
   const existing = await getInvoiceColumnsState();
   if (existing.hasStatus && existing.hasSentAt) {
-    return;
+    return existing;
   }
 
-  await withRetry(async () => {
-    if (!existing.hasStatus) {
-      await db.execute(
-        sql`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS status varchar(20) NOT NULL DEFAULT 'created'`
-      );
-    }
-    if (!existing.hasSentAt) {
-      await db.execute(
-        sql`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS sent_at timestamp`
-      );
-    }
-  });
+  try {
+    await withRetry(async () => {
+      if (!existing.hasStatus) {
+        await db.execute(
+          sql`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS status varchar(20) NOT NULL DEFAULT 'created'`
+        );
+      }
+      if (!existing.hasSentAt) {
+        await db.execute(
+          sql`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS sent_at timestamp`
+        );
+      }
+    });
+  } catch (error) {
+    // Some production DB users do not have ALTER permission.
+    // We keep API routes functional with fallback behavior when columns are absent.
+    console.warn("Invoice schema auto-migration skipped:", error);
+    return existing;
+  }
 
   const after = await getInvoiceColumnsState();
-  if (!after.hasStatus || !after.hasSentAt) {
-    throw new Error(
-      "Kolone status/sent_at na invoices tabeli nisu dostupne. Pokrenite DB migracije."
-    );
-  }
+  return after;
 }
 
 export async function ensureInvoiceColumns() {
@@ -69,5 +72,5 @@ export async function ensureInvoiceColumns() {
       throw error;
     });
   }
-  await schemaReadyPromise;
+  return await schemaReadyPromise;
 }

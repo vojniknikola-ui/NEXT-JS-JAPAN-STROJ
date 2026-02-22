@@ -19,7 +19,7 @@ export async function PATCH(
   if ("response" in auth) return auth.response;
 
   try {
-    await ensureInvoiceColumns();
+    const invoiceColumns = await ensureInvoiceColumns();
     const body = (await request.json().catch(() => ({}))) as StatusPayload;
     if (body.status !== "created" && body.status !== "sent") {
       return NextResponse.json(
@@ -27,20 +27,47 @@ export async function PATCH(
         { status: 400 }
       );
     }
+    if (!invoiceColumns.hasStatus) {
+      return NextResponse.json(
+        {
+          error:
+            "Status predračuna trenutno nije dostupan. Potrebna je migracija baze (kolona invoices.status).",
+        },
+        { status: 409 }
+      );
+    }
 
     const { invoiceNumber: invoiceNumberParam } = await params;
     const invoiceNumber = decodeURIComponent(invoiceNumberParam);
     const now = new Date();
 
-    const updated = await db
-      .update(invoices)
-      .set({
-        status: body.status,
-        sentAt: body.status === "sent" ? now : null,
-        updatedAt: now,
-      })
-      .where(eq(invoices.invoiceNumber, invoiceNumber))
-      .returning({ id: invoices.id, status: invoices.status, sentAt: invoices.sentAt });
+    let updated: Array<{ id: number; status: string; sentAt: Date | null }>;
+
+    if (invoiceColumns.hasSentAt) {
+      updated = await db
+        .update(invoices)
+        .set({
+          status: body.status,
+          sentAt: body.status === "sent" ? now : null,
+          updatedAt: now,
+        })
+        .where(eq(invoices.invoiceNumber, invoiceNumber))
+        .returning({ id: invoices.id, status: invoices.status, sentAt: invoices.sentAt });
+    } else {
+      const updatedWithoutSentAt = await db
+        .update(invoices)
+        .set({
+          status: body.status,
+          updatedAt: now,
+        })
+        .where(eq(invoices.invoiceNumber, invoiceNumber))
+        .returning({ id: invoices.id, status: invoices.status });
+
+      updated = updatedWithoutSentAt.map((row) => ({
+        ...row,
+        sentAt: null,
+      }));
+    }
 
     if (!updated[0]) {
       return NextResponse.json({ error: "Predračun nije pronađen." }, { status: 404 });
