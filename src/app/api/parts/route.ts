@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { parts, categories } from "@/db/schema";
-import { and, eq, ilike, desc, gt } from "drizzle-orm";
+import { and, asc, desc, eq, gt, ilike, lt, or, sql } from "drizzle-orm";
 import { partCreateSchema } from "@/lib/validation";
 import { revalidatePath } from "next/cache";
 
@@ -69,53 +69,114 @@ function createDbErrorResponse(error: unknown): Response {
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
-  const q = searchParams.get("q");
+  const q = searchParams.get("q")?.trim();
   const cat = searchParams.get("categoryId");
   const status = searchParams.get("status");
   const brand = searchParams.get("brand");
+  const delivery = searchParams.get("delivery");
+  const withDiscount = searchParams.get("withDiscount");
+  const minPrice = searchParams.get("minPrice");
+  const maxPrice = searchParams.get("maxPrice");
   const sort = searchParams.get("sort") || "createdAt";
   const order = searchParams.get("order") || "desc";
   const cursor = searchParams.get("cursor");
-  const limit = Math.min(Number(searchParams.get("limit") ?? 50), 100);
+  const parsedLimit = Number(searchParams.get("limit") ?? 50);
+  const limit = Number.isFinite(parsedLimit)
+    ? Math.min(Math.max(parsedLimit, 1), 100)
+    : 50;
 
   const where = [];
-  if (cursor) where.push(gt(parts.id, Number(cursor)));
-  if (q) where.push(ilike(parts.title, `%${q}%`));
-  if (cat) where.push(eq(parts.categoryId, Number(cat)));
+  const cursorId = cursor ? Number(cursor) : NaN;
+  if (Number.isFinite(cursorId)) {
+    where.push(sort === "id" && order === "desc" ? lt(parts.id, cursorId) : gt(parts.id, cursorId));
+  }
+
+  if (q) {
+    where.push(
+      or(
+        ilike(parts.title, `%${q}%`),
+        ilike(parts.brand, `%${q}%`),
+        ilike(parts.model, `%${q}%`),
+        ilike(parts.catalogNumber, `%${q}%`),
+        ilike(parts.sku, `%${q}%`)
+      )
+    );
+  }
+
+  const categoryId = cat ? Number(cat) : NaN;
+  if (Number.isFinite(categoryId)) where.push(eq(parts.categoryId, categoryId));
   if (status) where.push(eq(parts.isActive, status === 'active'));
-  if (brand) where.push(ilike(parts.brand, `%${brand}%`));
+
+  if (brand) {
+    const brands = brand
+      .split(",")
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+    if (brands.length === 1) {
+      where.push(ilike(parts.brand, `%${brands[0]}%`));
+    } else if (brands.length > 1) {
+      where.push(or(...brands.map((entry) => ilike(parts.brand, `%${entry}%`))));
+    }
+  }
+
+  if (delivery) {
+    const deliveryValues = delivery
+      .split(",")
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+    if (deliveryValues.length === 1) {
+      where.push(eq(parts.delivery, deliveryValues[0]));
+    } else if (deliveryValues.length > 1) {
+      where.push(or(...deliveryValues.map((entry) => eq(parts.delivery, entry))));
+    }
+  }
+
+  if (withDiscount === "true") {
+    where.push(sql`COALESCE(${parts.discount}, 0) > 0`);
+  }
+
+  const minPriceValue = minPrice ? Number(minPrice) : NaN;
+  const maxPriceValue = maxPrice ? Number(maxPrice) : NaN;
+  const effectivePrice = sql`COALESCE(${parts.priceWithVAT}, ${parts.price})`;
+
+  if (Number.isFinite(minPriceValue)) {
+    where.push(sql`${effectivePrice} >= ${String(minPriceValue)}`);
+  }
+  if (Number.isFinite(maxPriceValue)) {
+    where.push(sql`${effectivePrice} <= ${String(maxPriceValue)}`);
+  }
 
   let orderBy;
   switch (sort) {
     case 'id':
-      orderBy = order === 'asc' ? parts.id : desc(parts.id);
+      orderBy = order === 'asc' ? asc(parts.id) : desc(parts.id);
       break;
     case 'sku':
-      orderBy = order === 'asc' ? parts.sku : desc(parts.sku);
+      orderBy = order === 'asc' ? asc(parts.sku) : desc(parts.sku);
       break;
     case 'brand':
-      orderBy = order === 'asc' ? parts.brand : desc(parts.brand);
+      orderBy = order === 'asc' ? asc(parts.brand) : desc(parts.brand);
       break;
     case 'model':
-      orderBy = order === 'asc' ? parts.model : desc(parts.model);
+      orderBy = order === 'asc' ? asc(parts.model) : desc(parts.model);
       break;
     case 'title':
-      orderBy = order === 'asc' ? parts.title : desc(parts.title);
+      orderBy = order === 'asc' ? asc(parts.title) : desc(parts.title);
       break;
     case 'stock':
-      orderBy = order === 'asc' ? parts.stock : desc(parts.stock);
+      orderBy = order === 'asc' ? asc(parts.stock) : desc(parts.stock);
       break;
     case 'priceWithoutVAT':
-      orderBy = order === 'asc' ? parts.priceWithoutVAT : desc(parts.priceWithoutVAT);
+      orderBy = order === 'asc' ? asc(parts.priceWithoutVAT) : desc(parts.priceWithoutVAT);
       break;
     case 'priceWithVAT':
-      orderBy = order === 'asc' ? parts.priceWithVAT : desc(parts.priceWithVAT);
+      orderBy = order === 'asc' ? asc(parts.priceWithVAT) : desc(parts.priceWithVAT);
       break;
     case 'createdAt':
-      orderBy = order === 'asc' ? parts.createdAt : desc(parts.createdAt);
+      orderBy = order === 'asc' ? asc(parts.createdAt) : desc(parts.createdAt);
       break;
     case 'updatedAt':
-      orderBy = order === 'asc' ? parts.updatedAt : desc(parts.updatedAt);
+      orderBy = order === 'asc' ? asc(parts.updatedAt) : desc(parts.updatedAt);
       break;
     default:
       orderBy = desc(parts.createdAt);

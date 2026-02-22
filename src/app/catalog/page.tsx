@@ -38,6 +38,15 @@ interface PartData {
   spec7?: string | null;
 }
 
+interface PartsApiResponse {
+  items?: PartData[];
+  nextCursor?: string | null;
+  hasMore?: boolean;
+}
+
+const CATALOG_PAGE_SIZE = 24;
+const CATALOG_MAX_PRICE = 10000;
+
 const AvailabilityBadge: React.FC<{ availability: string }> = ({ availability }) => {
   const baseClasses = 'px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-semibold rounded-full uppercase tracking-wide';
   switch (availability) {
@@ -178,62 +187,136 @@ export default function CatalogPage() {
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
   const [selectedAvailability, setSelectedAvailability] = useState<string[]>([]);
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 10000]);
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, CATALOG_MAX_PRICE]);
   const [showOnlyDiscount, setShowOnlyDiscount] = useState(false);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [addedToCart, setAddedToCart] = useState<Set<number>>(new Set());
-  const [displayLimit, setDisplayLimit] = useState(12);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const observerTarget = useRef<HTMLDivElement>(null);
   const deferredSearchQuery = useDeferredValue(searchQuery);
-
-  const maxCatalogPrice = useMemo(() => {
-    if (!partsData.length) return 10000;
-    return Math.max(...partsData.map((p) => parseFloat(p.priceWithVAT || p.price)), 10000);
-  }, [partsData]);
+  const deferredMaxPrice = useDeferredValue(priceRange[1]);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const controller = new AbortController();
+
+    const fetchCategories = async () => {
       try {
-        setLoading(true);
-        setError(null);
-
-        const [partsRes, categoriesRes] = await Promise.all([
-          fetch('/api/parts?status=active'),
-          fetch('/api/categories')
-        ]);
-
-        if (!partsRes.ok) {
-          throw new Error(`Greška pri učitavanju dijelova: ${partsRes.status}`);
-        }
+        const categoriesRes = await fetch('/api/categories', { signal: controller.signal });
 
         if (!categoriesRes.ok) {
           throw new Error(`Greška pri učitavanju kategorija: ${categoriesRes.status}`);
         }
 
-        const [partsResponse, cats] = await Promise.all([
-          partsRes.json(),
-          categoriesRes.json()
-        ]);
-
-        const parts = Array.isArray(partsResponse) ? partsResponse : (partsResponse.items || []);
-        setPartsData(parts);
+        const cats = await categoriesRes.json();
         setCategories(cats);
-
-        const maxPrice = parts.length
-          ? Math.max(...parts.map((p: PartData) => parseFloat(p.priceWithVAT || p.price)))
-          : 100;
-        setPriceRange([0, Math.max(100, Math.ceil(maxPrice / 100) * 100)]);
       } catch (error) {
-        console.error('Error fetching data:', error);
-        setError(error instanceof Error ? error.message : 'Došlo je do greške pri učitavanju podataka');
-      } finally {
-        setLoading(false);
+        if (error instanceof DOMException && error.name === 'AbortError') return;
+        console.error('Error fetching categories:', error);
       }
     };
 
-    fetchData();
+    void fetchCategories();
+
+    return () => controller.abort();
   }, []);
+
+  const buildCatalogParams = useCallback(
+    (cursorValue?: string | null) => {
+      const params = new URLSearchParams();
+      params.set('status', 'active');
+      params.set('sort', 'id');
+      params.set('order', 'asc');
+      params.set('limit', String(CATALOG_PAGE_SIZE));
+
+      if (cursorValue) params.set('cursor', cursorValue);
+      if (deferredSearchQuery.trim()) params.set('q', deferredSearchQuery.trim());
+      if (selectedCategory !== null) params.set('categoryId', String(selectedCategory));
+      if (selectedBrands.length) params.set('brand', selectedBrands.join(','));
+      if (selectedAvailability.length) params.set('delivery', selectedAvailability.join(','));
+      if (showOnlyDiscount) params.set('withDiscount', 'true');
+
+      params.set('minPrice', String(priceRange[0]));
+      params.set('maxPrice', String(deferredMaxPrice));
+
+      return params;
+    },
+    [
+      deferredSearchQuery,
+      selectedCategory,
+      selectedBrands,
+      selectedAvailability,
+      showOnlyDiscount,
+      priceRange,
+      deferredMaxPrice,
+    ]
+  );
+
+  const fetchCatalogPage = useCallback(
+    async ({
+      cursorValue,
+      append,
+      signal,
+    }: {
+      cursorValue?: string | null;
+      append?: boolean;
+      signal?: AbortSignal;
+    }) => {
+      const params = buildCatalogParams(cursorValue);
+      const response = await fetch(`/api/parts?${params.toString()}`, { signal });
+
+      if (!response.ok) {
+        throw new Error(`Greška pri učitavanju dijelova: ${response.status}`);
+      }
+
+      const payload = (await response.json()) as PartsApiResponse | PartData[];
+      const items = Array.isArray(payload) ? payload : payload.items ?? [];
+      const newNextCursor = Array.isArray(payload) ? null : payload.nextCursor ?? null;
+      const newHasMore = Array.isArray(payload) ? false : Boolean(payload.hasMore);
+
+      setPartsData((prev) => {
+        const merged = append ? [...prev, ...items] : items;
+        const seenIds = new Set<number>();
+        return merged.filter((item) => {
+          if (seenIds.has(item.id)) return false;
+          seenIds.add(item.id);
+          return true;
+        });
+      });
+      setNextCursor(newNextCursor);
+      setHasMore(newHasMore);
+    },
+    [buildCatalogParams]
+  );
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    const fetchFirstPage = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        setLoadingMore(false);
+        await fetchCatalogPage({ append: false, signal: controller.signal });
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') return;
+        console.error('Error fetching catalog page:', error);
+        setError(error instanceof Error ? error.message : 'Došlo je do greške pri učitavanju podataka');
+        setPartsData([]);
+        setNextCursor(null);
+        setHasMore(false);
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void fetchFirstPage();
+
+    return () => controller.abort();
+  }, [fetchCatalogPage]);
 
   const availableBrands = useMemo(() => {
     const brands = new Set<string>();
@@ -242,33 +325,6 @@ export default function CatalogPage() {
     });
     return Array.from(brands).sort();
   }, [partsData]);
-
-  const normalizedQuery = deferredSearchQuery.toLowerCase().trim();
-
-  const filteredParts = useMemo(() => {
-    return partsData.filter(part => {
-      const matchesSearch = !normalizedQuery ||
-        part.title.toLowerCase().includes(normalizedQuery) ||
-        part.brand?.toLowerCase().includes(normalizedQuery) ||
-        part.model?.toLowerCase().includes(normalizedQuery) ||
-        part.catalogNumber?.toLowerCase().includes(normalizedQuery) ||
-        part.sku.toLowerCase().includes(normalizedQuery) ||
-        part.application?.toLowerCase().includes(normalizedQuery);
-
-      const matchesCategory = !selectedCategory || part.categoryId === selectedCategory;
-
-      const matchesBrand = selectedBrands.length === 0 || (part.brand && selectedBrands.includes(part.brand));
-
-      const matchesAvailability = selectedAvailability.length === 0 || (part.delivery && selectedAvailability.includes(part.delivery));
-
-      const partPrice = parseFloat(part.priceWithVAT || part.price);
-      const matchesPrice = partPrice >= priceRange[0] && partPrice <= priceRange[1];
-
-      const matchesDiscount = !showOnlyDiscount || (part.discount && parseFloat(part.discount) > 0);
-
-      return matchesSearch && matchesCategory && matchesBrand && matchesAvailability && matchesPrice && matchesDiscount;
-    });
-  }, [partsData, normalizedQuery, selectedCategory, selectedBrands, selectedAvailability, priceRange, showOnlyDiscount]);
 
   const handleAddToCart = useCallback((part: PartData) => {
     const sparePart: SparePart = {
@@ -315,25 +371,29 @@ export default function CatalogPage() {
     setSelectedBrands([]);
     setSelectedAvailability([]);
     setShowOnlyDiscount(false);
-    setPriceRange([0, Math.max(100, Math.ceil(maxCatalogPrice / 100) * 100)]);
-    setDisplayLimit(12);
+    setPriceRange([0, CATALOG_MAX_PRICE]);
   };
 
-  const hasActiveFilters = searchQuery || selectedCategory || selectedBrands.length > 0 || 
-    selectedAvailability.length > 0 || showOnlyDiscount;
+  const hasActiveFilters =
+    searchQuery ||
+    selectedCategory !== null ||
+    selectedBrands.length > 0 ||
+    selectedAvailability.length > 0 ||
+    showOnlyDiscount ||
+    priceRange[1] !== CATALOG_MAX_PRICE;
 
-  const loadMore = useCallback(() => {
-    if (loadingMore || displayLimit >= filteredParts.length) return;
-
+  const loadMore = useCallback(async () => {
+    if (loading || loadingMore || !hasMore || !nextCursor) return;
     setLoadingMore(true);
-    setDisplayLimit(prev => Math.min(prev + 12, filteredParts.length));
-    window.requestAnimationFrame(() => setLoadingMore(false));
-  }, [loadingMore, displayLimit, filteredParts.length]);
-
-  const visibleParts = useMemo(
-    () => filteredParts.slice(0, displayLimit),
-    [filteredParts, displayLimit]
-  );
+    try {
+      await fetchCatalogPage({ cursorValue: nextCursor, append: true });
+    } catch (error) {
+      console.error('Error loading next catalog page:', error);
+      toast.error('Učitavanje nije uspjelo', 'Pokušajte ponovo.');
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [loading, loadingMore, hasMore, nextCursor, fetchCatalogPage, toast]);
 
   const handleOpenProduct = useCallback(
     (id: number) => {
@@ -345,8 +405,8 @@ export default function CatalogPage() {
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && !loadingMore && displayLimit < filteredParts.length) {
-          loadMore();
+        if (entries[0].isIntersecting && hasMore && !loading && !loadingMore) {
+          void loadMore();
         }
       },
       { threshold: 0.1 }
@@ -362,7 +422,7 @@ export default function CatalogPage() {
         observer.unobserve(currentTarget);
       }
     };
-  }, [loadMore, loadingMore, displayLimit, filteredParts.length]);
+  }, [hasMore, loading, loadingMore, loadMore]);
 
   return (
     <div className="bg-[#0b0b0b] text-neutral-100 min-h-screen flex flex-col">
@@ -377,7 +437,7 @@ export default function CatalogPage() {
               </h1>
               <p className="text-sm sm:text-base md:text-lg text-neutral-400 max-w-2xl">
                 Pronađite savršene rezervne dijelove za vaše građevinske strojeve i mašine.
-                Preko {partsData.length} artikala dostupnih odmah.
+                Katalog se učitava po stranicama za brži rad na mobilnim uređajima.
               </p>
             </div>
 
@@ -499,7 +559,7 @@ export default function CatalogPage() {
                       <input
                         type="range"
                         min="0"
-                        max={maxCatalogPrice}
+                        max={CATALOG_MAX_PRICE}
                         step="50"
                         value={priceRange[1]}
                         onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
@@ -549,7 +609,7 @@ export default function CatalogPage() {
                       <span>Filteri</span>
                     </button>
                     <p className="text-neutral-300 text-xs sm:text-sm">
-                      {loading ? 'Učitavanje...' : `${filteredParts.length} ${filteredParts.length === 1 ? 'rezultat' : filteredParts.length < 5 ? 'rezultata' : 'rezultata'}`}
+                      {loading ? 'Učitavanje...' : `Prikazano ${partsData.length}${hasMore ? '+' : ''} rezultata`}
                     </p>
                   </div>
                 </div>
@@ -579,7 +639,7 @@ export default function CatalogPage() {
                       <p className="text-neutral-400">Učitavanje kataloga...</p>
                     </div>
                   </div>
-                ) : error ? null : filteredParts.length === 0 ? (
+                ) : error ? null : partsData.length === 0 ? (
                   <div className="text-center py-20">
                     <div className="w-16 h-16 mx-auto mb-4 bg-[#101010] rounded-full flex items-center justify-center">
                       <SearchIcon className="w-8 h-8 text-neutral-600" />
@@ -598,7 +658,7 @@ export default function CatalogPage() {
                 ) : (
                   <>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-5 lg:gap-6">
-                      {visibleParts.map((part) => (
+                      {partsData.map((part) => (
                         <ProductCard
                           key={part.id}
                           part={part}
@@ -609,11 +669,11 @@ export default function CatalogPage() {
                       ))}
                     </div>
 
-                    {filteredParts.length > displayLimit && (
+                    {hasMore && (
                       <div ref={observerTarget} className="text-center mt-8 sm:mt-10 md:mt-12 py-6 sm:py-8">
                         <div className="flex items-center justify-center gap-2 text-neutral-400 text-sm sm:text-base">
                           <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-[#ff6b00]/30 border-t-[#ff6b00] rounded-full animate-spin"></div>
-                          <span>Učitavanje još {Math.min(12, filteredParts.length - displayLimit)} dijelova...</span>
+                          <span>Učitavanje još dijelova...</span>
                         </div>
                       </div>
                     )}
