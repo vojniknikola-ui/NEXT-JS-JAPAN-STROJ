@@ -46,6 +46,7 @@ interface PartsApiResponse {
 
 const CATALOG_PAGE_SIZE = 24;
 const CATALOG_MAX_PRICE = 10000;
+type CatalogSortOption = 'newest' | 'price_asc' | 'price_desc' | 'relevance';
 
 const AvailabilityBadge: React.FC<{ availability: string }> = ({ availability }) => {
   const baseClasses = 'px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-semibold rounded-full uppercase tracking-wide';
@@ -184,6 +185,7 @@ export default function CatalogPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortOption, setSortOption] = useState<CatalogSortOption>('newest');
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
   const [selectedAvailability, setSelectedAvailability] = useState<string[]>([]);
@@ -226,9 +228,21 @@ export default function CatalogPage() {
     (cursorValue?: string | null) => {
       const params = new URLSearchParams();
       params.set('status', 'active');
-      params.set('sort', 'id');
-      params.set('order', 'asc');
       params.set('limit', String(CATALOG_PAGE_SIZE));
+
+      if (sortOption === 'price_asc') {
+        params.set('sort', 'priceWithVAT');
+        params.set('order', 'asc');
+      } else if (sortOption === 'price_desc') {
+        params.set('sort', 'priceWithVAT');
+        params.set('order', 'desc');
+      } else if (sortOption === 'relevance' && deferredSearchQuery.trim()) {
+        params.set('sort', 'relevance');
+        params.set('order', 'desc');
+      } else {
+        params.set('sort', 'id');
+        params.set('order', 'desc');
+      }
 
       if (cursorValue) params.set('cursor', cursorValue);
       if (deferredSearchQuery.trim()) params.set('q', deferredSearchQuery.trim());
@@ -237,13 +251,14 @@ export default function CatalogPage() {
       if (selectedAvailability.length) params.set('delivery', selectedAvailability.join(','));
       if (showOnlyDiscount) params.set('withDiscount', 'true');
 
-      params.set('minPrice', String(priceRange[0]));
-      params.set('maxPrice', String(deferredMaxPrice));
+      if (priceRange[0] > 0) params.set('minPrice', String(priceRange[0]));
+      if (deferredMaxPrice < CATALOG_MAX_PRICE) params.set('maxPrice', String(deferredMaxPrice));
 
       return params;
     },
     [
       deferredSearchQuery,
+      sortOption,
       selectedCategory,
       selectedBrands,
       selectedAvailability,
@@ -367,6 +382,7 @@ export default function CatalogPage() {
 
   const clearFilters = () => {
     setSearchQuery('');
+    setSortOption('newest');
     setSelectedCategory(null);
     setSelectedBrands([]);
     setSelectedAvailability([]);
@@ -380,7 +396,8 @@ export default function CatalogPage() {
     selectedBrands.length > 0 ||
     selectedAvailability.length > 0 ||
     showOnlyDiscount ||
-    priceRange[1] !== CATALOG_MAX_PRICE;
+    priceRange[1] !== CATALOG_MAX_PRICE ||
+    sortOption !== 'newest';
 
   const loadMore = useCallback(async () => {
     if (loading || loadingMore || !hasMore || !nextCursor) return;
@@ -611,6 +628,20 @@ export default function CatalogPage() {
                     <p className="text-neutral-300 text-xs sm:text-sm">
                       {loading ? 'Učitavanje...' : `Prikazano ${partsData.length}${hasMore ? '+' : ''} rezultata`}
                     </p>
+                  </div>
+                  <div className="min-w-[170px]">
+                    <label htmlFor="catalog-sort" className="sr-only">Sortiranje</label>
+                    <select
+                      id="catalog-sort"
+                      value={sortOption}
+                      onChange={(e) => setSortOption(e.target.value as CatalogSortOption)}
+                      className="w-full rounded-lg border border-white/10 bg-[#101010] px-3 py-2 text-xs text-neutral-200 outline-none transition focus:border-[#ff6b00]/50 focus:ring-2 focus:ring-[#ff6b00]/25 sm:text-sm"
+                    >
+                      <option value="newest">Najnoviji</option>
+                      <option value="price_asc">Cijena rastuće</option>
+                      <option value="price_desc">Cijena opadajuće</option>
+                      <option value="relevance" disabled={!searchQuery.trim()}>Relevantnost</option>
+                    </select>
                   </div>
                 </div>
 

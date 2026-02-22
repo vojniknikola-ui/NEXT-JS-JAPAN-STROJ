@@ -67,6 +67,43 @@ function createDbErrorResponse(error: unknown): Response {
   );
 }
 
+type CursorPayload = {
+  id: number;
+  sortValue?: string | number;
+};
+
+function encodeCursor(payload: CursorPayload) {
+  return Buffer.from(JSON.stringify(payload)).toString("base64url");
+}
+
+function decodeCursor(rawCursor: string | null): CursorPayload | null {
+  if (!rawCursor) return null;
+
+  const numericCursor = Number(rawCursor);
+  if (Number.isFinite(numericCursor)) {
+    return { id: numericCursor };
+  }
+
+  try {
+    const decoded = JSON.parse(Buffer.from(rawCursor, "base64url").toString("utf8")) as {
+      id?: unknown;
+      sortValue?: unknown;
+    };
+
+    if (typeof decoded.id !== "number" || !Number.isFinite(decoded.id)) {
+      return null;
+    }
+
+    if (typeof decoded.sortValue === "string" || typeof decoded.sortValue === "number") {
+      return { id: decoded.id, sortValue: decoded.sortValue };
+    }
+
+    return { id: decoded.id };
+  } catch {
+    return null;
+  }
+}
+
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const q = searchParams.get("q")?.trim();
@@ -84,12 +121,35 @@ export async function GET(req: Request) {
   const limit = Number.isFinite(parsedLimit)
     ? Math.min(Math.max(parsedLimit, 1), 100)
     : 50;
+  const normalizedOrder = order === "asc" ? "asc" : "desc";
+  const isAscending = normalizedOrder === "asc";
+  const normalizedSort = sort === "relevance" && !q ? "id" : sort;
 
   const where = [];
-  const cursorId = cursor ? Number(cursor) : NaN;
-  if (Number.isFinite(cursorId)) {
-    where.push(sort === "id" && order === "desc" ? lt(parts.id, cursorId) : gt(parts.id, cursorId));
-  }
+  const effectivePrice = sql`COALESCE(${parts.priceWithVAT}, ${parts.price})`;
+  const effectivePriceWithoutVat = sql`COALESCE(${parts.priceWithoutVAT}, ${parts.price})`;
+  const queryPrefix = q ? `${q}%` : "";
+  const queryContains = q ? `%${q}%` : "";
+  const relevanceExpression = q
+    ? sql<number>`
+      (
+        CASE
+          WHEN LOWER(COALESCE(${parts.sku}, '')) = LOWER(${q}) THEN 120
+          WHEN LOWER(COALESCE(${parts.catalogNumber}, '')) = LOWER(${q}) THEN 110
+          WHEN LOWER(COALESCE(${parts.title}, '')) = LOWER(${q}) THEN 100
+          WHEN COALESCE(${parts.title}, '') ILIKE ${queryPrefix} THEN 85
+          WHEN COALESCE(${parts.brand}, '') ILIKE ${queryPrefix} THEN 75
+          WHEN COALESCE(${parts.model}, '') ILIKE ${queryPrefix} THEN 65
+          WHEN COALESCE(${parts.title}, '') ILIKE ${queryContains} THEN 55
+          WHEN COALESCE(${parts.brand}, '') ILIKE ${queryContains} THEN 45
+          WHEN COALESCE(${parts.model}, '') ILIKE ${queryContains} THEN 35
+          WHEN COALESCE(${parts.catalogNumber}, '') ILIKE ${queryContains} THEN 25
+          WHEN COALESCE(${parts.sku}, '') ILIKE ${queryContains} THEN 15
+          ELSE 0
+        END
+      )
+    `
+    : sql<number>`0`;
 
   if (q) {
     where.push(
@@ -137,7 +197,6 @@ export async function GET(req: Request) {
 
   const minPriceValue = minPrice ? Number(minPrice) : NaN;
   const maxPriceValue = maxPrice ? Number(maxPrice) : NaN;
-  const effectivePrice = sql`COALESCE(${parts.priceWithVAT}, ${parts.price})`;
 
   if (Number.isFinite(minPriceValue)) {
     where.push(sql`${effectivePrice} >= ${String(minPriceValue)}`);
@@ -146,40 +205,69 @@ export async function GET(req: Request) {
     where.push(sql`${effectivePrice} <= ${String(maxPriceValue)}`);
   }
 
-  let orderBy;
-  switch (sort) {
+  let primaryOrderBy = isAscending ? asc(parts.id) : desc(parts.id);
+  let secondaryOrderBy = isAscending ? asc(parts.id) : desc(parts.id);
+  let cursorSortExpression = sql`${parts.id}`;
+  let cursorSortKind: "id" | "price" | "relevance" = "id";
+
+  switch (normalizedSort) {
+    case "relevance":
+      primaryOrderBy = isAscending ? asc(relevanceExpression) : desc(relevanceExpression);
+      secondaryOrderBy = isAscending ? asc(parts.id) : desc(parts.id);
+      cursorSortExpression = relevanceExpression;
+      cursorSortKind = "relevance";
+      break;
     case 'id':
-      orderBy = order === 'asc' ? asc(parts.id) : desc(parts.id);
+      primaryOrderBy = isAscending ? asc(parts.id) : desc(parts.id);
       break;
     case 'sku':
-      orderBy = order === 'asc' ? asc(parts.sku) : desc(parts.sku);
+      primaryOrderBy = isAscending ? asc(parts.sku) : desc(parts.sku);
       break;
     case 'brand':
-      orderBy = order === 'asc' ? asc(parts.brand) : desc(parts.brand);
+      primaryOrderBy = isAscending ? asc(parts.brand) : desc(parts.brand);
       break;
     case 'model':
-      orderBy = order === 'asc' ? asc(parts.model) : desc(parts.model);
+      primaryOrderBy = isAscending ? asc(parts.model) : desc(parts.model);
       break;
     case 'title':
-      orderBy = order === 'asc' ? asc(parts.title) : desc(parts.title);
+      primaryOrderBy = isAscending ? asc(parts.title) : desc(parts.title);
       break;
     case 'stock':
-      orderBy = order === 'asc' ? asc(parts.stock) : desc(parts.stock);
+      primaryOrderBy = isAscending ? asc(parts.stock) : desc(parts.stock);
       break;
     case 'priceWithoutVAT':
-      orderBy = order === 'asc' ? asc(parts.priceWithoutVAT) : desc(parts.priceWithoutVAT);
+      primaryOrderBy = isAscending ? asc(effectivePriceWithoutVat) : desc(effectivePriceWithoutVat);
+      secondaryOrderBy = isAscending ? asc(parts.id) : desc(parts.id);
+      cursorSortExpression = effectivePriceWithoutVat;
+      cursorSortKind = "price";
       break;
     case 'priceWithVAT':
-      orderBy = order === 'asc' ? asc(parts.priceWithVAT) : desc(parts.priceWithVAT);
+      primaryOrderBy = isAscending ? asc(effectivePrice) : desc(effectivePrice);
+      secondaryOrderBy = isAscending ? asc(parts.id) : desc(parts.id);
+      cursorSortExpression = effectivePrice;
+      cursorSortKind = "price";
       break;
     case 'createdAt':
-      orderBy = order === 'asc' ? asc(parts.createdAt) : desc(parts.createdAt);
+      primaryOrderBy = isAscending ? asc(parts.createdAt) : desc(parts.createdAt);
       break;
     case 'updatedAt':
-      orderBy = order === 'asc' ? asc(parts.updatedAt) : desc(parts.updatedAt);
+      primaryOrderBy = isAscending ? asc(parts.updatedAt) : desc(parts.updatedAt);
       break;
     default:
-      orderBy = desc(parts.createdAt);
+      primaryOrderBy = desc(parts.createdAt);
+      secondaryOrderBy = desc(parts.id);
+  }
+
+  const parsedCursor = decodeCursor(cursor);
+  if (parsedCursor && Number.isFinite(parsedCursor.id)) {
+    if (cursorSortKind === "id" || parsedCursor.sortValue === undefined) {
+      where.push(isAscending ? gt(parts.id, parsedCursor.id) : lt(parts.id, parsedCursor.id));
+    } else {
+      const operator = isAscending ? sql.raw(">") : sql.raw("<");
+      where.push(
+        sql`(${cursorSortExpression} ${operator} ${parsedCursor.sortValue}) OR (${cursorSortExpression} = ${parsedCursor.sortValue} AND ${parts.id} ${operator} ${parsedCursor.id})`
+      );
+    }
   }
 
   const rows = await db.select({
@@ -209,16 +297,41 @@ export async function GET(req: Request) {
     spec7: parts.spec7,
     isActive: parts.isActive,
     category: categories.name,
+    _effectivePrice: effectivePrice,
+    _relevanceScore: relevanceExpression,
   })
   .from(parts)
   .leftJoin(categories, eq(parts.categoryId, categories.id))
   .where(where.length ? and(...where) : undefined)
-  .orderBy(orderBy)
+  .orderBy(primaryOrderBy, secondaryOrderBy)
   .limit(limit + 1);
 
   const hasMore = rows.length > limit;
-  const items = hasMore ? rows.slice(0, limit) : rows;
-  const nextCursor = hasMore && items.length > 0 ? String(items[items.length - 1].id) : null;
+  const rawItems = hasMore ? rows.slice(0, limit) : rows;
+  const items = rawItems.map((row) => {
+    const item = { ...row };
+    delete (item as { _effectivePrice?: unknown })._effectivePrice;
+    delete (item as { _relevanceScore?: unknown })._relevanceScore;
+    return item;
+  });
+
+  let nextCursor: string | null = null;
+  if (hasMore && rawItems.length > 0) {
+    const lastItem = rawItems[rawItems.length - 1];
+    let sortValue: string | number | undefined;
+    if (cursorSortKind === "price") {
+      sortValue = String(lastItem._effectivePrice ?? lastItem.priceWithVAT ?? lastItem.price ?? "0");
+    } else if (cursorSortKind === "relevance") {
+      sortValue = Number(lastItem._relevanceScore ?? 0);
+    }
+
+    const cursorPayload: CursorPayload =
+      sortValue === undefined
+        ? { id: lastItem.id }
+        : { id: lastItem.id, sortValue };
+
+    nextCursor = encodeCursor(cursorPayload);
+  }
 
   return Response.json({ items, nextCursor, hasMore }, {
     headers: {
