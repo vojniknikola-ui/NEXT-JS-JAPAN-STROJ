@@ -4,40 +4,81 @@ import { db, withRetry } from "@/db";
 let schemaReadyPromise: Promise<InvoiceColumnsState> | null = null;
 
 type InvoiceColumnsState = {
+  hasTable: boolean;
   hasStatus: boolean;
   hasSentAt: boolean;
 };
 
 async function getInvoiceColumnsState(): Promise<InvoiceColumnsState> {
-  const result = await db.execute(
-    sql`
-      SELECT column_name
-      FROM information_schema.columns
-      WHERE table_schema = current_schema()
-        AND table_name = 'invoices'
-        AND column_name IN ('status', 'sent_at')
-    `
-  );
+  try {
+    const tableResult = await db.execute(
+      sql`
+        SELECT EXISTS (
+          SELECT 1
+          FROM information_schema.tables
+          WHERE table_schema = current_schema()
+            AND table_name = 'invoices'
+        ) AS exists
+      `
+    );
 
-  const rows =
-    (result as { rows?: Array<{ column_name?: unknown }> }).rows ?? [];
-  const names = new Set(
-    rows
-      .map((row) =>
-        typeof row.column_name === "string" ? row.column_name : null
-      )
-      .filter((name): name is string => Boolean(name))
-  );
+    const tableRow = (
+      tableResult as { rows?: Array<{ exists?: unknown }> }
+    ).rows?.[0];
+    const tableExistsRaw = tableRow?.exists;
+    const hasTable =
+      tableExistsRaw === true ||
+      tableExistsRaw === "t" ||
+      tableExistsRaw === "true" ||
+      tableExistsRaw === 1 ||
+      tableExistsRaw === "1";
 
-  return {
-    hasStatus: names.has("status"),
-    hasSentAt: names.has("sent_at"),
-  };
+    if (!hasTable) {
+      return {
+        hasTable: false,
+        hasStatus: false,
+        hasSentAt: false,
+      };
+    }
+
+    const result = await db.execute(
+      sql`
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'invoices'
+          AND column_name IN ('status', 'sent_at')
+      `
+    );
+
+    const rows =
+      (result as { rows?: Array<{ column_name?: unknown }> }).rows ?? [];
+    const names = new Set(
+      rows
+        .map((row) =>
+          typeof row.column_name === "string" ? row.column_name : null
+        )
+        .filter((name): name is string => Boolean(name))
+    );
+
+    return {
+      hasTable: true,
+      hasStatus: names.has("status"),
+      hasSentAt: names.has("sent_at"),
+    };
+  } catch (error) {
+    console.warn("Invoice schema inspection failed:", error);
+    return {
+      hasTable: false,
+      hasStatus: false,
+      hasSentAt: false,
+    };
+  }
 }
 
 async function ensureSchemaInternal() {
   const existing = await getInvoiceColumnsState();
-  if (existing.hasStatus && existing.hasSentAt) {
+  if (!existing.hasTable || (existing.hasStatus && existing.hasSentAt)) {
     return existing;
   }
 

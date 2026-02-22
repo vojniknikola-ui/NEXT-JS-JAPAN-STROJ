@@ -9,6 +9,35 @@ export const runtime = "nodejs";
 
 const ALLOWED_STATUSES = new Set(["created", "sent"]);
 
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return String(error ?? "");
+}
+
+function getPostgresCode(error: unknown): string | undefined {
+  if (!error || typeof error !== "object") return undefined;
+  const typedError = error as { code?: unknown; cause?: unknown };
+  if (typeof typedError.code === "string") return typedError.code;
+
+  const cause = typedError.cause;
+  if (cause && typeof cause === "object") {
+    const typedCause = cause as { code?: unknown };
+    if (typeof typedCause.code === "string") return typedCause.code;
+  }
+  return undefined;
+}
+
+function isInvoicesReadUnavailable(error: unknown): boolean {
+  const pgCode = getPostgresCode(error);
+  if (pgCode === "42P01" || pgCode === "42501") return true;
+
+  const msg = getErrorMessage(error).toLowerCase();
+  return (
+    msg.includes('relation "invoices" does not exist') ||
+    msg.includes("permission denied for relation invoices")
+  );
+}
+
 export async function GET(request: Request) {
   const auth = requireAdminRole(request, ["admin", "editor", "read_only"]);
   if ("response" in auth) return auth.response;
@@ -22,6 +51,16 @@ export async function GET(request: Request) {
     const page = Math.max(Number(searchParams.get("page") ?? 1), 1);
     const pageSize = Math.min(Math.max(Number(searchParams.get("pageSize") ?? 20), 1), 100);
     const offset = (page - 1) * pageSize;
+
+    if (!invoiceColumns.hasTable) {
+      return NextResponse.json({
+        items: [],
+        page,
+        pageSize,
+        total: 0,
+        hasMore: false,
+      });
+    }
 
     const where = [];
     if (q) {
@@ -161,6 +200,23 @@ export async function GET(request: Request) {
       hasMore: offset + rows.length < Number(totalRow?.total ?? 0),
     });
   } catch (error) {
+    if (isInvoicesReadUnavailable(error)) {
+      console.warn("Invoice history fallback: invoices table is unavailable.", error);
+      const { searchParams } = new URL(request.url);
+      const page = Math.max(Number(searchParams.get("page") ?? 1), 1);
+      const pageSize = Math.min(
+        Math.max(Number(searchParams.get("pageSize") ?? 20), 1),
+        100
+      );
+      return NextResponse.json({
+        items: [],
+        page,
+        pageSize,
+        total: 0,
+        hasMore: false,
+      });
+    }
+
     console.error("Error loading invoice history:", error);
     const detail =
       error instanceof Error && error.message
