@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import { db, withRetry } from "@/db";
+import { CATALOG_CATEGORIES, isLegacyOstaloCategory } from "@/lib/parts/catalogCategories";
 
 type CatalogSchemaState = {
   hasCategoriesTable: boolean;
@@ -12,6 +13,9 @@ type CatalogSchemaState = {
 };
 
 let schemaReadyPromise: Promise<CatalogSchemaState> | null = null;
+
+type CatalogCategorySlug = (typeof CATALOG_CATEGORIES)[number]["slug"];
+type CatalogCategoryIds = Record<CatalogCategorySlug, number>;
 
 function isDbTruthy(value: unknown): boolean {
   return value === true || value === "t" || value === "true" || value === 1 || value === "1";
@@ -83,33 +87,72 @@ async function inspectCatalogSchema(): Promise<CatalogSchemaState> {
   }
 }
 
-async function ensureDefaultCategoryId(): Promise<number> {
-  const existingResult = await db.execute(sql`
-    SELECT id
-    FROM categories
-    WHERE slug = 'ostalo'
-    LIMIT 1
-  `);
+async function ensureCanonicalCategoryIds(): Promise<CatalogCategoryIds> {
+  const ids = {} as CatalogCategoryIds;
 
-  const existingRow = (
-    existingResult as { rows?: Array<{ id?: unknown }> }
-  ).rows?.[0];
-  if (existingRow?.id !== undefined && existingRow.id !== null) {
-    return Number(existingRow.id);
+  for (const category of CATALOG_CATEGORIES) {
+    const result = await db.execute(sql`
+      INSERT INTO categories (name, slug)
+      VALUES (${category.name}, ${category.slug})
+      ON CONFLICT (slug) DO UPDATE
+      SET
+        name = EXCLUDED.name,
+        deleted_at = NULL
+      RETURNING id
+    `);
+
+    const insertedRow = (
+      result as { rows?: Array<{ id?: unknown }> }
+    ).rows?.[0];
+
+    ids[category.slug] = Number(insertedRow?.id ?? 0);
   }
 
-  const insertedResult = await db.execute(sql`
-    INSERT INTO categories (name, slug)
-    VALUES ('Ostalo', 'ostalo')
-    ON CONFLICT (slug) DO UPDATE SET name = EXCLUDED.name
-    RETURNING id
+  return ids;
+}
+
+async function remapLegacyCategories(ostaloCategoryId: number) {
+  const result = await db.execute(sql`
+    SELECT id, name, slug
+    FROM categories
   `);
 
-  const insertedRow = (
-    insertedResult as { rows?: Array<{ id?: unknown }> }
-  ).rows?.[0];
+  const rows = (
+    result as { rows?: Array<{ id?: unknown; name?: unknown; slug?: unknown }> }
+  ).rows ?? [];
 
-  return Number(insertedRow?.id ?? 1);
+  const obsoleteCategoryIds = rows
+    .map((row) => ({
+      id: Number(row.id ?? 0),
+      name: typeof row.name === "string" ? row.name : null,
+      slug: typeof row.slug === "string" ? row.slug : null,
+    }))
+    .filter(
+      (row) =>
+        Number.isFinite(row.id) &&
+        row.id > 0 &&
+        row.id !== ostaloCategoryId &&
+        isLegacyOstaloCategory({ slug: row.slug, name: row.name })
+    )
+    .map((row) => row.id);
+
+  for (const categoryId of obsoleteCategoryIds) {
+    await db.execute(sql`
+      UPDATE parts
+      SET category_id = ${ostaloCategoryId}
+      WHERE category_id = ${categoryId}
+    `);
+
+    await db.execute(sql`
+      DELETE FROM categories
+      WHERE id = ${categoryId}
+    `);
+  }
+}
+
+async function ensureDefaultCategoryId(): Promise<number> {
+  const ids = await ensureCanonicalCategoryIds();
+  return ids.ostalo;
 }
 
 async function createTablesIfMissing(state: CatalogSchemaState) {
@@ -309,6 +352,7 @@ async function migrateLegacySpareParts(state: CatalogSchemaState) {
 
 async function normalizeCatalogData() {
   const defaultCategoryId = await ensureDefaultCategoryId();
+  await remapLegacyCategories(defaultCategoryId);
 
   await db.execute(sql`
     UPDATE parts
@@ -323,6 +367,11 @@ async function normalizeCatalogData() {
       updated_at = COALESCE(updated_at, created_at, now())
     WHERE
       category_id IS NULL OR
+      NOT EXISTS (
+        SELECT 1
+        FROM categories
+        WHERE categories.id = parts.category_id
+      ) OR
       currency IS NULL OR currency = '' OR
       delivery IS NULL OR delivery = '' OR
       stock IS NULL OR

@@ -1,5 +1,10 @@
+import { asc, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { categories } from "@/db/schema";
+import {
+  CATALOG_CATEGORIES,
+  resolveCanonicalCatalogCategory,
+} from "@/lib/parts/catalogCategories";
 import { ensureCatalogSchema } from "@/lib/parts/ensureCatalogSchema";
 
 export const runtime = 'nodejs';
@@ -7,8 +12,39 @@ export const runtime = 'nodejs';
 export async function GET() {
   try {
     await ensureCatalogSchema();
-    const data = await db.select().from(categories).orderBy(categories.name);
-    return Response.json(data, {
+    const data = await db
+      .select()
+      .from(categories)
+      .where(isNull(categories.deletedAt))
+      .orderBy(asc(categories.name));
+
+    const canonicalRows = new Map<string, (typeof data)[number]>();
+    const extraRows: (typeof data)[number][] = [];
+
+    for (const row of data) {
+      const canonicalCategory = resolveCanonicalCatalogCategory(row.slug, row.name);
+      if (canonicalCategory) {
+        if (!canonicalRows.has(canonicalCategory.slug)) {
+          canonicalRows.set(canonicalCategory.slug, {
+            ...row,
+            name: canonicalCategory.name,
+            slug: canonicalCategory.slug,
+          });
+        }
+        continue;
+      }
+
+      extraRows.push(row);
+    }
+
+    const ordered = [
+      ...CATALOG_CATEGORIES.map((category) => canonicalRows.get(category.slug)).filter(
+        (row): row is (typeof data)[number] => Boolean(row)
+      ),
+      ...extraRows,
+    ];
+
+    return Response.json(ordered, {
       headers: {
         'Cache-Control': 's-maxage=300, stale-while-revalidate=600',
       },

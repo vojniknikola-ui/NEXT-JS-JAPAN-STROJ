@@ -310,7 +310,13 @@ export async function GET(req: Request) {
       spec6: parts.spec6,
       spec7: parts.spec7,
       isActive: parts.isActive,
-      category: categories.name,
+      category: sql<string>`
+        CASE
+          WHEN lower(COALESCE(${categories.slug}, '')) IN ('default', 'hidraulika', 'hydraulics')
+            THEN 'Ostalo'
+          ELSE COALESCE(${categories.name}, '')
+        END
+      `,
       _effectivePrice: effectivePrice,
       _relevanceScore: relevanceExpression,
     })

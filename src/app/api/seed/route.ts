@@ -1,10 +1,9 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/db';
 import { categories, parts } from '@/db/schema';
+import { CATALOG_CATEGORIES } from '@/lib/parts/catalogCategories';
 
-const seedCategories = [
-  { name: "Default", slug: "default" },
-];
+const seedCategories = [...CATALOG_CATEGORIES];
 
 const seedParts = [
   {
@@ -14,7 +13,7 @@ const seedParts = [
     price: "45.5",
     currency: "EUR",
     stock: 10,
-    categoryId: 1,
+    categorySlug: "filteri",
     imageUrl: "https://picsum.photos/seed/filter1/400/300",
     specJson: JSON.stringify({
       brand: "Caterpillar",
@@ -32,7 +31,7 @@ const seedParts = [
     price: "1250",
     currency: "EUR",
     stock: 5,
-    categoryId: 1,
+    categorySlug: "ostalo",
     imageUrl: "https://picsum.photos/seed/gear1/400/300",
     specJson: JSON.stringify({
       brand: "Komatsu",
@@ -50,7 +49,7 @@ const seedParts = [
     price: "850.75",
     currency: "EUR",
     stock: 8,
-    categoryId: 1,
+    categorySlug: "dijelovi-motora",
     imageUrl: "https://picsum.photos/seed/injector1/400/300",
     specJson: JSON.stringify({
       brand: "Volvo",
@@ -72,10 +71,22 @@ export async function POST() {
     }
 
     // Insert categories
-    await db.insert(categories).values(seedCategories);
+    const insertedCategories = await db
+      .insert(categories)
+      .values(seedCategories)
+      .returning({ id: categories.id, slug: categories.slug });
+
+    const categoryIdBySlug = Object.fromEntries(
+      insertedCategories.map((category) => [category.slug, category.id])
+    ) as Record<string, number>;
 
     // Insert parts
-    await db.insert(parts).values(seedParts);
+    await db.insert(parts).values(
+      seedParts.map(({ categorySlug, ...part }) => ({
+        ...part,
+        categoryId: categoryIdBySlug[categorySlug],
+      }))
+    );
 
     return NextResponse.json({ message: 'Data seeded successfully' });
   } catch (error) {
