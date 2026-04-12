@@ -406,26 +406,34 @@ export async function POST(req: Request) {
       updatedAt: new Date(),
     });
 
-    await db.transaction(async (tx) => {
-      const [insertedPart] = await tx
-        .insert(parts)
-        .values(insertValues as typeof parts.$inferInsert)
-        .returning({ id: parts.id });
+    const [insertedPart] = await db
+      .insert(parts)
+      .values(insertValues as typeof parts.$inferInsert)
+      .returning({ id: parts.id });
 
-      insertedId = insertedPart?.id;
+    insertedId = insertedPart?.id;
 
-      if (insertedId && parsed.data.additionalImages && parsed.data.additionalImages.length > 0) {
-        const galleryRows = buildAdditionalImageRows(
-          schemaState,
-          insertedId,
-          parsed.data.additionalImages
-        );
+    if (insertedId && parsed.data.additionalImages && parsed.data.additionalImages.length > 0) {
+      const galleryRows = buildAdditionalImageRows(
+        schemaState,
+        insertedId,
+        parsed.data.additionalImages
+      );
 
-        if (galleryRows.length > 0) {
-          await tx.insert(partImages).values(galleryRows);
+      if (galleryRows.length > 0) {
+        try {
+          await db.insert(partImages).values(galleryRows);
+        } catch (galleryError) {
+          // Best-effort rollback for the freshly created part when gallery insert fails.
+          try {
+            await db.delete(parts).where(eq(parts.id, insertedId));
+          } catch (rollbackError) {
+            console.warn("Part rollback after gallery insert failure did not complete:", rollbackError);
+          }
+          throw galleryError;
         }
       }
-    });
+    }
   } catch (error) {
     return createDbErrorResponse(error);
   }

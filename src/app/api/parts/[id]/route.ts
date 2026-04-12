@@ -153,31 +153,29 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   let updateSuccess = false;
   try {
-    await db.transaction(async (tx) => {
-      const [updatedPart] = await tx
-        .update(parts)
-        .set(updateData)
-        .where(eq(parts.id, Number(id)))
-        .returning({ id: parts.id });
-      
-      if (updatedPart) {
-        updateSuccess = true;
-        if (parsed.data.additionalImages !== undefined && canPersistAdditionalImages(schemaState)) {
-          // Replace all gallery images on update
-          await tx.delete(partImages).where(eq(partImages.partId, Number(id)));
-          if (parsed.data.additionalImages.length > 0) {
-            const galleryRows = buildAdditionalImageRows(
-              schemaState,
-              Number(id),
-              parsed.data.additionalImages
-            );
-            if (galleryRows.length > 0) {
-              await tx.insert(partImages).values(galleryRows);
-            }
+    const [updatedPart] = await db
+      .update(parts)
+      .set(updateData)
+      .where(eq(parts.id, Number(id)))
+      .returning({ id: parts.id });
+
+    if (updatedPart) {
+      updateSuccess = true;
+      if (parsed.data.additionalImages !== undefined && canPersistAdditionalImages(schemaState)) {
+        // neon-http does not support interactive transactions; sync gallery sequentially.
+        await db.delete(partImages).where(eq(partImages.partId, Number(id)));
+        if (parsed.data.additionalImages.length > 0) {
+          const galleryRows = buildAdditionalImageRows(
+            schemaState,
+            Number(id),
+            parsed.data.additionalImages
+          );
+          if (galleryRows.length > 0) {
+            await db.insert(partImages).values(galleryRows);
           }
         }
       }
-    });
+    }
   } catch (error) {
     return createDbErrorResponse(error);
   }
