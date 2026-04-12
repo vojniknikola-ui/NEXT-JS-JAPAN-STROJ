@@ -11,6 +11,7 @@ import { useCart } from '@/lib/hooks/useCart';
 import { useSpareParts } from '@/lib/hooks/useSpareParts';
 import { useToast } from '@/components/ui/ToastProvider';
 import ImageLightbox from '@/components/ui/ImageLightbox';
+import ProductDetailLoadingScreen from '@/components/product/ProductDetailLoadingScreen';
 
 const AvailabilityBadge: React.FC<{ availability: Availability }> = ({ availability }) => {
   const baseClasses = 'px-2 sm:px-3 py-1 text-[10px] sm:text-xs font-semibold rounded-full uppercase tracking-wide text-white';
@@ -38,6 +39,7 @@ export default function ProductDetailPage() {
   const { cartItemCount, addToCart } = useCart();
   const { getRecommendations } = useSpareParts();
   const [product, setProduct] = useState<SparePart | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [recommendations, setRecommendations] = useState<SparePart[]>([]);
   const [shareMenuOpen, setShareMenuOpen] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
@@ -58,9 +60,17 @@ export default function ProductDetailPage() {
     : [];
 
   useEffect(() => {
+    let isActive = true;
+    setIsLoading(true);
+    setSelectedImage(null);
+    setSelectedBlur(null);
+
     if (!Number.isFinite(productId) || productId <= 0) {
-      setProduct(null);
-      setRecommendations([]);
+      if (isActive) {
+        setProduct(null);
+        setRecommendations([]);
+        setIsLoading(false);
+      }
       return;
     }
 
@@ -109,20 +119,34 @@ export default function ProductDetailPage() {
           stock: typeof data.stock === 'number' ? data.stock : 0,
         };
 
+        if (!isActive) {
+          return;
+        }
+
         setProduct(sparePart);
         setRecommendations(getRecommendations(sparePart, 3));
       } catch (error) {
         if (error instanceof DOMException && error.name === 'AbortError') {
           return;
         }
+        if (!isActive) {
+          return;
+        }
         console.error('Error loading product:', error);
         setProduct(null);
         setRecommendations([]);
+      } finally {
+        if (isActive) {
+          setIsLoading(false);
+        }
       }
     };
 
     void loadProduct();
-    return () => controller.abort();
+    return () => {
+      isActive = false;
+      controller.abort();
+    };
   }, [productId, getRecommendations]);
 
   useEffect(() => {
@@ -180,6 +204,10 @@ export default function ProductDetailPage() {
   const priceAfterDiscount = product ? product.priceWithVAT * (1 - product.discount / 100) : 0;
   const shareMessage = encodeURIComponent(`Pogledaj ${product?.name} (${product?.catalogNumber}) za ${priceAfterDiscount.toFixed(2)} BAM: ${productUrl}`);
   const facebookShareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(productUrl)}`;
+
+  if (isLoading) {
+    return <ProductDetailLoadingScreen />;
+  }
 
   if (!product) {
     return (
