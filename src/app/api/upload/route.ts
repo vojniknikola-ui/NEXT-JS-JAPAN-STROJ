@@ -14,19 +14,23 @@ export async function POST(req: Request) {
 
   const buffer = Buffer.from(await file.arrayBuffer());
   
-  // 1. Generate heavy/original WebP
+  // 1. Generate display-safe WebP with capped dimensions.
   const optimizedBuffer = await sharp(buffer)
+    .rotate()
+    .resize({ width: 1800, height: 1800, fit: "inside", withoutEnlargement: true })
     .webp({ quality: 85 })
     .toBuffer();
 
   // 2. Generate Thumb WebP
   const thumbBuffer = await sharp(buffer)
-    .resize({ width: 400, withoutEnlargement: true })
+    .rotate()
+    .resize({ width: 400, height: 400, fit: "inside", withoutEnlargement: true })
     .webp({ quality: 75 })
     .toBuffer();
 
   // 3. Generate blur placeholder
   const blurBuffer = await sharp(buffer)
+    .rotate()
     .resize(10, 10, { fit: "inside" })
     .webp({ quality: 20 })
     .blur()

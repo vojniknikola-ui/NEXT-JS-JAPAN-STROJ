@@ -17,6 +17,8 @@ export interface PartData {
   stock: number;
   categoryId: number;
   imageUrl: string | null;
+  thumbUrl?: string | null;
+  blurData?: string | null;
   isActive: boolean;
   category: string;
   spec1?: string | null;
@@ -43,6 +45,8 @@ export function transformPartDataToSparePart(part: PartData): SparePart {
     priceWithVAT: parseFloat(part.priceWithVAT || part.price) || 0,
     discount: parseFloat(part.discount || '0') || 0,
     imageUrl: part.imageUrl || '',
+    thumbUrl: part.thumbUrl || undefined,
+    blurData: part.blurData || undefined,
     technicalSpecs: {
       spec1: part.spec1 || '',
       spec2: part.spec2 || '',

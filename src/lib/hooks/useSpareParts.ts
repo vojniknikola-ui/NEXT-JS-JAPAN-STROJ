@@ -16,6 +16,8 @@ interface PartApiItem {
   priceWithVAT?: string | null;
   discount?: string | null;
   imageUrl?: string | null;
+  thumbUrl?: string | null;
+  blurData?: string | null;
   stock?: number | null;
   spec1?: string | null;
   spec2?: string | null;
@@ -63,6 +65,8 @@ export function useSpareParts() {
         priceWithVAT: parseFloat(part.priceWithVAT || part.price || '0'),
         discount: parseFloat(part.discount || '0'),
         imageUrl: part.imageUrl || '',
+        thumbUrl: part.thumbUrl || undefined,
+        blurData: part.blurData || undefined,
         technicalSpecs: {
           spec1: part.spec1 || '',
           spec2: part.spec2 || '',

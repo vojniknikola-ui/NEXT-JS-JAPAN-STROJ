@@ -138,14 +138,16 @@ export default function CartPage() {
                       <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
                         {/* Product Image */}
                         <div className="flex-shrink-0 self-start relative">
-                          {item.part.imageUrl ? (
+                          {item.part.thumbUrl || item.part.imageUrl ? (
                             <Image
-                              src={item.part.imageUrl}
+                              src={item.part.thumbUrl || item.part.imageUrl}
                               alt={item.part.name}
                               width={96}
                               height={96}
                               unoptimized
                               sizes="(max-width: 640px) 80px, 96px"
+                              placeholder={item.part.blurData ? 'blur' : 'empty'}
+                              blurDataURL={item.part.blurData || undefined}
                               className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-lg shadow-md"
                             />
                           ) : (

@@ -27,6 +27,8 @@ interface PartData {
   stock: number;
   categoryId: number;
   imageUrl: string | null;
+  thumbUrl?: string | null;
+  blurData?: string | null;
   isActive: boolean;
   category: string;
   spec1?: string | null;
@@ -73,6 +75,7 @@ const ProductCard = React.memo(function ProductCard({
   onAddToCart,
   isAdded,
 }: ProductCardProps) {
+  const displayImageUrl = part.thumbUrl || part.imageUrl;
   const priceAfterDiscount = part.priceWithVAT && part.discount
     ? parseFloat(part.priceWithVAT) * (1 - parseFloat(part.discount) / 100)
     : parseFloat(part.priceWithVAT || part.price);
@@ -87,13 +90,15 @@ const ProductCard = React.memo(function ProductCard({
         data-testid="product-card-open"
         className="relative block aspect-square bg-[#1a1a1a] overflow-hidden cursor-pointer touch-manipulation"
       >
-        {part.imageUrl ? (
+        {displayImageUrl ? (
           <Image
-            src={part.imageUrl}
+            src={displayImageUrl}
             alt={part.title}
             fill
             unoptimized
             sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 25vw"
+            placeholder={part.blurData ? 'blur' : 'empty'}
+            blurDataURL={part.blurData || undefined}
             className="w-full h-full object-cover sm:group-hover:scale-105 transition-transform duration-300"
           />
         ) : (
@@ -366,6 +371,8 @@ export default function CatalogPage() {
       priceWithVAT: parseFloat(part.priceWithVAT || part.price),
       discount: parseFloat(part.discount || '0'),
       imageUrl: part.imageUrl || '',
+      thumbUrl: part.thumbUrl || undefined,
+      blurData: part.blurData || undefined,
       technicalSpecs: {
         spec1: part.spec1 || '',
         spec2: part.spec2 || '',

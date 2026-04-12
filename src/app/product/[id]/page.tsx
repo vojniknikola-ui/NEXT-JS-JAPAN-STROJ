@@ -49,12 +49,16 @@ export default function ProductDetailPage() {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
 
-  const mainImageUrl = selectedImage || product?.imageUrl || FALLBACK_PRODUCT_IMAGE;
+  const mainImageUrl = selectedImage || product?.thumbUrl || product?.imageUrl || FALLBACK_PRODUCT_IMAGE;
   const mainBlur = selectedBlur || product?.blurData || undefined;
 
   const allLightboxImages = product
     ? [
-        { url: product.imageUrl || FALLBACK_PRODUCT_IMAGE, blurData: product.blurData },
+        {
+          url: product.imageUrl || product.thumbUrl || FALLBACK_PRODUCT_IMAGE,
+          thumbUrl: product.thumbUrl,
+          blurData: product.blurData,
+        },
         ...(product.images || []).map((img) => ({ url: img.url, thumbUrl: img.thumbUrl, blurData: img.blurData })),
       ]
     : [];
@@ -107,6 +111,16 @@ export default function ProductDetailPage() {
           imageUrl: typeof data.imageUrl === 'string' ? data.imageUrl : '',
           thumbUrl: typeof data.thumbUrl === 'string' ? data.thumbUrl : undefined,
           blurData: typeof data.blurData === 'string' ? data.blurData : undefined,
+          images: Array.isArray(data.images)
+            ? data.images
+                .filter((image): image is { url?: unknown; thumbUrl?: unknown; blurData?: unknown } => typeof image === 'object' && image !== null)
+                .map((image) => ({
+                  url: typeof image.url === 'string' ? image.url : '',
+                  thumbUrl: typeof image.thumbUrl === 'string' ? image.thumbUrl : undefined,
+                  blurData: typeof image.blurData === 'string' ? image.blurData : undefined,
+                }))
+                .filter((image) => image.url)
+            : undefined,
           technicalSpecs: {
             spec1: typeof data.spec1 === 'string' ? data.spec1 : '',
             spec2: typeof data.spec2 === 'string' ? data.spec2 : '',
@@ -163,6 +177,8 @@ export default function ProductDetailPage() {
           imageUrl: product.imageUrl,
           priceWithVAT: product.priceWithVAT,
           discount: product.discount,
+          thumbUrl: product.thumbUrl,
+          blurData: product.blurData,
           currency: 'BAM',
         };
         const updated = [slimProduct, ...current.filter((p: any) => p.id !== product.id)].slice(0, 4);
@@ -327,7 +343,7 @@ export default function ProductDetailPage() {
                       onClick={() => { setSelectedImage(null); setSelectedBlur(null); }}
                       className={`relative w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 border-2 transition-all ${!selectedImage ? 'border-[#ff6b00]' : 'border-transparent'}`}
                     >
-                      <Image src={product.imageUrl} alt="Main" fill className="object-cover" />
+                      <Image src={product.thumbUrl || product.imageUrl || FALLBACK_PRODUCT_IMAGE} alt="Main" fill className="object-cover" />
                     </button>
                     {product.images.map((img, idx) => (
                       <button 
@@ -438,12 +454,14 @@ export default function ProductDetailPage() {
                       onClick={() => router.push(`/product/${recommendedProduct.id}`)}
                     >
                       <div className="relative h-32 overflow-hidden rounded-lg mb-3">
-                        <Image
-                          src={recommendedProduct.imageUrl || FALLBACK_PRODUCT_IMAGE}
+                      <Image
+                          src={recommendedProduct.thumbUrl || recommendedProduct.imageUrl || FALLBACK_PRODUCT_IMAGE}
                           alt={recommendedProduct.name}
                           fill
                           unoptimized
                           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                          placeholder={recommendedProduct.blurData ? 'blur' : 'empty'}
+                          blurDataURL={recommendedProduct.blurData || undefined}
                           className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-300"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
