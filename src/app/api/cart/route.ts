@@ -12,9 +12,17 @@ function getCartId(request: NextRequest): string {
   return cookie?.value || generateCartId();
 }
 
+function hasCartDatabase(): boolean {
+  return Boolean(process.env.DATABASE_URL);
+}
+
 export async function GET(request: NextRequest) {
   try {
     const cartId = getCartId(request);
+
+    if (!hasCartDatabase()) {
+      return NextResponse.json([]);
+    }
 
     try {
       const { db, withRetry } = await import('@/db');
@@ -44,6 +52,17 @@ export async function POST(request: NextRequest) {
   try {
     const cartItems: CartItem[] = await request.json();
     const cartId = getCartId(request);
+
+    if (!hasCartDatabase()) {
+      const response = NextResponse.json({ success: true });
+      response.cookies.set('japanStrojCartId', cartId, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 30,
+      });
+      return response;
+    }
 
     try {
       const { db, withRetry } = await import('@/db');
@@ -94,6 +113,12 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const cartId = getCartId(request);
+
+    if (!hasCartDatabase()) {
+      const response = NextResponse.json({ success: true });
+      response.cookies.set('japanStrojCartId', '', { maxAge: 0 });
+      return response;
+    }
 
     try {
       const { db, withRetry } = await import('@/db');

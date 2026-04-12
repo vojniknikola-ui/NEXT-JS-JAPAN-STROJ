@@ -14,12 +14,14 @@ export function useCart() {
     const controller = new AbortController();
 
     const loadCart = async () => {
+      let localCartItems: CartItem[] | null = null;
       if (typeof window !== 'undefined') {
         const savedCart = localStorage.getItem('japanStrojCart');
         if (savedCart) {
           try {
             const parsed = JSON.parse(savedCart) as CartItem[];
             if (Array.isArray(parsed) && isActive) {
+              localCartItems = parsed;
               setCartItems(parsed);
               lastSyncedCartRef.current = savedCart;
             }
@@ -37,8 +39,23 @@ export function useCart() {
 
         const data = await response.json();
         if (isActive) {
-          setCartItems(data);
-          lastSyncedCartRef.current = JSON.stringify(data);
+          if (!Array.isArray(data)) {
+            throw new Error('Invalid cart payload');
+          }
+
+          const shouldKeepLocalCart =
+            Array.isArray(localCartItems) &&
+            localCartItems.length > 0 &&
+            data.length === 0;
+
+          if (shouldKeepLocalCart) {
+            // Keep the local cart as source of truth when the API falls back to empty.
+            // This also lets the save effect sync local state back to the server later.
+            lastSyncedCartRef.current = JSON.stringify(data);
+          } else {
+            setCartItems(data);
+            lastSyncedCartRef.current = JSON.stringify(data);
+          }
         }
       } catch (error) {
         if (error instanceof DOMException && error.name === 'AbortError') {
