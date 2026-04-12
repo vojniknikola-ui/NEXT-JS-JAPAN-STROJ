@@ -5,6 +5,12 @@ import { partUpdateSchema } from "@/lib/validation";
 import { revalidatePath } from "next/cache";
 import { requireAdminRole } from "@/lib/auth/adminSession";
 import { ensureCatalogSchema } from "@/lib/parts/ensureCatalogSchema";
+import {
+  buildAdditionalImageRows,
+  buildPartMutationValues,
+  canPersistAdditionalImages,
+  canWriteParts,
+} from "@/lib/parts/buildPartMutationValues";
 
 function createDbErrorResponse(error: unknown): Response {
   const errorWithCause = error as Error & { cause?: unknown };
@@ -62,7 +68,10 @@ function createDbErrorResponse(error: unknown): Response {
 
   console.error("Part DB error:", error);
   return Response.json(
-    { error: "Greška pri spremanju izmjena. Pokušajte ponovo." },
+    {
+      error: "Greška pri spremanju izmjena. Pokušajte ponovo.",
+      detail: message || undefined,
+    },
     { status: 500 }
   );
 }
@@ -92,7 +101,16 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if ("response" in auth) return auth.response;
 
   const { id } = await params;
-  await ensureCatalogSchema();
+  const schemaState = await ensureCatalogSchema();
+  if (!canWriteParts(schemaState)) {
+    return Response.json(
+      {
+        error: "Tabela dijelova nije spremna za spremanje.",
+        detail: "Produkcijska baza nema potpunu parts šemu. Pokrenite migracije za bazu.",
+      },
+      { status: 500 }
+    );
+  }
   const payload = await req.json();
   const parsed = partUpdateSchema.safeParse(payload);
   if (!parsed.success) {
@@ -110,40 +128,28 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     );
   }
 
-  const updateData: Partial<typeof parts.$inferInsert> & { updatedAt: Date } = { updatedAt: new Date() };
-  if (parsed.data.price !== undefined) updateData.price = parsed.data.price.toString();
-  if (parsed.data.priceWithoutVAT !== undefined) updateData.priceWithoutVAT = parsed.data.priceWithoutVAT.toString();
-  if (parsed.data.priceWithVAT !== undefined) updateData.priceWithVAT = parsed.data.priceWithVAT.toString();
-  if (parsed.data.discount !== undefined) updateData.discount = parsed.data.discount.toString();
-  if (parsed.data.sku !== undefined) updateData.sku = parsed.data.sku;
-  if (parsed.data.title !== undefined) updateData.title = parsed.data.title;
-  if (parsed.data.brand !== undefined) updateData.brand = parsed.data.brand;
-  if (parsed.data.model !== undefined) updateData.model = parsed.data.model;
-  if (parsed.data.catalogNumber !== undefined) updateData.catalogNumber = parsed.data.catalogNumber;
-  if (parsed.data.application !== undefined) updateData.application = parsed.data.application;
-  if (parsed.data.delivery !== undefined) updateData.delivery = parsed.data.delivery;
-  if (parsed.data.description !== undefined) updateData.description = parsed.data.description;
-  if (parsed.data.currency !== undefined) updateData.currency = parsed.data.currency;
-  if (parsed.data.stock !== undefined) updateData.stock = parsed.data.stock;
-  if (parsed.data.categoryId !== undefined) updateData.categoryId = parsed.data.categoryId;
-  if (parsed.data.imageUrl !== undefined) {
-    updateData.imageUrl = parsed.data.imageUrl ? parsed.data.imageUrl : null;
-  }
-  if (parsed.data.thumbUrl !== undefined) {
-    updateData.thumbUrl = parsed.data.thumbUrl ? parsed.data.thumbUrl : null;
-  }
-  if (parsed.data.blurData !== undefined) {
-    updateData.blurData = parsed.data.blurData ? parsed.data.blurData : null;
-  }
-  if (parsed.data.spec1 !== undefined) updateData.spec1 = parsed.data.spec1;
-  if (parsed.data.spec2 !== undefined) updateData.spec2 = parsed.data.spec2;
-  if (parsed.data.spec3 !== undefined) updateData.spec3 = parsed.data.spec3;
-  if (parsed.data.spec4 !== undefined) updateData.spec4 = parsed.data.spec4;
-  if (parsed.data.spec5 !== undefined) updateData.spec5 = parsed.data.spec5;
-  if (parsed.data.spec6 !== undefined) updateData.spec6 = parsed.data.spec6;
-  if (parsed.data.spec7 !== undefined) updateData.spec7 = parsed.data.spec7;
-  if (parsed.data.specJson !== undefined) updateData.specJson = parsed.data.specJson;
-  if (parsed.data.isActive !== undefined) updateData.isActive = parsed.data.isActive;
+  const updateData = buildPartMutationValues(schemaState, {
+    ...parsed.data,
+    imageUrl:
+      parsed.data.imageUrl !== undefined
+        ? parsed.data.imageUrl
+          ? parsed.data.imageUrl
+          : null
+        : undefined,
+    thumbUrl:
+      parsed.data.thumbUrl !== undefined
+        ? parsed.data.thumbUrl
+          ? parsed.data.thumbUrl
+          : null
+        : undefined,
+    blurData:
+      parsed.data.blurData !== undefined
+        ? parsed.data.blurData
+          ? parsed.data.blurData
+          : null
+        : undefined,
+    updatedAt: new Date(),
+  });
 
   let updateSuccess = false;
   try {
@@ -156,19 +162,18 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       
       if (updatedPart) {
         updateSuccess = true;
-        if (parsed.data.additionalImages !== undefined) {
+        if (parsed.data.additionalImages !== undefined && canPersistAdditionalImages(schemaState)) {
           // Replace all gallery images on update
           await tx.delete(partImages).where(eq(partImages.partId, Number(id)));
           if (parsed.data.additionalImages.length > 0) {
-            await tx.insert(partImages).values(
-              parsed.data.additionalImages.map((img, index) => ({
-                partId: Number(id),
-                url: img.url,
-                thumbUrl: img.thumbUrl,
-                blurData: img.blurData,
-                order: index + 1,
-              }))
+            const galleryRows = buildAdditionalImageRows(
+              schemaState,
+              Number(id),
+              parsed.data.additionalImages
             );
+            if (galleryRows.length > 0) {
+              await tx.insert(partImages).values(galleryRows);
+            }
           }
         }
       }

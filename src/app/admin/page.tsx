@@ -151,6 +151,7 @@ const normalizeSku = (value: string): string =>
 
 type ApiErrorPayload = {
   error?: string;
+  detail?: string;
   formErrors?: string[];
   fieldErrors?: Record<string, string[] | undefined>;
 };
@@ -229,7 +230,7 @@ const parseApiError = (
   const firstFormError = typed.formErrors?.find(Boolean);
   const firstFieldError = Object.values(flattenedFieldErrors).find(Boolean);
   const message =
-    typed.error || firstFormError || firstFieldError || fallbackMessage;
+    typed.detail || typed.error || firstFormError || firstFieldError || fallbackMessage;
 
   return {
     message,

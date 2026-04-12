@@ -5,6 +5,11 @@ import { partCreateSchema } from "@/lib/validation";
 import { revalidatePath } from "next/cache";
 import { requireAdminRole } from "@/lib/auth/adminSession";
 import { ensureCatalogSchema } from "@/lib/parts/ensureCatalogSchema";
+import {
+  buildAdditionalImageRows,
+  buildPartMutationValues,
+  canWriteParts,
+} from "@/lib/parts/buildPartMutationValues";
 
 export const runtime = 'nodejs';
 
@@ -64,7 +69,10 @@ function createDbErrorResponse(error: unknown): Response {
 
   console.error("Error creating part:", error);
   return Response.json(
-    { error: "Greška pri spremanju dijela. Pokušajte ponovo." },
+    {
+      error: "Greška pri spremanju dijela. Pokušajte ponovo.",
+      detail: message || undefined,
+    },
     { status: 500 }
   );
 }
@@ -356,7 +364,16 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const auth = requireAdminRole(req, ["admin", "editor"]);
   if ("response" in auth) return auth.response;
-  await ensureCatalogSchema();
+  const schemaState = await ensureCatalogSchema();
+  if (!canWriteParts(schemaState)) {
+    return Response.json(
+      {
+        error: "Tabela dijelova nije spremna za spremanje.",
+        detail: "Produkcijska baza nema potpunu parts šemu. Pokrenite migracije za bazu.",
+      },
+      { status: 500 }
+    );
+  }
 
   const json = await req.json();
   const parsed = partCreateSchema.safeParse(json);
@@ -380,32 +397,33 @@ export async function POST(req: Request) {
     const normalizedImageUrl = parsed.data.imageUrl ? parsed.data.imageUrl : null;
     const normalizedThumbUrl = parsed.data.thumbUrl ? parsed.data.thumbUrl : null;
     const normalizedBlurData = parsed.data.blurData ? parsed.data.blurData : null;
+    const insertValues = buildPartMutationValues(schemaState, {
+      ...parsed.data,
+      imageUrl: normalizedImageUrl,
+      thumbUrl: normalizedThumbUrl,
+      blurData: normalizedBlurData,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
 
     await db.transaction(async (tx) => {
-      const [insertedPart] = await tx.insert(parts).values({
-        ...parsed.data,
-        price: parsed.data.price.toString(),
-        priceWithoutVAT: parsed.data.priceWithoutVAT ? parsed.data.priceWithoutVAT.toString() : undefined,
-        priceWithVAT: parsed.data.priceWithVAT ? parsed.data.priceWithVAT.toString() : undefined,
-        discount: parsed.data.discount ? parsed.data.discount.toString() : undefined,
-        imageUrl: normalizedImageUrl,
-        thumbUrl: normalizedThumbUrl,
-        blurData: normalizedBlurData,
-        updatedAt: new Date(),
-      }).returning({ id: parts.id });
+      const [insertedPart] = await tx
+        .insert(parts)
+        .values(insertValues as typeof parts.$inferInsert)
+        .returning({ id: parts.id });
 
       insertedId = insertedPart?.id;
 
       if (insertedId && parsed.data.additionalImages && parsed.data.additionalImages.length > 0) {
-        await tx.insert(partImages).values(
-          parsed.data.additionalImages.map((img, index) => ({
-            partId: insertedId as number,
-            url: img.url,
-            thumbUrl: img.thumbUrl,
-            blurData: img.blurData,
-            order: index + 1,
-          }))
+        const galleryRows = buildAdditionalImageRows(
+          schemaState,
+          insertedId,
+          parsed.data.additionalImages
         );
+
+        if (galleryRows.length > 0) {
+          await tx.insert(partImages).values(galleryRows);
+        }
       }
     });
   } catch (error) {
