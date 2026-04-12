@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { partUpdateSchema } from "@/lib/validation";
 import { revalidatePath } from "next/cache";
 import { requireAdminRole } from "@/lib/auth/adminSession";
+import { ensureCatalogSchema } from "@/lib/parts/ensureCatalogSchema";
 
 function createDbErrorResponse(error: unknown): Response {
   const errorWithCause = error as Error & { cause?: unknown };
@@ -68,6 +69,7 @@ function createDbErrorResponse(error: unknown): Response {
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  await ensureCatalogSchema();
   const row = await db.query.parts.findFirst({
     where: eq(parts.id, Number(id)),
     with: {
@@ -90,6 +92,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if ("response" in auth) return auth.response;
 
   const { id } = await params;
+  await ensureCatalogSchema();
   const payload = await req.json();
   const parsed = partUpdateSchema.safeParse(payload);
   if (!parsed.success) {
@@ -188,6 +191,7 @@ export async function DELETE(_: Request, { params }: { params: Promise<{ id: str
   if ("response" in auth) return auth.response;
 
   const { id } = await params;
+  await ensureCatalogSchema();
   try {
     await db.update(parts).set({ deletedAt: new Date(), isActive: false }).where(eq(parts.id, Number(id)));
   } catch (error) {
