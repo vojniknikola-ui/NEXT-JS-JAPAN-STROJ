@@ -9,6 +9,12 @@ type SortDirection = 'asc' | 'desc';
 type SortField = 'id' | 'sku' | 'brand' | 'model' | 'title' | 'stock' | 'priceWithoutVAT' | 'priceWithVAT' | 'createdAt' | 'updatedAt';
 type Delivery = 'available' | '15_days' | 'on_request';
 
+type PartImage = {
+  url: string;
+  thumbUrl?: string;
+  blurData?: string;
+};
+
 interface PartRecord {
   id: number;
   sku: string;
@@ -28,6 +34,8 @@ interface PartRecord {
   categoryId: number;
   imageUrl: string | null;
   thumbUrl: string | null;
+  blurData: string | null;
+  images?: PartImage[];
   spec1: string | null;
   spec2: string | null;
   spec3: string | null;
@@ -64,6 +72,8 @@ type PartInput = {
   categoryId: number;
   imageUrl?: string; 
   thumbUrl?: string; 
+  blurData?: string;
+  additionalImages?: PartImage[];
   spec1?: string;
   spec2?: string;
   spec3?: string;

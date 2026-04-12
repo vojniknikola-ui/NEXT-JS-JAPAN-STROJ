@@ -153,15 +153,14 @@ export async function GET(req: Request) {
     : sql<number>`0`;
 
   if (q) {
-    where.push(
-      or(
-        ilike(parts.title, `%${q}%`),
-        ilike(parts.brand, `%${q}%`),
-        ilike(parts.model, `%${q}%`),
-        ilike(parts.catalogNumber, `%${q}%`),
-        ilike(parts.sku, `%${q}%`)
-      )
+    const searchFilter = or(
+      ilike(parts.title, `%${q}%`),
+      ilike(parts.brand, `%${q}%`),
+      ilike(parts.model, `%${q}%`),
+      ilike(parts.catalogNumber, `%${q}%`),
+      ilike(parts.sku, `%${q}%`)
     );
+    if (searchFilter) where.push(searchFilter);
   }
 
   const categoryId = cat ? Number(cat) : NaN;
@@ -176,7 +175,8 @@ export async function GET(req: Request) {
     if (brands.length === 1) {
       where.push(ilike(parts.brand, `%${brands[0]}%`));
     } else if (brands.length > 1) {
-      where.push(or(...brands.map((entry) => ilike(parts.brand, `%${entry}%`))));
+      const brandFilter = or(...brands.map((entry) => ilike(parts.brand, `%${entry}%`)));
+      if (brandFilter) where.push(brandFilter);
     }
   }
 
@@ -188,7 +188,8 @@ export async function GET(req: Request) {
     if (deliveryValues.length === 1) {
       where.push(eq(parts.delivery, deliveryValues[0]));
     } else if (deliveryValues.length > 1) {
-      where.push(or(...deliveryValues.map((entry) => eq(parts.delivery, entry))));
+      const deliveryFilter = or(...deliveryValues.map((entry) => eq(parts.delivery, entry)));
+      if (deliveryFilter) where.push(deliveryFilter);
     }
   }
 
