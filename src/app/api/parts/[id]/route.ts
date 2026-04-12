@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { parts } from "@/db/schema";
+import { parts, partImages } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { partUpdateSchema } from "@/lib/validation";
 import { revalidatePath } from "next/cache";
@@ -68,7 +68,14 @@ function createDbErrorResponse(error: unknown): Response {
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [row] = await db.select().from(parts).where(eq(parts.id, Number(id)));
+  const row = await db.query.parts.findFirst({
+    where: eq(parts.id, Number(id)),
+    with: {
+      images: {
+        orderBy: (images, { asc }) => [asc(images.order)],
+      },
+    },
+  });
   if (!row) return new Response("Not found", { status: 404 });
 
   return Response.json(row, {
@@ -122,6 +129,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (parsed.data.thumbUrl !== undefined) {
     updateData.thumbUrl = parsed.data.thumbUrl ? parsed.data.thumbUrl : null;
   }
+  if (parsed.data.blurData !== undefined) {
+    updateData.blurData = parsed.data.blurData ? parsed.data.blurData : null;
+  }
   if (parsed.data.spec1 !== undefined) updateData.spec1 = parsed.data.spec1;
   if (parsed.data.spec2 !== undefined) updateData.spec2 = parsed.data.spec2;
   if (parsed.data.spec3 !== undefined) updateData.spec3 = parsed.data.spec3;
@@ -132,18 +142,39 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (parsed.data.specJson !== undefined) updateData.specJson = parsed.data.specJson;
   if (parsed.data.isActive !== undefined) updateData.isActive = parsed.data.isActive;
 
-  let updated: { id: number } | undefined;
+  let updateSuccess = false;
   try {
-    [updated] = await db
-      .update(parts)
-      .set(updateData)
-      .where(eq(parts.id, Number(id)))
-      .returning({ id: parts.id });
+    await db.transaction(async (tx) => {
+      const [updatedPart] = await tx
+        .update(parts)
+        .set(updateData)
+        .where(eq(parts.id, Number(id)))
+        .returning({ id: parts.id });
+      
+      if (updatedPart) {
+        updateSuccess = true;
+        if (parsed.data.additionalImages !== undefined) {
+          // Replace all gallery images on update
+          await tx.delete(partImages).where(eq(partImages.partId, Number(id)));
+          if (parsed.data.additionalImages.length > 0) {
+            await tx.insert(partImages).values(
+              parsed.data.additionalImages.map((img, index) => ({
+                partId: Number(id),
+                url: img.url,
+                thumbUrl: img.thumbUrl,
+                blurData: img.blurData,
+                order: index + 1,
+              }))
+            );
+          }
+        }
+      }
+    });
   } catch (error) {
     return createDbErrorResponse(error);
   }
 
-  if (!updated) {
+  if (!updateSuccess) {
     return Response.json({ error: "Dio nije pronađen." }, { status: 404 });
   }
   
@@ -158,7 +189,7 @@ export async function DELETE(_: Request, { params }: { params: Promise<{ id: str
 
   const { id } = await params;
   try {
-    await db.delete(parts).where(eq(parts.id, Number(id)));
+    await db.update(parts).set({ deletedAt: new Date(), isActive: false }).where(eq(parts.id, Number(id)));
   } catch (error) {
     return createDbErrorResponse(error);
   }

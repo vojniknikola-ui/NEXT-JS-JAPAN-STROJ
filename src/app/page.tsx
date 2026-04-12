@@ -16,27 +16,37 @@ const FALLBACK_PART_IMAGE = 'https://via.placeholder.com/800x800?text=JapanStroj
 export default function Home() {
   const router = useRouter();
   const [activePage, setActivePage] = useState<Page>('home');
-  const [cartItems] = useState<CartItem[]>(() => {
-    if (typeof window === 'undefined') {
-      return [];
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedCart = localStorage.getItem('japanStrojCart');
+      if (savedCart) {
+        try {
+          setCartItems(JSON.parse(savedCart) as CartItem[]);
+        } catch (error) {
+          console.error('Error loading cart:', error);
+        }
+      }
     }
-
-    const savedCart = localStorage.getItem('japanStrojCart');
-    if (!savedCart) {
-      return [];
-    }
-
-    try {
-      return JSON.parse(savedCart) as CartItem[];
-    } catch (error) {
-      console.error('Error loading cart:', error);
-      return [];
-    }
-  });
+  }, []);
   const [spareParts, setSpareParts] = useState<SparePart[]>([]);
+  const [recentlyViewed, setRecentlyViewed] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const cartItemCount = cartItems.reduce((total, item) => total + item.quantity, 0);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('japanStrojRecentlyViewed');
+        if (saved) {
+          setRecentlyViewed(JSON.parse(saved));
+        }
+      } catch (e) {
+        console.error('Error loading recently viewed:', e);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -213,11 +223,12 @@ export default function Home() {
                 >
                   <div className="relative overflow-hidden aspect-square sm:aspect-auto sm:h-40 md:h-48">
                     <Image
-                      src={part.imageUrl || FALLBACK_PART_IMAGE}
+                      src={part.thumbUrl || part.imageUrl || FALLBACK_PART_IMAGE}
                       alt={part.name}
                       fill
-                      unoptimized
                       sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 25vw"
+                      placeholder={part.blurData ? "blur" : "empty"}
+                      blurDataURL={part.blurData || undefined}
                       className="w-full h-full object-cover sm:group-hover:scale-110 transition-transform duration-500"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300" />
@@ -262,6 +273,40 @@ export default function Home() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>
               </button>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {recentlyViewed.length > 0 && (
+        <section className="py-10 sm:py-12 md:py-16 bg-[#080808] border-t border-white/5">
+          <div className="container mx-auto px-4">
+            <h2 className="text-xl sm:text-2xl font-bold text-white mb-6 sm:mb-8 flex items-center gap-3">
+              <span className="w-8 h-1 bg-[#ff6b00] rounded-full"></span>
+              Zadnje gledano
+            </h2>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+              {recentlyViewed.map((p) => (
+                <div 
+                  key={p.id}
+                  onClick={() => router.push(`/product/${p.id}`)}
+                  className="group bg-[#111] border border-white/5 rounded-xl overflow-hidden cursor-pointer active:scale-[0.98] transition-all"
+                >
+                  <div className="relative aspect-square">
+                    <Image 
+                      src={p.thumbUrl || p.imageUrl || FALLBACK_PART_IMAGE}
+                      alt={p.name}
+                      fill
+                      sizes="25vw"
+                      className="object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                  </div>
+                  <div className="p-3 sm:p-4">
+                    <h3 className="text-sm font-semibold text-white truncate group-hover:text-[#ff6b00] transition-colors">{p.name}</h3>
+                    <p className="text-[#ff6b00] font-bold text-sm mt-1">{p.priceWithVAT?.toFixed(2)} {p.currency || 'BAM'}</p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </section>

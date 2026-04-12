@@ -60,6 +60,12 @@ export const partCreateSchema = z.object({
       z.null(),
     ])
     .optional(),
+  blurData: z.string().optional(),
+  additionalImages: z.array(z.object({
+    url: z.string().url(),
+    thumbUrl: z.string().url().optional(),
+    blurData: z.string().optional(),
+  })).max(4, "Možete dodati najviše 4 dodatne slike (ukupno 5)").optional(),
   spec1: z.string().max(255, "Specifikacija 1 ne može biti duža od 255 karaktera").optional(),
   spec2: z.string().max(255, "Specifikacija 2 ne može biti duža od 255 karaktera").optional(),
   spec3: z.string().max(255, "Specifikacija 3 ne može biti duža od 255 karaktera").optional(),

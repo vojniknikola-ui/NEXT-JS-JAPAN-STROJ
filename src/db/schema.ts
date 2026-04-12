@@ -6,6 +6,7 @@ export const categories = pgTable("categories", {
   name: varchar("name", { length: 120 }).notNull(),
   slug: varchar("slug", { length: 140 }).notNull().unique(),
   createdAt: timestamp("created_at").defaultNow(),
+  deletedAt: timestamp("deleted_at"),
 });
 
 export const parts = pgTable("parts", {
@@ -27,6 +28,7 @@ export const parts = pgTable("parts", {
   categoryId: integer("category_id").notNull().references(() => categories.id),
   imageUrl: text("image_url"),
   thumbUrl: text("thumb_url"),
+  blurData: text("blur_data"),
   spec1: text("spec_1"),
   spec2: text("spec_2"),
   spec3: text("spec_3"),
@@ -38,6 +40,7 @@ export const parts = pgTable("parts", {
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+  deletedAt: timestamp("deleted_at"),
 }, (table) => ({
   skuIdx: uniqueIndex("parts_sku_idx").on(table.sku),
   brandIdx: index("parts_brand_idx").on(table.brand),
@@ -54,10 +57,28 @@ export const categoriesRelations = relations(categories, ({ many }) => ({
   parts: many(parts),
 }));
 
-export const partsRelations = relations(parts, ({ one }) => ({
+export const partsRelations = relations(parts, ({ one, many }) => ({
   category: one(categories, {
     fields: [parts.categoryId],
     references: [categories.id],
+  }),
+  images: many(partImages),
+}));
+
+export const partImages = pgTable("part_images", {
+  id: serial("id").primaryKey(),
+  partId: integer("part_id").notNull().references(() => parts.id),
+  url: text("url").notNull(),
+  thumbUrl: text("thumb_url"),
+  blurData: text("blur_data"),
+  order: integer("order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const partImagesRelations = relations(partImages, ({ one }) => ({
+  part: one(parts, {
+    fields: [partImages.partId],
+    references: [parts.id],
   }),
 }));
 
@@ -83,6 +104,7 @@ export const invoices = pgTable('invoices', {
   sentAt: timestamp('sent_at'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  deletedAt: timestamp('deleted_at'),
 }, (table) => ({
   invoiceNumberIdx: uniqueIndex('invoices_invoice_number_idx').on(table.invoiceNumber),
   createdAtIdx: index('invoices_created_at_idx').on(table.createdAt),

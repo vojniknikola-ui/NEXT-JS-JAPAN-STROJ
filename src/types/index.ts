@@ -26,6 +26,9 @@ export interface SparePart {
   priceWithVAT: number;
   discount: number;
   imageUrl: string;
+  thumbUrl?: string;
+  blurData?: string;
+  images?: { url: string; thumbUrl?: string; blurData?: string }[];
   technicalSpecs: TechnicalSpecs;
   stock?: number;
   recommendationReasons?: string[];

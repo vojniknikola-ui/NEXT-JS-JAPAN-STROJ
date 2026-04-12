@@ -1,6 +1,6 @@
 import { db } from "@/db";
-import { parts, categories } from "@/db/schema";
-import { and, asc, desc, eq, gt, ilike, lt, or, sql } from "drizzle-orm";
+import { parts, categories, partImages } from "@/db/schema";
+import { and, asc, desc, eq, gt, ilike, isNull, lt, or, sql } from "drizzle-orm";
 import { partCreateSchema } from "@/lib/validation";
 import { revalidatePath } from "next/cache";
 import { requireAdminRole } from "@/lib/auth/adminSession";
@@ -126,7 +126,7 @@ export async function GET(req: Request) {
   const isAscending = normalizedOrder === "asc";
   const normalizedSort = sort === "relevance" && !q ? "id" : sort;
 
-  const where = [];
+  const where = [isNull(parts.deletedAt)];
   const effectivePrice = sql`COALESCE(${parts.priceWithVAT}, ${parts.price})`;
   const effectivePriceWithoutVat = sql`COALESCE(${parts.priceWithoutVAT}, ${parts.price})`;
   const queryPrefix = q ? `${q}%` : "";
@@ -362,26 +362,44 @@ export async function POST(req: Request) {
     );
   }
 
-  let inserted: { id: number } | undefined;
+  let insertedId: number | undefined;
   try {
     const normalizedImageUrl = parsed.data.imageUrl ? parsed.data.imageUrl : null;
     const normalizedThumbUrl = parsed.data.thumbUrl ? parsed.data.thumbUrl : null;
+    const normalizedBlurData = parsed.data.blurData ? parsed.data.blurData : null;
 
-    [inserted] = await db.insert(parts).values({
-      ...parsed.data,
-      price: parsed.data.price.toString(),
-      priceWithoutVAT: parsed.data.priceWithoutVAT ? parsed.data.priceWithoutVAT.toString() : undefined,
-      priceWithVAT: parsed.data.priceWithVAT ? parsed.data.priceWithVAT.toString() : undefined,
-      discount: parsed.data.discount ? parsed.data.discount.toString() : undefined,
-      imageUrl: normalizedImageUrl,
-      thumbUrl: normalizedThumbUrl,
-      updatedAt: new Date(),
-    }).returning({ id: parts.id });
+    await db.transaction(async (tx) => {
+      const [insertedPart] = await tx.insert(parts).values({
+        ...parsed.data,
+        price: parsed.data.price.toString(),
+        priceWithoutVAT: parsed.data.priceWithoutVAT ? parsed.data.priceWithoutVAT.toString() : undefined,
+        priceWithVAT: parsed.data.priceWithVAT ? parsed.data.priceWithVAT.toString() : undefined,
+        discount: parsed.data.discount ? parsed.data.discount.toString() : undefined,
+        imageUrl: normalizedImageUrl,
+        thumbUrl: normalizedThumbUrl,
+        blurData: normalizedBlurData,
+        updatedAt: new Date(),
+      }).returning({ id: parts.id });
+
+      insertedId = insertedPart?.id;
+
+      if (insertedId && parsed.data.additionalImages && parsed.data.additionalImages.length > 0) {
+        await tx.insert(partImages).values(
+          parsed.data.additionalImages.map((img, index) => ({
+            partId: insertedId as number,
+            url: img.url,
+            thumbUrl: img.thumbUrl,
+            blurData: img.blurData,
+            order: index + 1,
+          }))
+        );
+      }
+    });
   } catch (error) {
     return createDbErrorResponse(error);
   }
 
   revalidatePath('/catalog');
 
-  return Response.json({ id: inserted?.id }, { status: 201 });
+  return Response.json({ id: insertedId }, { status: 201 });
 }

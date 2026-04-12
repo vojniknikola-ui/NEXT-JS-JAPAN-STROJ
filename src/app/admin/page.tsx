@@ -238,7 +238,10 @@ export default function AdminParts() {
   const [saving, setSaving] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
+  const [additionalFiles, setAdditionalFiles] = useState<(File | null)[]>([null, null, null, null]);
+  const [additionalPreviewUrls, setAdditionalPreviewUrls] = useState<(string | null)[]>([null, null, null, null]);
   const [originalImageUrl, setOriginalImageUrl] = useState<string | null>(null);
+  const [originalGalleryUrls, setOriginalGalleryUrls] = useState<any[]>([]);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
@@ -305,6 +308,14 @@ export default function AdminParts() {
     setFilePreviewUrl(objectUrl);
     return () => URL.revokeObjectURL(objectUrl);
   }, [file]);
+
+  useEffect(() => {
+    const urls = additionalFiles.map(f => f ? URL.createObjectURL(f) : null);
+    setAdditionalPreviewUrls(urls);
+    return () => {
+      urls.forEach(url => url && URL.revokeObjectURL(url));
+    };
+  }, [additionalFiles]);
 
   const applySession = useCallback((payload: AdminSessionPayload | null) => {
     if (!payload?.authenticated || !payload.role) {
@@ -508,21 +519,22 @@ export default function AdminParts() {
     }
   }, [authLoading, canRead, loadInvoices]);
 
-  async function uploadImage(): Promise<string | undefined> {
+  async function uploadImage(fileToUpload?: File | null): Promise<{ url: string; thumbUrl: string; blurData: string } | undefined> {
     if (!canEdit) {
       throw new Error('Nemate dozvolu za upload slike.');
     }
-    if (!file) return undefined;
+    const targetFile = fileToUpload || file;
+    if (!targetFile) return undefined;
     const fd = new FormData();
-    fd.append("file", file);
+    fd.append("file", targetFile);
     const resp = await fetch("/api/upload", { method: "POST", body: fd });
     if (!resp.ok) {
       const errorData = await resp.json().catch(() => ({}));
       const parsed = parseApiError(errorData, "Upload slike nije uspio");
       throw new Error(parsed.message);
     }
-    const { url } = await resp.json();
-    return url as string;
+    const data = await resp.json();
+    return { url: data.url, thumbUrl: data.thumbUrl, blurData: data.blurData };
   }
 
   async function deleteImageByUrl(imageUrl: string): Promise<void> {
@@ -577,10 +589,29 @@ export default function AdminParts() {
       }
 
       const previousImageUrl = (originalImageUrl || '').trim();
-      const nextImageUrlRaw = file ? (await uploadImage()) || '' : (form.imageUrl || '');
+      let nextImageUrlRaw = form.imageUrl || '';
+      let nextThumbUrlRaw = form.thumbUrl || '';
+      let nextBlurDataRaw = form.blurData || '';
+
       if (file) {
-        uploadedImageUrl = nextImageUrlRaw;
+        const uploadResult = await uploadImage(file);
+        if (uploadResult) {
+          nextImageUrlRaw = uploadResult.url;
+          nextThumbUrlRaw = uploadResult.thumbUrl;
+          nextBlurDataRaw = uploadResult.blurData;
+          uploadedImageUrl = nextImageUrlRaw;
+        }
       }
+
+      // Process additional gallery images
+      const nextAdditionalImages = [...originalGalleryUrls];
+      for (const addFile of additionalFiles) {
+        if (addFile) {
+          const res = await uploadImage(addFile);
+          if (res) nextAdditionalImages.push(res);
+        }
+      }
+
       const normalizedImageUrl = nextImageUrlRaw.trim();
 
       const payload = {
@@ -593,6 +624,9 @@ export default function AdminParts() {
         discount: form.discount ? Number(form.discount) : 0,
         stock: Number(form.stock),
         imageUrl: normalizedImageUrl,
+        thumbUrl: nextThumbUrlRaw.trim(),
+        blurData: nextBlurDataRaw.trim(),
+        additionalImages: nextAdditionalImages.slice(0, 4), // Main + 4 = 5 max
       };
 
       let res;
@@ -736,16 +770,21 @@ export default function AdminParts() {
       spec5: p.spec5 || "",
       spec6: p.spec6 || "",
       spec7: p.spec7 || "",
+      specJson: p.specJson || "",
       isActive: p.isActive,
     });
     setFile(null);
+    setAdditionalFiles([null, null, null, null]);
+    setOriginalGalleryUrls(p.images || []);
   }
 
   function resetForm() {
     setEditingId(null);
     setOriginalImageUrl(null);
+    setOriginalGalleryUrls([]);
     setForm(createInitialForm(cats[0]?.id || 1));
     setFile(null);
+    setAdditionalFiles([null, null, null, null]);
     setFormError(null);
     setFormFieldErrors({});
   }
@@ -1457,6 +1496,64 @@ export default function AdminParts() {
                   {!form.imageUrl && !file && (
                     <p className="mt-2 text-sm text-neutral-500">Trenutno nema slike za ovaj dio.</p>
                   )}
+                </div>
+
+                <div className="pt-4 border-t border-white/5">
+                  <label className={labelClass}>Galerija (Maksimalno 4 dodatne slike)</label>
+                  
+                  {/* Current Gallery */}
+                  {originalGalleryUrls.length > 0 && (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                      {originalGalleryUrls.map((img, idx) => (
+                        <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border border-white/10 bg-black/40 group">
+                          <Image src={img.thumbUrl || img.url} alt={`Gallery ${idx}`} fill className="object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setOriginalGalleryUrls(prev => prev.filter((_, i) => i !== idx));
+                            }}
+                            className="absolute inset-0 bg-red-600/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <span className="text-white text-[10px] font-bold uppercase">Obriši</span>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {[0, 1, 2, 3].map((idx) => (
+                      <div key={idx} className="space-y-2">
+                        <label className="text-[10px] text-neutral-500 uppercase">Slika {idx + 2}</label>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const newFiles = [...additionalFiles];
+                            newFiles[idx] = e.target.files?.[0] ?? null;
+                            setAdditionalFiles(newFiles);
+                          }}
+                          className="w-full text-xs text-neutral-400 file:mr-3 file:rounded-full file:border-0 file:bg-white/5 file:px-3 file:py-1 file:text-xs file:font-semibold file:text-neutral-300 hover:file:bg-white/10"
+                        />
+                        {additionalPreviewUrls[idx] && (
+                          <div className="relative aspect-video rounded-lg overflow-hidden border border-[#ff6b00]/20 bg-black/40">
+                             <img src={additionalPreviewUrls[idx]!} alt="Preview" className="w-full h-full object-cover" />
+                             <button 
+                               type="button"
+                               onClick={() => {
+                                 const newFiles = [...additionalFiles];
+                                 newFiles[idx] = null;
+                                 setAdditionalFiles(newFiles);
+                               }}
+                               className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded-full text-[8px]"
+                             >
+                               X
+                             </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <input

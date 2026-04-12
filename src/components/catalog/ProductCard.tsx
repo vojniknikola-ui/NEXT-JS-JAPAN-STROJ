@@ -20,6 +20,8 @@ interface PartData {
   stock: number;
   categoryId: number;
   imageUrl: string | null;
+  thumbUrl?: string | null;
+  blurData?: string | null;
   isActive: boolean;
   category: string;
   spec1?: string | null;
@@ -48,6 +50,7 @@ const AvailabilityBadge: React.FC<{ availability: string }> = memo(({ availabili
 AvailabilityBadge.displayName = 'AvailabilityBadge';
 
 const ProductCard = memo<{ part: PartData; onAddToCart: (part: PartData) => void; isAdded: boolean }>(({ part, onAddToCart, isAdded }) => {
+  const displayImageUrl = part.thumbUrl || part.imageUrl;
   const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null);
 
   const priceAfterDiscount = useMemo(() => {
@@ -65,14 +68,16 @@ const ProductCard = memo<{ part: PartData; onAddToCart: (part: PartData) => void
         href={productHref}
         className="relative block aspect-square bg-[#1a1a1a] overflow-hidden touch-manipulation"
       >
-        {part.imageUrl && failedImageUrl !== part.imageUrl ? (
+        {displayImageUrl && failedImageUrl !== displayImageUrl ? (
           <Image
-            src={part.imageUrl}
+            src={displayImageUrl}
             alt={part.title}
             fill
             className="object-cover sm:group-hover:scale-105 transition-transform duration-300"
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-            onError={() => setFailedImageUrl(part.imageUrl)}
+            placeholder={part.blurData ? "blur" : "empty"}
+            blurDataURL={part.blurData || undefined}
+            onError={() => setFailedImageUrl(displayImageUrl)}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-neutral-600">
@@ -89,6 +94,17 @@ const ProductCard = memo<{ part: PartData; onAddToCart: (part: PartData) => void
         <div className="absolute top-2 sm:top-3 right-2 sm:right-3">
           <AvailabilityBadge availability={part.delivery || 'available'} />
         </div>
+        {/* In Cart badge */}
+        {isAdded && (
+          <div className="absolute inset-0 bg-emerald-900/60 backdrop-blur-[2px] flex items-center justify-center transition-all duration-300">
+            <div className="flex flex-col items-center gap-1">
+              <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-500/50">
+                <CheckIcon className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-[10px] font-bold text-emerald-300 uppercase tracking-wider">U košarici</span>
+            </div>
+          </div>
+        )}
         {part.discount && parseFloat(part.discount) > 0 && (
           <div className="absolute top-2 sm:top-3 left-2 sm:left-3 bg-green-500 text-white px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold">
             -{part.discount}%
