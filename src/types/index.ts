@@ -48,4 +48,4 @@ export interface Manual {
   url: string;
 }
 
-export type Page = 'home' | 'catalog' | 'services' | 'cart' | 'manuals' | 'admin' | 'productDetail';
+export type Page = 'home' | 'catalog' | 'services' | 'cart' | 'manuals' | 'contact' | 'admin' | 'productDetail';

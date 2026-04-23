@@ -116,10 +116,10 @@ export default function CartPage() {
                     Pregledaj katalog
                   </button>
                   <button
-                    onClick={() => router.push('/services')}
+                    onClick={() => router.push('/contact')}
                     className="border border-[#ff6b00]/50 text-[#ff6b00] active:bg-[#ff6b00]/10 px-6 sm:px-8 py-3 sm:py-4 rounded-full font-semibold text-sm sm:text-base transition-all active:scale-95 sm:hover:scale-105 touch-manipulation"
                   >
-                    Naše usluge
+                    Kontakt
                   </button>
                 </div>
               </div>

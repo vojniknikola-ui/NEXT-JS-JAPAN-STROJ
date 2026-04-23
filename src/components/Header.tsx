@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { Page } from '@/types';
-import { HomeIcon, CatalogIcon, CartIcon, ManualIcon, CogIcon, FacebookIcon } from '@/lib/icons';
+import { HomeIcon, CatalogIcon, CartIcon, ContactIcon, FacebookIcon } from '@/lib/icons';
 import { CONTACT_INFO } from '@/lib/constants';
 
 interface HeaderProps {
@@ -14,9 +14,8 @@ const Header: React.FC<HeaderProps> = ({ activePage, setActivePage, cartItemCoun
   const navItems = [
     { id: 'home', label: 'Početna', mobileLabel: 'Početna', icon: HomeIcon },
     { id: 'catalog', label: 'Rezervni dijelovi', mobileLabel: 'Dijelovi', icon: CatalogIcon },
-    { id: 'services', label: 'Usluge', mobileLabel: 'Usluge', icon: CogIcon },
+    { id: 'contact', label: 'Kontakt', mobileLabel: 'Kontakt', icon: ContactIcon },
     { id: 'cart', label: 'Košarica', mobileLabel: 'Košarica', icon: CartIcon },
-    { id: 'manuals', label: 'Priručnici', mobileLabel: 'Priruč.', icon: ManualIcon },
   ] as const;
 
   const getPageHref = (page: Page) => (page === 'home' ? '/' : `/${page}`);

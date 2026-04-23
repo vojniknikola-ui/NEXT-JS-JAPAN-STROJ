@@ -127,17 +127,16 @@ export default function Home() {
             </button>
             <button
               onClick={() => {
-                setActivePage('services');
-                router.push('/services');
+                setActivePage('contact');
+                router.push('/contact');
               }}
               className="group border-2 border-white/80 text-white hover:bg-white hover:text-secondary-900 active:bg-white active:text-secondary-900 px-5 sm:px-6 md:px-8 lg:px-10 py-3 sm:py-3.5 md:py-4 lg:py-5 rounded-full font-bold text-xs sm:text-sm md:text-base lg:text-lg transition-all duration-300 active:scale-95 sm:hover:scale-105 backdrop-blur-sm bg-white/5 hover:bg-white flex items-center justify-center gap-2 touch-manipulation w-full sm:w-auto focus-ring"
-              aria-label="View our services"
+              aria-label="Kontaktirajte JapanStroj"
             >
               <svg className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 group-active:rotate-12 transition-transform flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21.75 8.25v7.5a2.25 2.25 0 01-2.25 2.25H4.5a2.25 2.25 0 01-2.25-2.25v-7.5m19.5 0A2.25 2.25 0 0019.5 6H4.5a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0l-7.5-4.615A2.25 2.25 0 012.25 8.493V8.25" />
               </svg>
-              <span>Naše usluge</span>
+              <span>Kontaktirajte nas</span>
             </button>
           </div>
         </div>
