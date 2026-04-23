@@ -46,6 +46,14 @@ export const partCreateSchema = z.object({
     .default(0),
   categoryId: z.coerce.number().int("ID kategorije mora biti cijeli broj")
     .positive("ID kategorije mora biti pozitivan broj"),
+  categorySlug: z.string()
+    .trim()
+    .max(140, "Slug kategorije ne može biti duži od 140 karaktera")
+    .optional(),
+  categoryName: z.string()
+    .trim()
+    .max(120, "Naziv kategorije ne može biti duži od 120 karaktera")
+    .optional(),
   imageUrl: z
     .union([
       z.string().url("URL slike mora biti validan"),

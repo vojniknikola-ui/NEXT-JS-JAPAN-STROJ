@@ -39,6 +39,46 @@ export function resolveCanonicalCatalogCategory(
   return null;
 }
 
+export function slugifyCategoryName(value: string) {
+  return value
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+export function getCategoryNameFromSlug(slug: string) {
+  return slug
+    .split("-")
+    .filter(Boolean)
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(" ");
+}
+
+export function normalizeCategoryInput(input: {
+  slug?: string | null;
+  name?: string | null;
+}) {
+  const canonical = resolveCanonicalCatalogCategory(input.slug, input.name);
+  if (canonical) {
+    return canonical;
+  }
+
+  const rawName = typeof input.name === "string" ? input.name.trim() : "";
+  const rawSlug = typeof input.slug === "string" ? input.slug.trim() : "";
+  const normalizedSlug = slugifyCategoryName(rawSlug || rawName);
+
+  if (!normalizedSlug) {
+    return null;
+  }
+
+  return {
+    slug: normalizedSlug,
+    name: rawName || getCategoryNameFromSlug(normalizedSlug),
+  };
+}
+
 export function getCatalogCategorySortIndex(slug?: string | null) {
   const normalizedSlug = typeof slug === "string" ? slug.trim().toLowerCase() : "";
   const index = CATALOG_CATEGORIES.findIndex((category) => category.slug === normalizedSlug);

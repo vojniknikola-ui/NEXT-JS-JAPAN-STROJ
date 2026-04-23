@@ -4,7 +4,10 @@ import { eq } from "drizzle-orm";
 import { partUpdateSchema } from "@/lib/validation";
 import { revalidatePath } from "next/cache";
 import { requireAdminRole } from "@/lib/auth/adminSession";
-import { ensureCatalogSchema } from "@/lib/parts/ensureCatalogSchema";
+import {
+  ensureCatalogSchema,
+  ensureCategoryRecord,
+} from "@/lib/parts/ensureCatalogSchema";
 import {
   buildAdditionalImageRows,
   buildPartMutationValues,
@@ -128,8 +131,33 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     );
   }
 
+  const shouldResolveCategory =
+    parsed.data.categoryId !== undefined ||
+    parsed.data.categorySlug !== undefined ||
+    parsed.data.categoryName !== undefined;
+
+  const category = shouldResolveCategory
+    ? await ensureCategoryRecord({
+        fallbackId: parsed.data.categoryId,
+        slug: parsed.data.categorySlug,
+        name: parsed.data.categoryName,
+      })
+    : null;
+
+  if (shouldResolveCategory && !category) {
+    return Response.json(
+      {
+        error: "Odabrana kategorija ne postoji.",
+        fieldErrors: { categoryId: ["Odabrana kategorija ne postoji."] },
+        formErrors: [],
+      },
+      { status: 400 }
+    );
+  }
+
   const updateData = buildPartMutationValues(schemaState, {
     ...parsed.data,
+    categoryId: category?.id ?? parsed.data.categoryId,
     imageUrl:
       parsed.data.imageUrl !== undefined
         ? parsed.data.imageUrl

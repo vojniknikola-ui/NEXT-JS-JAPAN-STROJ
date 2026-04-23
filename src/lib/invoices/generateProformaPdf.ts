@@ -2,6 +2,7 @@ import jsPDF from "jspdf";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import type { CartItem } from "@/types";
+import { CONTACT_INFO } from "@/lib/constants";
 
 export interface InvoiceCompanyDetails {
   companyName: string;
@@ -97,8 +98,8 @@ export async function generateProformaPdf({
 
   doc.setFontSize(8);
   setPdfFont("normal");
-  doc.text("Adresa: Sarajevo, Bosna i Hercegovina", margin, 22);
-  doc.text("Telefon: +387 61 234 567 | Email: info@japanstroj.ba", margin, 27);
+  doc.text(`Adresa: ${CONTACT_INFO.address}`, margin, 22);
+  doc.text(`Telefon: ${CONTACT_INFO.phone} | Email: ${CONTACT_INFO.email}`, margin, 27);
 
   doc.setTextColor(0, 0, 0);
 

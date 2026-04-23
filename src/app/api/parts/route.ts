@@ -4,7 +4,10 @@ import { and, asc, desc, eq, gt, ilike, isNull, lt, or, sql } from "drizzle-orm"
 import { partCreateSchema } from "@/lib/validation";
 import { revalidatePath } from "next/cache";
 import { requireAdminRole } from "@/lib/auth/adminSession";
-import { ensureCatalogSchema } from "@/lib/parts/ensureCatalogSchema";
+import {
+  ensureCatalogSchema,
+  ensureCategoryRecord,
+} from "@/lib/parts/ensureCatalogSchema";
 import {
   buildAdditionalImageRows,
   buildPartMutationValues,
@@ -400,11 +403,29 @@ export async function POST(req: Request) {
 
   let insertedId: number | undefined;
   try {
+    const category = await ensureCategoryRecord({
+      fallbackId: parsed.data.categoryId,
+      slug: parsed.data.categorySlug,
+      name: parsed.data.categoryName,
+    });
+
+    if (!category) {
+      return Response.json(
+        {
+          error: "Odabrana kategorija ne postoji.",
+          fieldErrors: { categoryId: ["Odabrana kategorija ne postoji."] },
+          formErrors: [],
+        },
+        { status: 400 }
+      );
+    }
+
     const normalizedImageUrl = parsed.data.imageUrl ? parsed.data.imageUrl : null;
     const normalizedThumbUrl = parsed.data.thumbUrl ? parsed.data.thumbUrl : null;
     const normalizedBlurData = parsed.data.blurData ? parsed.data.blurData : null;
     const insertValues = buildPartMutationValues(schemaState, {
       ...parsed.data,
+      categoryId: category.id,
       imageUrl: normalizedImageUrl,
       thumbUrl: normalizedThumbUrl,
       blurData: normalizedBlurData,

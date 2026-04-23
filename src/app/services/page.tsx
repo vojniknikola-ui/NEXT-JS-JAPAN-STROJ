@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Page } from '@/types';
+import { CONTACT_INFO } from '@/lib/constants';
 
 type CartCountItem = { quantity: number };
 
@@ -138,29 +139,36 @@ export default function ServicesPage() {
                 <div className="bg-white/10 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6">
                   <div className="text-xl sm:text-2xl md:text-3xl mb-1.5 sm:mb-2 md:mb-3">📞</div>
                   <h3 className="font-semibold text-neutral-900 mb-1 sm:mb-2 text-xs sm:text-sm md:text-base">Telefon</h3>
-                  <p className="text-neutral-800 text-xs sm:text-sm md:text-base">+387 61 924 848</p>
+                  <p className="text-neutral-800 text-xs sm:text-sm md:text-base">{CONTACT_INFO.phone}</p>
                 </div>
                 <div className="bg-white/10 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6">
                   <div className="text-xl sm:text-2xl md:text-3xl mb-1.5 sm:mb-2 md:mb-3">✉️</div>
                   <h3 className="font-semibold text-neutral-900 mb-1 sm:mb-2 text-xs sm:text-sm md:text-base">Email</h3>
-                  <p className="text-neutral-800 text-xs sm:text-sm md:text-base">info@japanstroj.ba</p>
+                  <p className="text-neutral-800 text-xs sm:text-sm md:text-base">{CONTACT_INFO.email}</p>
                 </div>
                 <div className="bg-white/10 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6">
                   <div className="text-xl sm:text-2xl md:text-3xl mb-1.5 sm:mb-2 md:mb-3">📍</div>
                   <h3 className="font-semibold text-neutral-900 mb-1 sm:mb-2 text-xs sm:text-sm md:text-base">Lokacija</h3>
-                  <p className="text-neutral-800 text-xs sm:text-sm md:text-base">Sarajevo, BiH</p>
+                  <a
+                    href={CONTACT_INFO.mapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-neutral-800 text-xs sm:text-sm md:text-base underline-offset-4 hover:underline"
+                  >
+                    {CONTACT_INFO.address}
+                  </a>
                 </div>
               </div>
               <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 md:gap-4 justify-center px-2 sm:px-4">
                 <a
-                  href="tel:+38761924848"
+                  href={`tel:${CONTACT_INFO.phoneClean}`}
                   className="inline-flex items-center justify-center gap-2 sm:gap-3 bg-neutral-900 text-white px-5 sm:px-6 md:px-8 py-2.5 sm:py-3 md:py-4 rounded-full font-semibold text-sm sm:text-base md:text-lg active:bg-black transition-all duration-300 active:scale-95 sm:hover:scale-105 touch-manipulation"
                 >
                   <span>📞</span>
                   Pozovite odmah
                 </a>
                 <a
-                  href="https://wa.me/38761924848?text=Pozdrav,%20zanima%20me%20servis%20za%20moj%20stroj"
+                  href={`https://wa.me/${CONTACT_INFO.phoneClean}?text=Pozdrav,%20zanima%20me%20servis%20za%20moj%20stroj`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center justify-center gap-2 sm:gap-3 bg-green-600 text-white px-5 sm:px-6 md:px-8 py-2.5 sm:py-3 md:py-4 rounded-full font-semibold text-sm sm:text-base md:text-lg active:bg-green-700 transition-all duration-300 active:scale-95 sm:hover:scale-105 touch-manipulation"

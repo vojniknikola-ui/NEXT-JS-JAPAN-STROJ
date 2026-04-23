@@ -4,7 +4,7 @@ import Image from "next/image";
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { useToast } from '@/components/ui/ToastProvider';
 
-type Category = { id: number; name: string };
+type Category = { id: number; name: string; slug: string };
 type SortDirection = 'asc' | 'desc';
 type SortField = 'id' | 'sku' | 'brand' | 'model' | 'title' | 'stock' | 'priceWithoutVAT' | 'priceWithVAT' | 'createdAt' | 'updatedAt';
 type Delivery = 'available' | '15_days' | 'on_request';
@@ -110,6 +110,8 @@ const createInitialForm = (categoryId: number): PartInput => ({
   spec7: "",
   isActive: true,
 });
+
+const getDefaultCategoryId = (categories: Category[]) => categories[0]?.id || 1;
 
 const parseNumberString = (value: string | null | undefined): number => {
   if (!value) return 0;
@@ -277,6 +279,8 @@ export default function AdminParts() {
   const [loginUsername, setLoginUsername] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [addingCategory, setAddingCategory] = useState(false);
 
   const [invoiceItems, setInvoiceItems] = useState<InvoiceHistoryRecord[]>([]);
   const [invoiceLoading, setInvoiceLoading] = useState(false);
@@ -308,6 +312,36 @@ export default function AdminParts() {
 
   const getInputClassName = (field: string) =>
     `${inputClass} ${formFieldErrors[field] ? 'border-red-500/60 focus:border-red-500 focus:ring-red-500/40' : ''}`;
+
+  const loadCategories = useCallback(
+    async (preferredSlug?: string) => {
+      const res = await fetch("/api/categories", { cache: "no-store" });
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      }
+
+      const categories = (await res.json()) as Category[];
+      setCats(categories);
+      setForm((prev) => {
+        const preferredCategory = preferredSlug
+          ? categories.find((category) => category.slug === preferredSlug)
+          : null;
+
+        if (preferredCategory) {
+          return { ...prev, categoryId: preferredCategory.id };
+        }
+
+        if (categories.some((category) => category.id === prev.categoryId)) {
+          return prev;
+        }
+
+        return { ...prev, categoryId: getDefaultCategoryId(categories) };
+      });
+
+      return categories;
+    },
+    []
+  );
 
   useEffect(() => {
     if (!file) {
@@ -459,16 +493,10 @@ export default function AdminParts() {
 
         // Load categories
         try {
-          const res = await fetch("/api/categories");
-          if (res.ok) {
-            const categories = (await res.json()) as Category[];
-            setCats(categories);
-          } else {
-            setCats([{ id: 1, name: "Default" }]);
-          }
+          await loadCategories();
         } catch (error) {
           console.warn('Failed to load categories:', error);
-          setCats([{ id: 1, name: "Default" }]);
+          setCats([]);
         }
 
         // Load parts
@@ -488,7 +516,7 @@ export default function AdminParts() {
     };
 
     loadInitialData();
-  }, [authLoading, canRead]);
+  }, [authLoading, canRead, loadCategories]);
 
   async function refresh(search?: string) {
     if (!canRead) return;
@@ -564,6 +592,46 @@ export default function AdminParts() {
     }
   }
 
+  async function createCategory() {
+    if (!canEdit) {
+      toast.error('Nedozvoljena akcija', 'Vaša uloga nema pravo dodavanja kategorija.');
+      return;
+    }
+
+    const trimmedName = newCategoryName.trim();
+    if (!trimmedName) {
+      toast.error('Naziv kategorije je obavezan.');
+      return;
+    }
+
+    try {
+      setAddingCategory(true);
+      const response = await fetch('/api/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: trimmedName }),
+      });
+
+      const payload = (await response.json().catch(() => ({}))) as
+        | { error?: string; slug?: string; name?: string }
+        | undefined;
+
+      if (!response.ok) {
+        throw new Error(payload?.error || `HTTP ${response.status}`);
+      }
+
+      await loadCategories(payload?.slug);
+      setNewCategoryName('');
+      clearFieldError('categoryId');
+      toast.success('Kategorija je dodana.', payload?.name || trimmedName);
+    } catch (error) {
+      console.error('Category create error:', error);
+      toast.error('Dodavanje kategorije nije uspjelo', getErrorMessage(error, 'Pokušajte ponovo.'));
+    } finally {
+      setAddingCategory(false);
+    }
+  }
+
   async function savePart(e: React.FormEvent) {
     e.preventDefault();
     if (!canEdit) {
@@ -624,6 +692,7 @@ export default function AdminParts() {
       }
 
       const normalizedImageUrl = nextImageUrlRaw.trim();
+      const selectedCategory = cats.find((category) => category.id === form.categoryId);
 
       const payload = {
         ...form,
@@ -637,6 +706,8 @@ export default function AdminParts() {
         imageUrl: normalizedImageUrl,
         thumbUrl: nextThumbUrlRaw.trim(),
         blurData: nextBlurDataRaw.trim(),
+        categorySlug: selectedCategory?.slug,
+        categoryName: selectedCategory?.name,
         additionalImages: nextAdditionalImages.slice(0, 4), // Main + 4 = 5 max
       };
 
@@ -772,7 +843,7 @@ export default function AdminParts() {
       discount: parseNumberString(p.discount),
       currency: p.currency || "BAM",
       stock: p.stock,
-      categoryId: p.categoryId || 1,
+      categoryId: p.categoryId || getDefaultCategoryId(cats),
       imageUrl: p.imageUrl || undefined,
       spec1: p.spec1 || "",
       spec2: p.spec2 || "",
@@ -793,7 +864,7 @@ export default function AdminParts() {
     setEditingId(null);
     setOriginalImageUrl(null);
     setOriginalGalleryUrls([]);
-    setForm(createInitialForm(cats[0]?.id || 1));
+    setForm(createInitialForm(getDefaultCategoryId(cats)));
     setFile(null);
     setAdditionalFiles([null, null, null, null]);
     setFormError(null);
@@ -1270,16 +1341,44 @@ export default function AdminParts() {
                 <div>
                   <label className={labelClass}>Kategorija</label>
                   <select
-                    value={form.categoryId}
+                    value={cats.length ? form.categoryId : 0}
                     id="part-category"
                     onChange={e => {
                       clearFieldError('categoryId');
                       setForm({ ...form, categoryId: Number(e.target.value) });
                     }}
                     className={getInputClassName('categoryId')}
+                    disabled={!cats.length}
                   >
+                    {!cats.length && <option value={0}>Učitavanje kategorija...</option>}
                     {cats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
+                  <div className="mt-3 rounded-2xl border border-white/10 bg-[#0d0d0d] p-3">
+                    <label className="block text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-neutral-500 mb-2">
+                      Nova kategorija
+                    </label>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <input
+                        type="text"
+                        value={newCategoryName}
+                        onChange={(event) => setNewCategoryName(event.target.value)}
+                        placeholder="Unesite naziv kategorije"
+                        className="flex-1 rounded-2xl border border-white/10 bg-[#111111] px-4 py-3 text-sm text-neutral-100 placeholder:text-neutral-500 outline-none transition focus:border-[#ff6b00]/50 focus:ring-2 focus:ring-[#ff6b00]/60"
+                        disabled={!canEdit || addingCategory}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => void createCategory()}
+                        disabled={!canEdit || addingCategory}
+                        className="inline-flex items-center justify-center rounded-full bg-[#ff6b00] px-5 py-3 text-sm font-semibold uppercase tracking-wide text-black transition-all hover:scale-105 hover:bg-[#ff7f1a] disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {addingCategory ? 'Dodavanje...' : 'Dodaj'}
+                      </button>
+                    </div>
+                    <p className="mt-2 text-xs text-neutral-500">
+                      Nova kategorija će odmah biti dostupna u formi i automatski odabrana.
+                    </p>
+                  </div>
                 </div>
                 <div>
                   <label className={labelClass}>Cijena bez PDV-a</label>

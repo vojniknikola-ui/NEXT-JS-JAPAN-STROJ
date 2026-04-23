@@ -1,6 +1,10 @@
 import { sql } from "drizzle-orm";
 import { db, withRetry } from "@/db";
-import { CATALOG_CATEGORIES, isLegacyOstaloCategory } from "@/lib/parts/catalogCategories";
+import {
+  CATALOG_CATEGORIES,
+  isLegacyOstaloCategory,
+  normalizeCategoryInput,
+} from "@/lib/parts/catalogCategories";
 
 type CatalogSchemaState = {
   hasCategoriesTable: boolean;
@@ -16,6 +20,7 @@ let schemaReadyPromise: Promise<CatalogSchemaState> | null = null;
 
 type CatalogCategorySlug = (typeof CATALOG_CATEGORIES)[number]["slug"];
 type CatalogCategoryIds = Record<CatalogCategorySlug, number>;
+type EnsuredCategoryRecord = { id: number; name: string; slug: string };
 
 function isDbTruthy(value: unknown): boolean {
   return value === true || value === "t" || value === "true" || value === 1 || value === "1";
@@ -434,6 +439,71 @@ export async function ensureCatalogSchema() {
   }
 
   return await schemaReadyPromise;
+}
+
+export async function ensureCategoryRecord(input: {
+  slug?: string | null;
+  name?: string | null;
+  fallbackId?: number | null;
+}): Promise<EnsuredCategoryRecord | null> {
+  await ensureCatalogSchema();
+
+  const normalized = normalizeCategoryInput({
+    slug: input.slug,
+    name: input.name,
+  });
+
+  if (normalized) {
+    const result = await db.execute(sql`
+      INSERT INTO categories (name, slug)
+      VALUES (${normalized.name}, ${normalized.slug})
+      ON CONFLICT (slug) DO UPDATE
+      SET
+        name = EXCLUDED.name,
+        deleted_at = NULL
+      RETURNING id, name, slug
+    `);
+
+    const row = (
+      result as {
+        rows?: Array<{ id?: unknown; name?: unknown; slug?: unknown }>;
+      }
+    ).rows?.[0];
+
+    if (row?.id !== undefined && typeof row.name === "string" && typeof row.slug === "string") {
+      return {
+        id: Number(row.id),
+        name: row.name,
+        slug: row.slug,
+      };
+    }
+  }
+
+  if (input.fallbackId && Number.isFinite(input.fallbackId)) {
+    const result = await db.execute(sql`
+      SELECT id, name, slug
+      FROM categories
+      WHERE id = ${input.fallbackId}
+        AND deleted_at IS NULL
+      LIMIT 1
+    `);
+
+    const row = (
+      result as {
+        rows?: Array<{ id?: unknown; name?: unknown; slug?: unknown }>;
+      }
+    ).rows?.[0];
+
+    if (row?.id !== undefined && typeof row.name === "string" && typeof row.slug === "string") {
+      return {
+        id: Number(row.id),
+        name: row.name,
+        slug: row.slug,
+      };
+    }
+  }
+
+  return null;
 }
 
 export async function catalogSchemaHasCoreTables() {

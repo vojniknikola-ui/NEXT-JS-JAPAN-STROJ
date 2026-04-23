@@ -2,6 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import { Page } from '@/types';
 import { HomeIcon, CatalogIcon, CartIcon, ManualIcon, CogIcon, FacebookIcon } from '@/lib/icons';
+import { CONTACT_INFO } from '@/lib/constants';
 
 interface HeaderProps {
   activePage: Page;
@@ -61,20 +62,20 @@ const Header: React.FC<HeaderProps> = ({ activePage, setActivePage, cartItemCoun
               ))}
             </nav>
             <div className="hidden lg:flex items-center space-x-3 xl:space-x-4 ml-6 xl:ml-8 pl-6 xl:pl-8 border-l border-white/10">
-                 <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 hover:bg-[#ff6b00] hover:text-black transition-all duration-300 hover:scale-105 border border-white/10 hover:border-[#ff6b00]">
+                 <a href={CONTACT_INFO.facebookUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 hover:bg-[#ff6b00] hover:text-black transition-all duration-300 hover:scale-105 border border-white/10 hover:border-[#ff6b00]">
                      <FacebookIcon className="h-5 w-5" />
                      <span className="text-sm font-semibold">Facebook</span>
                  </a>
-                 <a href="https://olx.ba" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 hover:bg-[#ff6b00] hover:text-black transition-all duration-300 hover:scale-105 border border-white/10 hover:border-[#ff6b00]">
+                 <a href={CONTACT_INFO.olxUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 hover:bg-[#ff6b00] hover:text-black transition-all duration-300 hover:scale-105 border border-white/10 hover:border-[#ff6b00]">
                      <span className="text-sm font-semibold">OLX</span>
                  </a>
             </div>
           </div>
           <div className="lg:hidden flex items-center gap-1.5">
-            <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="p-2.5 rounded-full bg-white/5 hover:bg-[#ff6b00] hover:text-black transition-all duration-300 active:scale-95 border border-white/10 hover:border-[#ff6b00] touch-manipulation">
+            <a href={CONTACT_INFO.facebookUrl} target="_blank" rel="noopener noreferrer" className="p-2.5 rounded-full bg-white/5 hover:bg-[#ff6b00] hover:text-black transition-all duration-300 active:scale-95 border border-white/10 hover:border-[#ff6b00] touch-manipulation">
               <FacebookIcon className="h-4 w-4 sm:h-5 sm:w-5" />
             </a>
-            <a href="https://olx.ba" target="_blank" rel="noopener noreferrer" className="p-2.5 rounded-full bg-white/5 hover:bg-[#ff6b00] hover:text-black transition-all duration-300 active:scale-95 border border-white/10 hover:border-[#ff6b00] touch-manipulation flex items-center justify-center">
+            <a href={CONTACT_INFO.olxUrl} target="_blank" rel="noopener noreferrer" className="p-2.5 rounded-full bg-white/5 hover:bg-[#ff6b00] hover:text-black transition-all duration-300 active:scale-95 border border-white/10 hover:border-[#ff6b00] touch-manipulation flex items-center justify-center">
               <span className="text-xs font-semibold">OLX</span>
             </a>
           </div>

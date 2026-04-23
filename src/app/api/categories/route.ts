@@ -1,11 +1,15 @@
 import { asc, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { categories } from "@/db/schema";
+import { requireAdminRole } from "@/lib/auth/adminSession";
 import {
   CATALOG_CATEGORIES,
   resolveCanonicalCatalogCategory,
 } from "@/lib/parts/catalogCategories";
-import { ensureCatalogSchema } from "@/lib/parts/ensureCatalogSchema";
+import {
+  ensureCatalogSchema,
+  ensureCategoryRecord,
+} from "@/lib/parts/ensureCatalogSchema";
 
 export const runtime = 'nodejs';
 
@@ -60,12 +64,33 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  await ensureCatalogSchema();
-  const { name, slug } = await req.json();
-  const [inserted] = await db.insert(categories).values({
-    name,
-    slug: slug || name.toLowerCase().replace(/\s+/g, '-')
-  }).returning({ id: categories.id });
+  const auth = requireAdminRole(req, ["admin", "editor"]);
+  if ("response" in auth) return auth.response;
 
-  return Response.json({ id: inserted.id }, { status: 201 });
+  await ensureCatalogSchema();
+  const payload = (await req.json().catch(() => ({}))) as {
+    name?: string;
+    slug?: string;
+  };
+
+  const name = payload.name?.trim();
+  const slug = payload.slug?.trim();
+
+  if (!name && !slug) {
+    return Response.json(
+      { error: "Naziv kategorije je obavezan." },
+      { status: 400 }
+    );
+  }
+
+  const category = await ensureCategoryRecord({ name, slug });
+
+  if (!category) {
+    return Response.json(
+      { error: "Kategorija nije mogla biti sačuvana." },
+      { status: 500 }
+    );
+  }
+
+  return Response.json(category, { status: 201 });
 }
