@@ -8,9 +8,9 @@ export const SITE_CONFIG = {
 export const CONTACT_INFO = {
   phone: '+387 61 924 848',
   phoneClean: '38761924848',
-  email: 'Kontakt@japanstroj.com',
+  email: 'kontakt@japanstroj.com',
   address: 'Sarajevo, Bosna i Hercegovina',
-  mapsUrl: 'https://www.google.com/maps/search/?api=1&query=JapanStroj+Sarajevo',
+  mapsUrl: 'https://maps.app.goo.gl/ioNRCzUuje6yq4Pg7',
   facebookUrl: 'https://www.facebook.com/share/1C7UZGuvCV/',
   olxUrl: 'https://olx.ba/profil/japanstroj',
 };
