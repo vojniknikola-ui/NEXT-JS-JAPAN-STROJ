@@ -46,12 +46,12 @@ interface PartsApiResponse {
   hasMore?: boolean;
 }
 
-const CATALOG_PAGE_SIZE = 24;
+const CATALOG_PAGE_SIZE = 16;
 const CATALOG_MAX_PRICE = 10000;
 type CatalogSortOption = 'newest' | 'price_asc' | 'price_desc' | 'relevance';
 
 const AvailabilityBadge: React.FC<{ availability: string }> = ({ availability }) => {
-  const baseClasses = 'px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-semibold rounded-full uppercase tracking-wide';
+  const baseClasses = 'px-1.5 sm:px-2 py-0.5 sm:py-1 text-[8px] sm:text-xs font-semibold rounded-full uppercase tracking-wide';
   switch (availability) {
     case 'available':
       return <div className={`${baseClasses} bg-emerald-500/90 text-white`}>Dostupno</div>;
@@ -83,23 +83,24 @@ const ProductCard = React.memo(function ProductCard({
   return (
     <article
       data-testid="product-card"
-      className="group bg-[#101010] border border-white/5 rounded-xl sm:rounded-2xl overflow-hidden active:border-[#ff6b00]/30 transition-all duration-300 sm:hover:shadow-[0_10px_40px_-15px_rgba(255,107,0,0.3)] sm:hover:-translate-y-1"
+      className="group overflow-hidden rounded-lg border border-white/5 bg-[#101010] transition-all duration-200 active:border-[#ff6b00]/30 sm:rounded-2xl sm:hover:-translate-y-1 sm:hover:shadow-[0_10px_40px_-15px_rgba(255,107,0,0.3)] [contain-intrinsic-size:280px] [content-visibility:auto]"
     >
       <Link
         href={`/product/${part.id}`}
         data-testid="product-card-open"
-        className="relative block aspect-square bg-[#1a1a1a] overflow-hidden cursor-pointer touch-manipulation"
+        className="relative block aspect-[4/3] cursor-pointer overflow-hidden bg-[#1a1a1a] touch-manipulation sm:aspect-square"
       >
         {displayImageUrl ? (
           <Image
             src={displayImageUrl}
             alt={part.title}
             fill
-            unoptimized
-            sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 25vw"
+            loading="lazy"
+            quality={72}
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
             placeholder={part.blurData ? 'blur' : 'empty'}
             blurDataURL={part.blurData || undefined}
-            className="w-full h-full object-cover sm:group-hover:scale-105 transition-transform duration-300"
+            className="h-full w-full object-cover transition-transform duration-300 sm:group-hover:scale-105"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-neutral-600">
@@ -117,44 +118,43 @@ const ProductCard = React.memo(function ProductCard({
           <AvailabilityBadge availability={part.delivery || 'available'} />
         </div>
         {part.discount && parseFloat(part.discount) > 0 && (
-          <div className="absolute top-2 sm:top-3 left-2 sm:left-3 bg-green-500 text-white px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold">
+          <div className="absolute left-2 top-2 rounded-full bg-green-500 px-1.5 py-0.5 text-[9px] font-bold text-white sm:left-3 sm:top-3 sm:px-2 sm:py-1 sm:text-xs">
             -{part.discount}%
           </div>
         )}
       </Link>
 
-      <div className="p-4 sm:p-5 md:p-6">
+      <div className="p-2.5 sm:p-5 md:p-6">
         <div className="mb-2 sm:mb-3">
-          <div className="text-[10px] sm:text-xs text-neutral-500 mb-1 font-mono truncate">{part.sku}</div>
           <Link href={`/product/${part.id}`} className="block">
-            <h3 className="text-sm sm:text-base font-semibold text-white mb-1 line-clamp-2 sm:group-hover:text-[#ff6b00] transition-colors">
+            <h3 className="mb-1 min-h-[2.35rem] text-xs font-semibold leading-snug text-white line-clamp-2 transition-colors sm:min-h-0 sm:text-base sm:group-hover:text-[#ff6b00]">
               {part.title}
             </h3>
           </Link>
           {(part.brand || part.model) && (
-            <p className="text-xs sm:text-sm text-neutral-400 truncate">
+            <p className="truncate text-[11px] text-neutral-400 sm:text-sm">
               {part.brand}{part.brand && part.model && ' • '}{part.model}
             </p>
           )}
           {part.catalogNumber && (
-            <p className="text-[10px] sm:text-xs text-neutral-500 mt-1 truncate">
+            <p className="mt-1 hidden truncate text-[10px] text-neutral-500 sm:block sm:text-xs">
               Kat. broj: {part.catalogNumber}
             </p>
           )}
         </div>
 
-        <div className="space-y-1 sm:space-y-2 mb-3 sm:mb-4">
+        <div className="mb-2 space-y-1 sm:mb-4 sm:space-y-2">
           {part.priceWithoutVAT && (
-            <p className="text-xs sm:text-sm text-neutral-400">
+            <p className="hidden text-xs text-neutral-400 sm:block sm:text-sm">
               Bez PDV-a: {parseFloat(part.priceWithoutVAT).toFixed(2)} {part.currency}
             </p>
           )}
-          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-            <span className="text-base sm:text-lg font-bold text-[#ff6b00]">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+            <span className="text-sm font-bold text-[#ff6b00] sm:text-lg">
               {priceAfterDiscount.toFixed(2)} {part.currency}
             </span>
             {part.discount && parseFloat(part.discount) > 0 && (
-              <span className="text-xs sm:text-sm text-neutral-500 line-through">
+              <span className="text-[10px] text-neutral-500 line-through sm:text-sm">
                 {parseFloat(part.priceWithVAT || part.price).toFixed(2)} {part.currency}
               </span>
             )}
@@ -168,7 +168,7 @@ const ProductCard = React.memo(function ProductCard({
             onAddToCart(part);
           }}
           disabled={isAdded}
-          className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-full font-semibold text-xs sm:text-sm uppercase tracking-wide transition-all duration-300 flex items-center justify-center gap-1.5 sm:gap-2 touch-manipulation ${
+          className={`flex w-full items-center justify-center gap-1.5 rounded-xl px-2 py-2 text-[10px] font-bold uppercase tracking-wide transition-all duration-200 touch-manipulation sm:gap-2 sm:rounded-full sm:px-4 sm:py-3 sm:text-sm ${
             isAdded
               ? 'bg-emerald-500 text-white shadow-emerald-500/70'
               : 'bg-gradient-to-br from-[#ff6b00] to-[#ff8c33] text-black active:scale-95 sm:hover:scale-105 shadow-[0_8px_25px_rgba(255,107,0,0.6)] sm:hover:shadow-[0_12px_35px_rgba(255,107,0,0.8)]'
@@ -177,19 +177,34 @@ const ProductCard = React.memo(function ProductCard({
           {isAdded ? (
             <>
               <CheckIcon className="w-3 h-3 sm:w-4 sm:h-4" />
-              <span className="text-[11px] sm:text-xs">Dodano!</span>
+              <span>Dodano</span>
             </>
           ) : (
             <>
               <CartIcon className="w-3 h-3 sm:w-4 sm:h-4" />
-              <span className="text-[11px] sm:text-xs">Dodaj u košaricu</span>
+              <span className="sm:hidden">Dodaj</span>
+              <span className="hidden sm:inline">Dodaj u košaricu</span>
             </>
           )}
         </button>
       </div>
     </article>
   );
-});
+}, (prev, next) => (
+  prev.isAdded === next.isAdded &&
+  prev.onAddToCart === next.onAddToCart &&
+  prev.part.id === next.part.id &&
+  prev.part.title === next.part.title &&
+  prev.part.brand === next.part.brand &&
+  prev.part.model === next.part.model &&
+  prev.part.catalogNumber === next.part.catalogNumber &&
+  prev.part.delivery === next.part.delivery &&
+  prev.part.price === next.part.price &&
+  prev.part.priceWithVAT === next.part.priceWithVAT &&
+  prev.part.discount === next.part.discount &&
+  prev.part.thumbUrl === next.part.thumbUrl &&
+  prev.part.imageUrl === next.part.imageUrl
+));
 
 export default function CatalogPage() {
   const toast = useToast();
@@ -213,6 +228,7 @@ export default function CatalogPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const observerTarget = useRef<HTMLDivElement>(null);
   const deferredSearchQuery = useDeferredValue(searchQuery);
+  const deferredMinPrice = useDeferredValue(priceRange[0]);
   const deferredMaxPrice = useDeferredValue(priceRange[1]);
 
   useEffect(() => {
@@ -266,7 +282,7 @@ export default function CatalogPage() {
       if (selectedAvailability.length) params.set('delivery', selectedAvailability.join(','));
       if (showOnlyDiscount) params.set('withDiscount', 'true');
 
-      if (priceRange[0] > 0) params.set('minPrice', String(priceRange[0]));
+      if (deferredMinPrice > 0) params.set('minPrice', String(deferredMinPrice));
       if (deferredMaxPrice < CATALOG_MAX_PRICE) params.set('maxPrice', String(deferredMaxPrice));
 
       return params;
@@ -278,7 +294,7 @@ export default function CatalogPage() {
       selectedBrands,
       selectedAvailability,
       showOnlyDiscount,
-      priceRange,
+      deferredMinPrice,
       deferredMaxPrice,
     ]
   );
@@ -436,7 +452,7 @@ export default function CatalogPage() {
           void loadMore();
         }
       },
-      { threshold: 0.1 }
+      { rootMargin: '450px 0px', threshold: 0.01 }
     );
 
     const currentTarget = observerTarget.current;
@@ -458,7 +474,7 @@ export default function CatalogPage() {
       <main className="flex-grow safe-main-padding lg:pb-0">
         <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 md:py-10 lg:py-12">
           <div className="max-w-7xl mx-auto">
-            <div className="mb-6 sm:mb-8">
+            <div className="mb-5 sm:mb-8">
               <h1 data-testid="catalog-title" className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-3 sm:mb-4">
                 Katalog rezervnih dijelova
               </h1>
@@ -632,21 +648,21 @@ export default function CatalogPage() {
               )}
 
               <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-4 sm:mb-6">
-                  <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
+                <div className="sticky top-14 z-30 -mx-3 mb-4 flex items-center justify-between gap-2 border-b border-white/5 bg-[#0b0b0b]/95 px-3 py-3 backdrop-blur-md sm:static sm:mx-0 sm:mb-6 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
+                  <div className="flex min-w-0 items-center gap-2 sm:gap-3 md:gap-4">
                     <button
                       data-testid="catalog-mobile-filters-open"
                       onClick={() => setShowMobileFilters(true)}
-                      className="lg:hidden flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-[#101010] border border-white/10 rounded-lg sm:rounded-xl text-neutral-200 active:border-[#ff6b00]/50 transition-all active:scale-95 touch-manipulation text-sm sm:text-base"
+                      className="lg:hidden flex items-center gap-1.5 rounded-full border border-white/10 bg-[#101010] px-3 py-2 text-sm text-neutral-200 transition-all active:scale-95 active:border-[#ff6b00]/50"
                     >
                       <FilterIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                       <span>Filteri</span>
                     </button>
-                    <p className="text-neutral-300 text-xs sm:text-sm">
+                    <p className="truncate text-xs text-neutral-300 sm:text-sm">
                       {loading ? 'Učitavanje...' : `Prikazano ${partsData.length}${hasMore ? '+' : ''} rezultata`}
                     </p>
                   </div>
-                  <div className="min-w-[170px]">
+                  <div className="w-[132px] shrink-0 sm:w-[170px]">
                     <label htmlFor="catalog-sort" className="sr-only">Sortiranje</label>
                     <select
                       id="catalog-sort"
@@ -705,7 +721,7 @@ export default function CatalogPage() {
                   </div>
                 ) : (
                   <>
-                    <div data-testid="catalog-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-5 lg:gap-6">
+                    <div data-testid="catalog-grid" className="grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-3 lg:gap-6">
                       {partsData.map((part) => (
                         <ProductCard
                           key={part.id}

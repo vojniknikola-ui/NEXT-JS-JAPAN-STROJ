@@ -8,7 +8,7 @@ const Footer: React.FC = () => {
   return (
     <footer className="bg-[#050505] text-neutral-100 mt-auto border-t border-white/5">
       <div className="container mx-auto px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center md:text-left">
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_1.25fr_1fr] gap-8 text-center md:text-left">
           <div>
             <h3 className="text-lg sm:text-xl font-semibold text-[#ff6b00] mb-3 sm:mb-4 tracking-tight">
               Japan<span className="text-white">Stroj</span>
@@ -20,27 +20,29 @@ const Footer: React.FC = () => {
           <div>
             <h3 className="text-lg font-semibold mb-4 text-white">Kontakt</h3>
             <ul className="text-neutral-300 space-y-2">
-              <li>Adresa: {CONTACT_INFO.address}</li>
-              <li>
-                Telefon:{' '}
-                <a href={`tel:${CONTACT_INFO.phoneClean}`} className="hover:text-[#ff6b00] transition-colors">
-                  {CONTACT_INFO.phone}
-                </a>
-              </li>
-              <li>
-                Email:{' '}
-                <a href={`mailto:${CONTACT_INFO.email}`} className="hover:text-[#ff6b00] transition-colors">
-                  {CONTACT_INFO.email}
-                </a>
-              </li>
               <li>
                 <a
                   href={CONTACT_INFO.mapsUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-[#ff6b00] hover:text-[#ff7f1a] transition-colors"
+                  className="hover:text-[#ff6b00] transition-colors"
                 >
-                  Google Maps
+                  {CONTACT_INFO.address}
+                </a>
+              </li>
+              <li>
+                <a href={`tel:${CONTACT_INFO.phoneClean}`} className="hover:text-[#ff6b00] transition-colors">
+                  Mobitel: {CONTACT_INFO.phone}
+                </a>
+              </li>
+              <li>
+                <a href={`tel:${CONTACT_INFO.secondaryPhoneClean}`} className="hover:text-[#ff6b00] transition-colors">
+                  Telefon: {CONTACT_INFO.secondaryPhone}
+                </a>
+              </li>
+              <li>
+                <a href={`mailto:${CONTACT_INFO.email}`} className="hover:text-[#ff6b00] transition-colors">
+                  {CONTACT_INFO.displayEmail}
                 </a>
               </li>
             </ul>

@@ -1,4 +1,5 @@
 import { CartItem } from '@/types';
+import { CONTACT_INFO } from '@/lib/constants';
 
 export interface OrderData {
   items: CartItem[];
@@ -13,7 +14,7 @@ export interface OrderData {
 }
 
 export class OrderService {
-  private static phoneNumber = "38761924848";
+  private static phoneNumber = CONTACT_INFO.phoneClean;
 
   static generateOrderMessage(orderData: OrderData): string {
     const { items, pricing } = orderData;
@@ -32,7 +33,7 @@ export class OrderService {
   }
 
   static getViberUrl(orderMessage: string): string {
-    return `viber://forward?text=${orderMessage}`;
+    return `viber://chat?number=%2B${this.phoneNumber}&text=${orderMessage}`;
   }
 
   static getPhoneNumber(): string {

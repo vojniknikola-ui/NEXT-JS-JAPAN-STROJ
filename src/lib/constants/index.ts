@@ -6,11 +6,15 @@ export const SITE_CONFIG = {
 };
 
 export const CONTACT_INFO = {
-  phone: '+387 61 924 848',
-  phoneClean: '38761924848',
+  phone: '+387 61 936 935',
+  phoneClean: '38761936935',
+  phoneInternational: '+38761936935',
+  secondaryPhone: '+387 032 740',
+  secondaryPhoneClean: '387032740',
   email: 'kontakt@japanstroj.com',
-  address: 'Sarajevo, Bosna i Hercegovina',
-  mapsUrl: 'https://maps.app.goo.gl/ioNRCzUuje6yq4Pg7',
+  displayEmail: 'Kontakt@japanstroj.com',
+  address: 'Vareš, Zvijezda 32, Vareš',
+  mapsUrl: 'https://www.google.com/maps/search/?api=1&query=Vare%C5%A1%2C%20Zvijezda%2032%2C%20Vare%C5%A1',
   facebookUrl: 'https://www.facebook.com/share/1C7UZGuvCV/',
   olxUrl: 'https://olx.ba/profil/japanstroj',
 };

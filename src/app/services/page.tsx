@@ -138,8 +138,9 @@ export default function ServicesPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 md:gap-6 mb-6 sm:mb-8 md:mb-10">
                 <div className="bg-white/10 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6">
                   <div className="text-xl sm:text-2xl md:text-3xl mb-1.5 sm:mb-2 md:mb-3">📞</div>
-                  <h3 className="font-semibold text-neutral-900 mb-1 sm:mb-2 text-xs sm:text-sm md:text-base">Telefon</h3>
+                  <h3 className="font-semibold text-neutral-900 mb-1 sm:mb-2 text-xs sm:text-sm md:text-base">Mobitel</h3>
                   <p className="text-neutral-800 text-xs sm:text-sm md:text-base">{CONTACT_INFO.phone}</p>
+                  <p className="text-neutral-800 text-xs sm:text-sm md:text-base">{CONTACT_INFO.secondaryPhone}</p>
                 </div>
                 <div className="bg-white/10 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6">
                   <div className="text-xl sm:text-2xl md:text-3xl mb-1.5 sm:mb-2 md:mb-3">✉️</div>

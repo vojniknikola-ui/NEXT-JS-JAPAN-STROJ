@@ -114,7 +114,6 @@ const ProductCard = memo<{ part: PartData; onAddToCart: (part: PartData) => void
 
       <div className="p-4 sm:p-5 md:p-6">
         <div className="mb-2 sm:mb-3">
-          <div className="text-[10px] sm:text-xs text-neutral-400 mb-1 font-mono truncate">{part.sku}</div>
           <Link
             href={productHref}
             className="block text-sm sm:text-base font-semibold text-white mb-1 line-clamp-2 sm:group-hover:text-[#ff6b00] transition-colors"

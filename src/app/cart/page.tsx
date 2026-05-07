@@ -10,7 +10,8 @@ import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { useToast } from '@/components/ui/ToastProvider';
 import { Page } from '@/types';
 import { useCart } from '@/lib/hooks/useCart';
-import { MinusIcon, PlusIcon, TrashIcon, ShoppingBagIcon, ArrowLeftIcon } from '@/lib/icons';
+import { CONTACT_INFO } from '@/lib/constants';
+import { MinusIcon, PlusIcon, TrashIcon, ShoppingBagIcon, ArrowLeftIcon, ViberIcon, WhatsAppIcon } from '@/lib/icons';
 
 export default function CartPage() {
    const router = useRouter();
@@ -21,37 +22,22 @@ export default function CartPage() {
    const [showClearConfirm, setShowClearConfirm] = useState(false);
    const [showProformaModal, setShowProformaModal] = useState(false);
 
-  const handleOrder = async () => {
+  const handleOrder = async (channel: 'whatsapp' | 'viber') => {
     if (cartItems.length === 0) return;
 
     setIsOrdering(true);
 
-    // Prepare order message for WhatsApp/Viber
     const orderItems = cartItems.map(item =>
       `${item.quantity}x ${item.part.name} (${item.part.brand} ${item.part.model}) - ${(item.part.priceWithVAT * item.quantity).toFixed(2)} BAM`
     ).join('\n');
 
     const totalMessage = `UKUPNO: ${cartTotal.toFixed(2)} BAM`;
-
-    const fullMessage = `🚛 *JapanStroj Narudžba*\n\n${orderItems}\n\n${totalMessage}\n\n📞 Kontaktirajte nas za potvrdu narudžbe!`;
-
-    // Encode message for WhatsApp
+    const fullMessage = `JapanStroj narudžba\n\n${orderItems}\n\n${totalMessage}\n\nKontaktirajte nas za potvrdu narudžbe.`;
     const encodedMessage = encodeURIComponent(fullMessage);
+    const whatsappUrl = `https://wa.me/${CONTACT_INFO.phoneClean}?text=${encodedMessage}`;
+    const viberUrl = `viber://chat?number=%2B${CONTACT_INFO.phoneClean}&text=${encodedMessage}`;
 
-    // Try WhatsApp first, fallback to Viber
-    const whatsappUrl = `https://wa.me/38761234567?text=${encodedMessage}`;
-    const viberUrl = `viber://chat?number=%2B38761234567&text=${encodedMessage}`;
-
-    // Open WhatsApp, if not available try Viber
-    window.open(whatsappUrl, '_blank');
-
-    // Fallback to Viber after a short delay
-    setTimeout(() => {
-      if (!document.hasFocus()) {
-        window.open(viberUrl, '_blank');
-      }
-    }, 2000);
-
+    window.open(channel === 'whatsapp' ? whatsappUrl : viberUrl, '_blank');
     setIsOrdering(false);
   };
 
@@ -268,7 +254,7 @@ export default function CartPage() {
                       Predračun
                     </button>
                     <button
-                      onClick={handleOrder}
+                      onClick={() => handleOrder('whatsapp')}
                       disabled={isOrdering}
                       className="flex-1 bg-gradient-to-r from-[#ff6b00] to-[#ff8533] hover:from-[#ff8533] hover:to-[#ff6b00] active:bg-[#ff7f1a] text-black px-4 sm:px-6 py-3 sm:py-4 rounded-full font-bold text-base sm:text-lg transition-all active:scale-95 sm:hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 touch-manipulation shadow-lg hover:shadow-xl relative overflow-hidden group"
                     >
@@ -280,12 +266,18 @@ export default function CartPage() {
                         </>
                       ) : (
                         <>
-                          <svg className="w-4 h-4 sm:w-5 sm:h-5 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                          </svg>
-                          <span className="text-sm sm:text-base relative z-10">Naruči putem WhatsApp/Viber</span>
+                          <WhatsAppIcon className="w-4 h-4 sm:w-5 sm:h-5 relative z-10" />
+                          <span className="text-sm sm:text-base relative z-10">Naruči WhatsApp</span>
                         </>
                       )}
+                    </button>
+                    <button
+                      onClick={() => handleOrder('viber')}
+                      disabled={isOrdering}
+                      className="flex-1 border border-[#7d3cff]/50 bg-[#7d3cff]/10 text-white px-4 sm:px-6 py-3 sm:py-4 rounded-full font-bold text-base sm:text-lg transition-all active:scale-95 sm:hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 touch-manipulation hover:border-[#9f73ff] hover:bg-[#7d3cff]/20"
+                    >
+                      <ViberIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+                      <span className="text-sm sm:text-base">Naruči Viber</span>
                     </button>
                   </div>
                 </div>
