@@ -6,7 +6,7 @@ import Footer from '@/components/Footer';
 import { Page } from '@/types';
 import { useCart } from '@/lib/hooks/useCart';
 import { CONTACT_INFO } from '@/lib/constants';
-import { FacebookIcon, OlxIcon, ViberIcon, WhatsAppIcon } from '@/lib/icons';
+import { FacebookIcon, ViberIcon, WhatsAppIcon } from '@/lib/icons';
 
 const orderMessage = encodeURIComponent('Pozdrav, želim naručiti dio preko JapanStroj stranice.');
 
@@ -131,7 +131,6 @@ export default function ContactPage() {
                   rel="noopener noreferrer"
                   className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm font-semibold text-white transition-colors hover:border-[#ff6b00]/50 hover:text-[#ffb27b]"
                 >
-                  <OlxIcon className="h-4 w-4" />
                   OLX
                 </a>
               </div>
