@@ -46,7 +46,7 @@ interface PartsApiResponse {
   hasMore?: boolean;
 }
 
-const CATALOG_PAGE_SIZE = 16;
+const CATALOG_PAGE_SIZE = 12;
 const CATALOG_MAX_PRICE = 10000;
 type CatalogSortOption = 'newest' | 'price_asc' | 'price_desc' | 'relevance';
 
@@ -68,14 +68,17 @@ interface ProductCardProps {
   part: PartData;
   onAddToCart: (part: PartData) => void;
   isAdded: boolean;
+  cardIndex: number;
 }
 
 const ProductCard = React.memo(function ProductCard({
   part,
   onAddToCart,
   isAdded,
+  cardIndex,
 }: ProductCardProps) {
   const displayImageUrl = part.thumbUrl || part.imageUrl;
+  const isPriorityImage = cardIndex < 6;
   const priceAfterDiscount = part.priceWithVAT && part.discount
     ? parseFloat(part.priceWithVAT) * (1 - parseFloat(part.discount) / 100)
     : parseFloat(part.priceWithVAT || part.price);
@@ -95,9 +98,11 @@ const ProductCard = React.memo(function ProductCard({
             src={displayImageUrl}
             alt={part.title}
             fill
-            loading="lazy"
-            quality={72}
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            {...(isPriorityImage
+              ? { priority: true, fetchPriority: 'high' as const }
+              : { loading: 'lazy' as const, fetchPriority: 'low' as const })}
+            quality={60}
+            sizes="(max-width: 640px) calc(50vw - 18px), (max-width: 1024px) calc(50vw - 120px), 320px"
             placeholder={part.blurData ? 'blur' : 'empty'}
             blurDataURL={part.blurData || undefined}
             className="h-full w-full object-cover transition-transform duration-300 sm:group-hover:scale-105"
@@ -203,7 +208,9 @@ const ProductCard = React.memo(function ProductCard({
   prev.part.priceWithVAT === next.part.priceWithVAT &&
   prev.part.discount === next.part.discount &&
   prev.part.thumbUrl === next.part.thumbUrl &&
-  prev.part.imageUrl === next.part.imageUrl
+  prev.part.imageUrl === next.part.imageUrl &&
+  prev.part.blurData === next.part.blurData &&
+  prev.cardIndex === next.cardIndex
 ));
 
 export default function CatalogPage() {
@@ -267,7 +274,7 @@ export default function CatalogPage() {
       } else if (sortOption === 'price_desc') {
         params.set('sort', 'priceWithVAT');
         params.set('order', 'desc');
-      } else if (sortOption === 'relevance' && deferredSearchQuery.trim()) {
+      } else if (deferredSearchQuery.trim() && (sortOption === 'relevance' || sortOption === 'newest')) {
         params.set('sort', 'relevance');
         params.set('order', 'desc');
       } else {
@@ -511,11 +518,24 @@ export default function CatalogPage() {
                     <input
                       data-testid="catalog-search"
                       type="text"
-                      placeholder="Pretraga proizvoda..."
+                      placeholder="Naziv, kataloški broj, brend, model..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-10 sm:pl-12 pr-3 sm:pr-4 py-2.5 sm:py-3 bg-[#101010] border border-white/10 rounded-lg sm:rounded-xl text-sm sm:text-base text-white placeholder-neutral-500 focus:border-[#ff6b00]/50 focus:ring-2 focus:ring-[#ff6b00]/20 outline-none transition-all"
+                      className="w-full pl-10 sm:pl-12 pr-10 sm:pr-11 py-2.5 sm:py-3 bg-[#101010] border border-white/10 rounded-lg sm:rounded-xl text-sm sm:text-base text-white placeholder-neutral-500 focus:border-[#ff6b00]/50 focus:ring-2 focus:ring-[#ff6b00]/20 outline-none transition-all"
+                      autoComplete="off"
+                      spellCheck={false}
+                      aria-label="Pretraga kataloga"
                     />
+                    {searchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchQuery('')}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-2 text-neutral-400 transition hover:bg-white/5 hover:text-white"
+                        aria-label="Obriši pretragu"
+                      >
+                        <XIcon className="h-4 w-4" />
+                      </button>
+                    )}
                   </div>
 
                   <div className="bg-[#101010] border border-white/10 rounded-lg sm:rounded-xl p-3 sm:p-4">
@@ -670,7 +690,7 @@ export default function CatalogPage() {
                       onChange={(e) => setSortOption(e.target.value as CatalogSortOption)}
                       className="w-full rounded-lg border border-white/10 bg-[#101010] px-3 py-2 text-xs text-neutral-200 outline-none transition focus:border-[#ff6b00]/50 focus:ring-2 focus:ring-[#ff6b00]/25 sm:text-sm"
                     >
-                      <option value="newest">Najnoviji</option>
+                      <option value="newest">{searchQuery.trim() ? 'Najrelevantnije' : 'Najnoviji'}</option>
                       <option value="price_asc">Cijena rastuće</option>
                       <option value="price_desc">Cijena opadajuće</option>
                       <option value="relevance" disabled={!searchQuery.trim()}>Relevantnost</option>
@@ -722,12 +742,13 @@ export default function CatalogPage() {
                 ) : (
                   <>
                     <div data-testid="catalog-grid" className="grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-3 lg:gap-6">
-                      {partsData.map((part) => (
+                      {partsData.map((part, index) => (
                         <ProductCard
                           key={part.id}
                           part={part}
                           onAddToCart={handleAddToCart}
                           isAdded={addedToCart.has(part.id)}
+                          cardIndex={index}
                         />
                       ))}
                     </div>

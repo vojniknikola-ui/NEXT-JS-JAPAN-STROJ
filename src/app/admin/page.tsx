@@ -254,7 +254,7 @@ export default function AdminParts() {
   const [additionalFiles, setAdditionalFiles] = useState<(File | null)[]>([null, null, null, null]);
   const [additionalPreviewUrls, setAdditionalPreviewUrls] = useState<(string | null)[]>([null, null, null, null]);
   const [originalImageUrl, setOriginalImageUrl] = useState<string | null>(null);
-  const [originalGalleryUrls, setOriginalGalleryUrls] = useState<any[]>([]);
+  const [originalGalleryUrls, setOriginalGalleryUrls] = useState<PartImage[]>([]);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
@@ -1647,7 +1647,7 @@ export default function AdminParts() {
                         />
                         {additionalPreviewUrls[idx] && (
                           <div className="relative aspect-video rounded-lg overflow-hidden border border-[#ff6b00]/20 bg-black/40">
-                             <img src={additionalPreviewUrls[idx]!} alt="Preview" className="w-full h-full object-cover" />
+                             <Image src={additionalPreviewUrls[idx]!} alt="Preview" fill unoptimized className="object-cover" />
                              <button 
                                type="button"
                                onClick={() => {

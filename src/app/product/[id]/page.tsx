@@ -27,6 +27,13 @@ const AvailabilityBadge: React.FC<{ availability: Availability }> = ({ availabil
   }
 };
 
+type RecentlyViewedProduct = Pick<
+  SparePart,
+  'id' | 'name' | 'brand' | 'model' | 'imageUrl' | 'priceWithVAT' | 'discount' | 'thumbUrl' | 'blurData'
+> & {
+  currency: string;
+};
+
 const FALLBACK_PRODUCT_IMAGE = 'https://via.placeholder.com/1200x900?text=JapanStroj';
 
 export default function ProductDetailPage() {
@@ -168,8 +175,8 @@ export default function ProductDetailPage() {
       const key = 'japanStrojRecentlyViewed';
       try {
         const currentStr = localStorage.getItem(key);
-        const current = currentStr ? JSON.parse(currentStr) : [];
-        const slimProduct = {
+        const current = (currentStr ? JSON.parse(currentStr) : []) as RecentlyViewedProduct[];
+        const slimProduct: RecentlyViewedProduct = {
           id: product.id,
           name: product.name,
           brand: product.brand,
@@ -181,7 +188,7 @@ export default function ProductDetailPage() {
           blurData: product.blurData,
           currency: 'BAM',
         };
-        const updated = [slimProduct, ...current.filter((p: any) => p.id !== product.id)].slice(0, 4);
+        const updated = [slimProduct, ...current.filter((p) => p.id !== product.id)].slice(0, 4);
         localStorage.setItem(key, JSON.stringify(updated));
       } catch (e) {
         console.error('Error saving recently viewed:', e);

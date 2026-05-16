@@ -11,7 +11,41 @@ type PartApiResponse = {
   items?: SparePart[];
 };
 
+type RecentlyViewedPart = Pick<
+  SparePart,
+  'id' | 'name' | 'imageUrl' | 'priceWithVAT' | 'thumbUrl' | 'blurData'
+> & {
+  currency?: string;
+};
+
 const FALLBACK_PART_IMAGE = 'https://via.placeholder.com/800x800?text=JapanStroj';
+
+const improvementIdeas = [
+  {
+    title: 'Preciznija pretraga dijelova',
+    description: 'Dodati pretragu po kataloškom broju, brendu, modelu motora i zamjenskim oznakama.',
+  },
+  {
+    title: 'Upit sa fotografijom dijela',
+    description: 'Kupac može poslati sliku pločice, starog dijela ili stroja i odmah dobiti jasniji zahtjev za ponudu.',
+  },
+  {
+    title: 'Filteri kompatibilnosti',
+    description: 'Povezati dijelove sa strojevima, motorima i kategorijama da se smanji rizik pogrešne narudžbe.',
+  },
+  {
+    title: 'Bolje slike i tehnički podaci',
+    description: 'Dodati više fotografija, dimenzije, OEM brojeve i napomene za ugradnju gdje su dostupne.',
+  },
+  {
+    title: 'Status zalihe i rok isporuke',
+    description: 'Prikazati da li je dio na stanju, po narudžbi ili zahtijeva provjeru prije slanja.',
+  },
+  {
+    title: 'Brži predračuni i narudžbe',
+    description: 'Unaprijediti korpu, automatski predračun i slanje narudžbe preko WhatsAppa, Vibera ili emaila.',
+  },
+];
 
 export default function Home() {
   const router = useRouter();
@@ -30,7 +64,7 @@ export default function Home() {
     }
   }, []);
   const [spareParts, setSpareParts] = useState<SparePart[]>([]);
-  const [recentlyViewed, setRecentlyViewed] = useState<any[]>([]);
+  const [recentlyViewed, setRecentlyViewed] = useState<RecentlyViewedPart[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const cartItemCount = cartItems.reduce((total, item) => total + item.quantity, 0);
@@ -40,7 +74,7 @@ export default function Home() {
       try {
         const saved = localStorage.getItem('japanStrojRecentlyViewed');
         if (saved) {
-          setRecentlyViewed(JSON.parse(saved));
+          setRecentlyViewed(JSON.parse(saved) as RecentlyViewedPart[]);
         }
       } catch (e) {
         console.error('Error loading recently viewed:', e);
@@ -276,6 +310,51 @@ export default function Home() {
           </div>
         </section>
       )}
+
+      <section className="py-10 sm:py-12 md:py-16 lg:py-20 bg-[#0b0b0b] border-y border-white/5">
+        <div className="container mx-auto px-3 sm:px-4">
+          <div className="mb-8 sm:mb-10 md:mb-12 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div className="max-w-3xl">
+              <span className="inline-flex items-center gap-2 rounded-full border border-[#ff6b00]/30 bg-[#ff6b00]/10 px-3 sm:px-4 py-1.5 text-[10px] sm:text-xs font-semibold uppercase tracking-[0.3em] text-[#ffb27b] mb-4">
+                Plan razvoja
+              </span>
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-white mb-3">
+                Moguća unapređenja stranice
+              </h2>
+              <p className="text-sm sm:text-base text-neutral-400 leading-relaxed">
+                Ova poboljšanja mogu olakšati pronalazak dijelova, ubrzati slanje upita i povećati sigurnost kupca prije narudžbe.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setActivePage('contact');
+                router.push('/contact');
+              }}
+              className="inline-flex items-center justify-center gap-2 rounded-full border border-white/15 bg-white/5 px-5 py-3 text-sm font-bold text-white transition hover:border-[#ff6b00]/50 hover:text-[#ffb27b] active:scale-95"
+            >
+              <span>Pošaljite prijedlog</span>
+              <svg className="h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+              </svg>
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5 md:gap-6">
+            {improvementIdeas.map((idea, index) => (
+              <article
+                key={idea.title}
+                className="rounded-2xl border border-white/8 bg-[#111111] p-5 sm:p-6 transition hover:border-[#ff6b00]/35 hover:bg-[#141414]"
+              >
+                <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-full border border-[#ff6b00]/25 bg-[#ff6b00]/10 text-sm font-black text-[#ffb27b]">
+                  {String(index + 1).padStart(2, '0')}
+                </div>
+                <h3 className="mb-2 text-base sm:text-lg font-bold text-white">{idea.title}</h3>
+                <p className="text-sm leading-6 text-neutral-400">{idea.description}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {recentlyViewed.length > 0 && (
         <section className="py-10 sm:py-12 md:py-16 bg-[#080808] border-t border-white/5">

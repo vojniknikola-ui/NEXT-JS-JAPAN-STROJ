@@ -17,15 +17,15 @@ export async function POST(req: Request) {
   // 1. Generate display-safe WebP with capped dimensions.
   const optimizedBuffer = await sharp(buffer)
     .rotate()
-    .resize({ width: 1800, height: 1800, fit: "inside", withoutEnlargement: true })
-    .webp({ quality: 85 })
+    .resize({ width: 1400, height: 1400, fit: "inside", withoutEnlargement: true })
+    .webp({ quality: 80, effort: 5 })
     .toBuffer();
 
-  // 2. Generate Thumb WebP
+  // 2. Generate compact catalog thumbnail.
   const thumbBuffer = await sharp(buffer)
     .rotate()
-    .resize({ width: 400, height: 400, fit: "inside", withoutEnlargement: true })
-    .webp({ quality: 75 })
+    .resize({ width: 320, height: 320, fit: "inside", withoutEnlargement: true })
+    .webp({ quality: 68, effort: 5 })
     .toBuffer();
 
   // 3. Generate blur placeholder

@@ -3,7 +3,6 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { ToastProvider } from '@/components/ui/ToastProvider';
-import SalesBotWidget from '@/components/SalesBotWidget';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -23,7 +22,6 @@ export default function RootLayout({
         <ToastProvider>
           <ErrorBoundary>
             {children}
-            <SalesBotWidget />
           </ErrorBoundary>
         </ToastProvider>
       </body>

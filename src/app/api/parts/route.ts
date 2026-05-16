@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { parts, categories, partImages } from "@/db/schema";
-import { and, asc, desc, eq, gt, ilike, isNull, lt, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, ilike, isNull, lt, or, sql, type SQL } from "drizzle-orm";
 import { partCreateSchema } from "@/lib/validation";
 import { revalidatePath } from "next/cache";
 import { requireAdminRole } from "@/lib/auth/adminSession";
@@ -85,6 +85,20 @@ type CursorPayload = {
   sortValue?: string | number;
 };
 
+const SEARCH_STOP_WORDS = new Set(["i", "ili", "u", "za", "na", "sa", "od", "do", "po"]);
+
+function normalizeSearchQuery(query: string) {
+  return query
+    .toLowerCase()
+    .replace(/[._/\\|,+;:()[\]{}-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function compactSearchQuery(query: string) {
+  return query.toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+
 function encodeCursor(payload: CursorPayload) {
   return Buffer.from(JSON.stringify(payload)).toString("base64url");
 }
@@ -140,12 +154,21 @@ export async function GET(req: Request) {
     const normalizedOrder = order === "asc" ? "asc" : "desc";
     const isAscending = normalizedOrder === "asc";
     const normalizedSort = sort === "relevance" && !q ? "id" : sort;
+    const normalizedQuery = q ? normalizeSearchQuery(q) : "";
+    const compactQuery = q ? compactSearchQuery(q) : "";
+    const searchTerms = normalizedQuery
+      ? Array.from(new Set(normalizedQuery.split(" ")))
+          .filter((term) => term.length >= 2 && !SEARCH_STOP_WORDS.has(term))
+          .slice(0, 8)
+      : [];
 
-    const where = [isNull(parts.deletedAt)];
+    const where: SQL[] = [isNull(parts.deletedAt)];
     const effectivePrice = sql`COALESCE(${parts.priceWithVAT}, ${parts.price})`;
     const effectivePriceWithoutVat = sql`COALESCE(${parts.priceWithoutVAT}, ${parts.price})`;
     const queryPrefix = q ? `${q}%` : "";
     const queryContains = q ? `%${q}%` : "";
+    const normalizedQueryContains = normalizedQuery ? `%${normalizedQuery}%` : "";
+    const compactQueryContains = compactQuery.length >= 3 ? `%${compactQuery}%` : "";
     const relevanceExpression = q
       ? sql<number>`
         (
@@ -153,6 +176,8 @@ export async function GET(req: Request) {
             WHEN LOWER(COALESCE(${parts.sku}, '')) = LOWER(${q}) THEN 120
             WHEN LOWER(COALESCE(${parts.catalogNumber}, '')) = LOWER(${q}) THEN 110
             WHEN LOWER(COALESCE(${parts.title}, '')) = LOWER(${q}) THEN 100
+            WHEN regexp_replace(lower(COALESCE(${parts.sku}, '')), '[^a-z0-9]+', '', 'g') = ${compactQuery} THEN 95
+            WHEN regexp_replace(lower(COALESCE(${parts.catalogNumber}, '')), '[^a-z0-9]+', '', 'g') = ${compactQuery} THEN 92
             WHEN COALESCE(${parts.title}, '') ILIKE ${queryPrefix} THEN 85
             WHEN COALESCE(${parts.brand}, '') ILIKE ${queryPrefix} THEN 75
             WHEN COALESCE(${parts.model}, '') ILIKE ${queryPrefix} THEN 65
@@ -161,6 +186,16 @@ export async function GET(req: Request) {
             WHEN COALESCE(${parts.model}, '') ILIKE ${queryContains} THEN 35
             WHEN COALESCE(${parts.catalogNumber}, '') ILIKE ${queryContains} THEN 25
             WHEN COALESCE(${parts.sku}, '') ILIKE ${queryContains} THEN 15
+            WHEN COALESCE(${parts.application}, '') ILIKE ${queryContains} THEN 12
+            WHEN COALESCE(${categories.name}, '') ILIKE ${queryContains} THEN 10
+            WHEN COALESCE(${parts.spec1}, '') ILIKE ${queryContains}
+              OR COALESCE(${parts.spec2}, '') ILIKE ${queryContains}
+              OR COALESCE(${parts.spec3}, '') ILIKE ${queryContains}
+              OR COALESCE(${parts.spec4}, '') ILIKE ${queryContains}
+              OR COALESCE(${parts.spec5}, '') ILIKE ${queryContains}
+              OR COALESCE(${parts.spec6}, '') ILIKE ${queryContains}
+              OR COALESCE(${parts.spec7}, '') ILIKE ${queryContains}
+              THEN 8
             ELSE 0
           END
         )
@@ -168,14 +203,75 @@ export async function GET(req: Request) {
       : sql<number>`0`;
 
     if (q) {
-      const searchFilter = or(
+      const fullQueryFilter = or(
         ilike(parts.title, `%${q}%`),
         ilike(parts.brand, `%${q}%`),
         ilike(parts.model, `%${q}%`),
         ilike(parts.catalogNumber, `%${q}%`),
-        ilike(parts.sku, `%${q}%`)
+        ilike(parts.sku, `%${q}%`),
+        ilike(parts.application, `%${q}%`),
+        ilike(categories.name, `%${q}%`),
+        ilike(parts.spec1, `%${q}%`),
+        ilike(parts.spec2, `%${q}%`),
+        ilike(parts.spec3, `%${q}%`),
+        ilike(parts.spec4, `%${q}%`),
+        ilike(parts.spec5, `%${q}%`),
+        ilike(parts.spec6, `%${q}%`),
+        ilike(parts.spec7, `%${q}%`)
       );
-      if (searchFilter) where.push(searchFilter);
+      const normalizedFilter =
+        normalizedQuery && normalizedQuery !== q.toLowerCase()
+          ? or(
+              ilike(parts.title, normalizedQueryContains),
+              ilike(parts.brand, normalizedQueryContains),
+              ilike(parts.model, normalizedQueryContains),
+              ilike(parts.catalogNumber, normalizedQueryContains),
+              ilike(parts.sku, normalizedQueryContains),
+              ilike(parts.application, normalizedQueryContains),
+              ilike(categories.name, normalizedQueryContains)
+            )
+          : undefined;
+      const compactFilter = compactQueryContains
+        ? or(
+            sql`regexp_replace(lower(COALESCE(${parts.title}, '')), '[^a-z0-9]+', '', 'g') LIKE ${compactQueryContains}`,
+            sql`regexp_replace(lower(COALESCE(${parts.brand}, '')), '[^a-z0-9]+', '', 'g') LIKE ${compactQueryContains}`,
+            sql`regexp_replace(lower(COALESCE(${parts.model}, '')), '[^a-z0-9]+', '', 'g') LIKE ${compactQueryContains}`,
+            sql`regexp_replace(lower(COALESCE(${parts.catalogNumber}, '')), '[^a-z0-9]+', '', 'g') LIKE ${compactQueryContains}`,
+            sql`regexp_replace(lower(COALESCE(${parts.sku}, '')), '[^a-z0-9]+', '', 'g') LIKE ${compactQueryContains}`
+          )
+        : undefined;
+      const tokenFilters: SQL[] = searchTerms.flatMap((term) => {
+        const tokenFilter = or(
+            ilike(parts.title, `%${term}%`),
+            ilike(parts.brand, `%${term}%`),
+            ilike(parts.model, `%${term}%`),
+            ilike(parts.catalogNumber, `%${term}%`),
+            ilike(parts.sku, `%${term}%`),
+            ilike(parts.application, `%${term}%`),
+            ilike(categories.name, `%${term}%`),
+            ilike(parts.spec1, `%${term}%`),
+            ilike(parts.spec2, `%${term}%`),
+            ilike(parts.spec3, `%${term}%`),
+            ilike(parts.spec4, `%${term}%`),
+            ilike(parts.spec5, `%${term}%`),
+            ilike(parts.spec6, `%${term}%`),
+            ilike(parts.spec7, `%${term}%`)
+          );
+        return tokenFilter ? [tokenFilter] : [];
+      });
+      const searchFilterCandidates: SQL[] = [fullQueryFilter, normalizedFilter, compactFilter].flatMap((filter) =>
+        filter ? [filter] : []
+      );
+      const searchFilter =
+        searchFilterCandidates.length > 1
+          ? or(...searchFilterCandidates)
+          : searchFilterCandidates[0];
+      if (searchFilter && tokenFilters.length) {
+        const combinedSearchFilter = and(searchFilter, ...tokenFilters);
+        if (combinedSearchFilter) where.push(combinedSearchFilter);
+      } else if (searchFilter) {
+        where.push(searchFilter);
+      }
     }
 
     const categoryId = cat ? Number(cat) : NaN;
@@ -305,6 +401,7 @@ export async function GET(req: Request) {
       categoryId: parts.categoryId,
       imageUrl: parts.imageUrl,
       thumbUrl: parts.thumbUrl,
+      blurData: parts.blurData,
       spec1: parts.spec1,
       spec2: parts.spec2,
       spec3: parts.spec3,
